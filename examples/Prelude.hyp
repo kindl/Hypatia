@@ -1,0 +1,182 @@
+module Prelude
+
+
+# Operators
+infixl 4 < smallerThan
+infixl 4 > greaterThan
+infixl 4 <= smallerOrEqal
+infixl 4 >= greaterOrEqal
+
+infixl 6 + plus
+infixl 6 - minus
+
+infixl 7 * times
+infixl 7 / divide
+infixl 7 % modulo
+
+infixr 8 ^ power
+
+infixr 5 & concat
+infixr 5 ++ append
+
+infix 9 == genEq
+
+infixr 3 && and
+infixr 2 || or
+
+
+alias Numeral = Native.Numeral
+alias Text = Native.Text
+alias Path = Native.Text
+alias Array = Native.Array
+
+# Math
+negate : Numeral -> Numeral
+
+(*) : Numeral -> Numeral -> Numeral
+
+(/) : Numeral -> Numeral -> Numeral
+
+(+) : Numeral -> Numeral -> Numeral
+
+(-) : Numeral -> Numeral -> Numeral
+
+(^) : Numeral -> Numeral -> Numeral
+
+(%) : Numeral -> Numeral -> Numeral
+
+sin : Numeral -> Numeral
+
+cos : Numeral -> Numeral
+
+# Arrays
+get : Numeral -> Array a -> a
+
+size : Array a -> Numeral
+
+isArray : a -> bool
+
+empty : Unit -> Array a
+
+insert : Array a -> a -> Array a
+
+# Primitive
+coerce : a -> b
+
+error : Text -> a
+
+# Logic
+
+## Equality
+
+genEq l r = toBoolean (genComp eq l r)
+
+### Comparing Numerals, Strings and Constructors
+eq : e -> e -> b
+
+## Matching
+wildcard : z
+
+matches = genComp matchAux
+
+matchAux l r = primLazyOr (eq wildcard l) (fun _ -> eq l r)
+
+## Generic comparison
+genComp comp l r =
+    primLazyOr (comp l r)
+        (fun _ -> trySeqComp (genComp comp) l r)
+
+trySeqComp comp l r =
+    primLazyAnd (bothArray l r)
+        (fun _ -> seqComp comp (coerce l) (coerce r))
+
+bothArray l r = primLazyAnd (isArray l) (fun _ -> isArray r)
+
+seqComp comp l r = let {
+    lsize = size l
+    rsize = size r
+        } in primLazyAnd (eq lsize rsize)
+            (fun _ -> seqCompAux comp lsize l r)
+
+seqCompAux comp n l r =
+    primLazyOr (eq n 0) (fun _ ->
+        primLazyAnd (comp (get n l) (get n r)) (fun _ -> seqCompAux comp (n - 1) l r))
+
+# Working with built in boolean values
+primIf : bool -> val -> val -> val
+
+### turn foreign bool into Boolean
+toBoolean val = primIf val True False
+
+primLazyOr : bool -> (Unit -> bool) -> bool
+primLazyOr x f = primIf x (fun _ -> x) f Unit
+
+primLazyAnd : bool -> (Unit -> bool) -> bool
+primLazyAnd x f = primIf x f (fun _ -> x) Unit
+
+# IO
+print : Text -> Unit
+
+file : Path -> Text
+
+# Strings
+toString : a -> Text
+
+concat : Text -> Text -> Text
+
+toNumber : Text -> Numeral
+
+arrayMap f a = arrayMapAux 1 (size a) f a (empty Unit)
+
+arrayMapAux i s f a acc =
+    primIf (eq i (s + 1)) (fun _ -> acc) (fun _ -> arrayMapAux (i + 1) s f a (insert acc (f (get i a)))) Unit
+
+arrayFoldl f z a = arrayFoldlAux 1 (size a) f z a
+
+arrayFoldlAux i s f z a =
+    primIf (eq i (s + 1)) (fun _ -> z) (fun _ -> arrayFoldlAux (i + 1) s f (f z (get i a)) a) Unit
+
+repeatN f n =
+    primIf (eq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
+
+inspect x =
+    primIf (isArray x) (fun _ -> "{" & arrayFoldl (fun z i -> z & " " & inspect i) "" (coerce x) & "}") (fun _ -> toString x) Unit
+
+# Basic Types
+enum Option a = None | A a
+
+enum Boolean = True | False
+
+lazyAnd x f = if x then f Unit else x
+
+lazyOr x f = if x then x else f Unit
+
+strictNot True = False
+strictNot False = True
+
+strictAnd False _ = False
+strictAnd _ b = b
+
+strictOr True _ = True
+strictOr _ b = b
+
+boolToString False = "False"
+boolToString True = "True"
+
+enum Unit = Unit
+
+enum Tuple a b = Tuple a b
+
+# Text
+split : Text -> Text -> Array Text
+
+# Fix
+fix f x = f (fix f) x
+
+# Game
+sqrt x = x ^ 0.5
+
+# Categories
+id x = x
+
+compose f g x = f (g x)

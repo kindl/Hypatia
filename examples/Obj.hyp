@@ -1,0 +1,64 @@
+module Obj
+
+import Prelude((&), toNumber, file,
+    Numeral, compose)
+import Geometry(Vector, Vec4)
+import List(Empty, Element, List,
+    split, map, foldMap, lines, words)
+
+
+alias V = Vector Native.Numeral
+
+enum VertexIndex
+    = VI Numeral
+    | VTI Numeral Numeral
+    | VNI Numeral Numeral
+    | VTNI Numeral Numeral Numeral
+
+enum ObjElement
+    = Vertex V
+    | TextureCoordinate V
+    | Normal V
+    | Face (List VertexIndex)
+    | Comment
+
+toFace (Face f) = Element f Empty
+toFace _ = Empty
+
+toVertex (Vertex v) = Element v Empty
+toVertex _ = Empty
+
+toNormal (Normal n) = Element n Empty
+toNormal _ = Empty
+
+getFaces = foldMap toFace
+getVertices = foldMap toVertex
+getNormals = foldMap toNormal
+
+load filePath = map (compose matchLine words) (lines (file filePath))
+
+matchLine (Element "v" es) = Vertex (readVector es)
+matchLine (Element "vn" es) = Normal (readVector es)
+matchLine (Element "vt" es) = TextureCoordinate (readVector es)
+matchLine (Element "f" es) = Face (map readVI es)
+matchLine _ = Comment
+
+readVector es = listToVector (map toNumber es)
+
+listToVector (Element v1 (Element v2 (Element v3 (Element v4 Empty)))) =
+    Vec4 v1 v2 v3 v4
+listToVector (Element v1 (Element v2 (Element v3 Empty))) =
+    Vec4 v1 v2 v3 1
+listToVector (Element v1 (Element v2 Empty)) =
+    Vec4 v1 v2 0 1
+listToVector (Element v1 Empty) =
+    Vec4 v1 0 0 1
+
+readVI s = case split "/" s of {
+    Element vi Empty -> VI (toNumber vi)
+    # TODO why this line?
+    Element vi (Element "" Empty) -> VI (toNumber vi)
+    Element vi (Element vt Empty) -> VTI (toNumber vi) (toNumber vt)
+    Element vi (Element "" (Element vn Empty)) -> VNI (toNumber vi) (toNumber vn)
+    Element vi (Element vt (Element vn Empty)) -> VTNI (toNumber vi) (toNumber vt) (toNumber vn)
+}

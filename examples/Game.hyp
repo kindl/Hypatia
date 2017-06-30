@@ -1,0 +1,56 @@
+module Game
+
+import Prelude((/), Tuple, Unit,
+    Numeral, Array, empty, insert, compose)
+import Obj(getFaces, getVertices, getNormals,
+    VTNI, VNI, VTI, VI)
+import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
+    rotationZ, rotationY, normalize, to2d, multiply, transform)
+import List(map, nth, Empty, Element)
+
+
+# Primitives
+polygon : Array Numeral -> Unit
+
+pi = 3.141592653589793
+
+## Load
+model = Obj.load "cube.obj"
+
+screenWidth = 800
+screenHeight = 600
+t = translateMatrix (screenWidth / 2) (screenHeight / 2) 0
+s = scaleMatrix (screenHeight / 2)
+r = rotationZ pi
+
+modelview = multiply t (multiply r s)
+projection = simpleProjectionMatrix 5000
+rotation = rotationY 30
+
+lightDirection = normalize (Vec4 0 0 1 0)
+
+faces = getFaces model
+
+vertices = getVertices model
+
+getPoint (VTNI v _ _) = nth v vertices
+getPoint (VNI v _) = nth v vertices
+getPoint (VTI v _) = nth v vertices
+getPoint (VI v) = nth v vertices
+
+transformPoint vector =
+    let {
+        rotated = transform rotation vector
+        transformed = transform modelview rotated
+        projected = transform projection transformed
+        divided = to2d projected
+     } in divided
+
+trFaces = map (compose tuplesToArray transformFace) faces
+
+transformFace face = map (compose transformPoint getPoint) face
+
+drawFaces _ = map polygon trFaces
+
+tuplesToArray Empty = empty Unit
+tuplesToArray (Element (Tuple a b) es) = insert (insert (tuplesToArray es) a) b

@@ -7,7 +7,7 @@ import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
 import Data.List(nub)
 import Data.Maybe(fromMaybe)
-import Control.Monad(when, zipWithM, liftM2)
+import Control.Monad(when, zipWithM)
 import Data.IORef(readIORef, writeIORef, newIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, transformM)
 

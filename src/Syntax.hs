@@ -10,7 +10,7 @@ import Control.Applicative(Alternative, empty, (<|>))
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
-import Text.PrettyPrint(text, (<+>), ($$), parens, render)
+import Text.PrettyPrint(text, (<+>), ($$), parens, brackets, render)
 import Data.IORef(IORef)
 import Data.Generics.Uniplate.Data(universe)
 
@@ -161,6 +161,14 @@ instance Pretty Pattern where
     pPrint Wildcard = text "_"
     pPrint (ConstructorPattern name ps) =
         parens (pPrint name <+> mintercalate (text " ") (fmap pPrint ps))
+    pPrint (InfixConstructorPattern a op b) =
+        parens (pPrint a <+> pPrint op <+> pPrint b)
+    pPrint (ParenthesizedPattern p) =
+        parens (pPrint p)
+    pPrint (AliasPattern i p) =
+        pPrint i <+> text "as" <+> pPrint p
+    pPrint (ArrayPattern ps) =
+        brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
     pPrint (Name qs s) = mintercalate (text ".") (fmap pPrint (qs ++ [s]))

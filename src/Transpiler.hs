@@ -143,6 +143,7 @@ getAssignments i (ArrayPattern ps) =
     descAssignments i 0 ps
 getAssignments _ (LiteralPattern _) = []
 getAssignments _ Wildcard = []
+getAssignments _ p = error ("getAssignments on " ++ pretty p)
 
 descAssignments _ _ [] = []
 descAssignments i j (p:ps) =

@@ -9,7 +9,7 @@ import Data.List(nub)
 import Data.Maybe(fromMaybe)
 import Control.Monad(when, zipWithM, liftM2)
 import Data.IORef(readIORef, writeIORef, newIORef, IORef)
-import Data.Generics.Uniplate.Data(universe, para)
+import Data.Generics.Uniplate.Data(universe, para, transformM)
 
 type Scheme = Type
 type Environment = HashMap Name Scheme
@@ -227,21 +227,14 @@ apply _ t@(SkolemConstant _) = t
 apply subst (ParenthesizedType t) = ParenthesizedType (apply subst t)
 
 -- substitute unification variables with types
-zonk (ForAll vs ty) = fmap (ForAll vs) (zonk ty)
-zonk (TypeArrow x y) = liftM2 TypeArrow (zonk x) (zonk y)
-zonk (TypeApplication x y) = liftM2 TypeApplication (zonk x) (zonk y)
-zonk (TypeInfixOperator t1 op t2) =
-    liftM2 (\x y -> TypeInfixOperator x op y) (zonk t1) (zonk t2)
-zonk t@(UniVariable r) =
-    do
-        mty <- readRef r
-        case mty of
-             Nothing -> return t
-             Just ty -> zonk ty
-zonk t@(TypeConstructor _) = return t
-zonk t@(SkolemConstant _) = return t
-zonk t@(TypeVariable _) = return t
-zonk (ParenthesizedType t) = fmap ParenthesizedType (zonk t)
+zonk ty =
+    let
+        f t@(UniVariable r) =
+            do
+                mty <- readRef r
+                maybe (return t) zonk mty
+        f t = return t
+    in transformM f ty
 
 -- Environment
 getEnv = fmap (\(TypecheckerState env _) -> env) ask
@@ -273,7 +266,7 @@ bounds ty =
         f _ cs = concat cs
     in para f ty
 
-freeVars t = fmap unis (zonk t)
+freeVars ty = fmap unis (zonk ty)
 
 newBound r = do
     n <- newUniqueName
@@ -292,12 +285,12 @@ instantiate (ForAll vars ty) =
   do
     subst <- traverse (\x -> fmap (\t -> (x, t)) newTyVar) vars
     return (apply (fromList subst) ty)
-instantiate t = return t
+instantiate ty = return ty
 
 subsume scheme1 scheme2@(ForAll _ _) =
   do
-    (skolVars, t) <- skolemise scheme2
-    subsume scheme1 t
+    (skolVars, ty) <- skolemise scheme2
+    subsume scheme1 ty
     let escVars = skolems scheme1 ++ skolems scheme2
     when (null (including escVars skolVars)) (fail "Escape")
 subsume scheme@(ForAll _ _) t2 =

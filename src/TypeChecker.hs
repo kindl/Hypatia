@@ -9,6 +9,7 @@ import Data.List(nub)
 import Data.Maybe(fromMaybe)
 import Control.Monad(when, zipWithM, liftM2)
 import Data.IORef(readIORef, writeIORef, newIORef, IORef)
+import Data.Generics.Uniplate.Data(universe, para)
 
 type Scheme = Type
 type Environment = HashMap Name Scheme
@@ -259,37 +260,18 @@ newUnique =
 newTyVar = fmap UniVariable (newRef Nothing)
 
 -- extract unification variables
-unis (ForAll _ t) = unis t
-unis (TypeVariable _) = []
-unis (UniVariable r) = [r]
-unis (TypeArrow x y) = unis x ++ unis y
-unis (TypeApplication x y) = unis x ++ unis y
-unis (TypeConstructor _) = []
-unis (ParenthesizedType t) = unis t
-unis (SkolemConstant _) = []
-unis (TypeInfixOperator x _ y) = unis x ++ unis y
+unis ty = [u | UniVariable u <- universe ty]
 
 -- extract skolem constants
-skolems (TypeVariable _) = []
-skolems (TypeConstructor _) = []
-skolems (UniVariable _) = []
-skolems (SkolemConstant c) = [c]
-skolems (ForAll _ t) = skolems t
-skolems (TypeArrow x y) = skolems x ++ skolems y
-skolems (TypeApplication x y) = skolems x ++ skolems y
-skolems (ParenthesizedType t) = skolems t
-skolems (TypeInfixOperator x _ y) = skolems x ++ skolems y
+skolems ty = [c | SkolemConstant c <- universe ty]
 
 -- extract bound variables
-bounds (ForAll vars t) = excluding vars (bounds t)
-bounds (TypeVariable v) = [v]
-bounds (TypeArrow x y) = bounds x ++ bounds y
-bounds (TypeApplication x y) = bounds x ++ bounds y
-bounds (TypeConstructor _) = []
-bounds (UniVariable _) = []
-bounds (ParenthesizedType t) = bounds t
-bounds (SkolemConstant _) = []
-bounds (TypeInfixOperator x _ y) = bounds x ++ bounds y
+bounds ty =
+    let
+        f (ForAll vars _) cs = excluding vars (concat cs)
+        f (TypeVariable v) _ = [v]
+        f _ cs = concat cs
+    in para f ty
 
 freeVars t = fmap unis (zonk t)
 

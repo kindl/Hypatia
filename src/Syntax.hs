@@ -12,6 +12,7 @@ import Data.HashMap.Strict(lookup, keys, foldrWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), parens, render)
 import Data.IORef(IORef)
+import Data.Generics.Uniplate.Data(universe)
 
 type Line = Integer
 type Column = Integer
@@ -83,13 +84,6 @@ data Type
     | SkolemConstant Id
     | UniVariable (IORef (Maybe Type))
         deriving (Data, Typeable)
-
--- TODO we don't need this instance
--- it is just there to derive data for uniplate
-instance Typeable x => Data (IORef x) where
-    toConstr = error "toConstr IORef"
-    dataTypeOf = error "dataTypeOf IORef"
-    gunfold _ _ = error "gunfold IORef"
 
 instance Show Type where
     show = pretty
@@ -209,15 +203,12 @@ getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (EnumDeclaration _ _ cs) = fmap fst cs
 getDefsD _ = []
 
-getDefsP (VariablePattern v) = [v]
-getDefsP (ConstructorPattern _ ps) = foldMap getDefsP ps
-getDefsP (AliasPattern id p) = id:getDefsP p
-getDefsP (ParenthesizedPattern p) = getDefsP p
-getDefsP (ArrayPattern ps) = foldMap getDefsP ps
-getDefsP (InfixConstructorPattern p1 _ p2) =
-    getDefsP p1 ++ getDefsP p2
-getDefsP (LiteralPattern _) = []
-getDefsP Wildcard = []
+getDefsP p =
+    let
+        f (VariablePattern v) = [v]
+        f (AliasPattern i _) = []
+        f _ = []
+    in concatMap f (universe p)
 
 nNewVars n = fmap (\x -> makeId ("_v" ++ show x)) [1..n]
 

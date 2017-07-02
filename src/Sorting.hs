@@ -2,7 +2,7 @@ module Sorting where
 
 import Syntax
 import Data.List(partition)
-import Data.Generics.Uniplate.Data(transformBi)
+import Data.Generics.Uniplate.Data(transformBi, para)
 
 
 {-
@@ -52,24 +52,20 @@ sortPairs pairs =
               in decls ++ sortPairs rest
 
 {-
-Gather variables are used in an expression
+Gather variables used in an expression
 -}
-getDeps (Variable v) = [v]
-getDeps (ConstructorExpression c) = [c]
-getDeps (FunctionApplication f e) = getDeps f ++ getDeps e
-getDeps (CaseLambdaExpression alts) =
-    foldMap (uncurry getDepsAlt) alts
-getDeps (LambdaExpression [p] e) = getDepsAlt p e
-getDeps (LetExpression decls e) =
+getDepsE e =
     let
-        defs = foldMap getDefsD decls
-        deps = foldMap getDepsD decls ++ getDeps e
-    in excluding (fmap fromId defs) deps
-getDeps (IfExpression c th el) =
-    getDeps c ++ getDeps th ++ getDeps el
-getDeps _ = []
+        f (Variable v) _ = [v]
+        f (ConstructorExpression c) _ = [c]
+        f (CaseLambdaExpression alts) cs =
+            excluding (foldMap (fmap fromId . getDefsP . fst) alts) (concat cs)
+        f (LambdaExpression ps _) cs =
+            excluding (foldMap (fmap fromId . getDefsP) ps) (concat cs)
+        f (LetExpression decls _) cs =
+            excluding (foldMap (fmap fromId . getDefsD) decls) (concat cs)
+        f _ cs = concat cs
+    in para f e
 
-getDepsAlt p e = excluding (fmap fromId (getDefsP p)) (getDeps e)
-
-getDepsD (ExpressionDeclaration _ e) = getDeps e
+getDepsD (ExpressionDeclaration _ e) = getDepsE e
 getDepsD _ = []

@@ -206,7 +206,7 @@ getDefsD _ = []
 getDefsP p =
     let
         f (VariablePattern v) = [v]
-        f (AliasPattern i _) = []
+        f (AliasPattern i _) = [i]
         f _ = []
     in concatMap f (universe p)
 

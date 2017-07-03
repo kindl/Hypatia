@@ -9,7 +9,7 @@ import Data.List(nub)
 import Data.Maybe(fromMaybe)
 import Control.Monad(when, zipWithM)
 import Data.IORef(readIORef, writeIORef, newIORef, IORef)
-import Data.Generics.Uniplate.Data(universe, para, transformM)
+import Data.Generics.Uniplate.Data(universe, para, transformM, descend)
 
 type Scheme = Type
 type Environment = HashMap Name Scheme
@@ -216,15 +216,8 @@ occurs x ty = elem x (unis ty)
 apply subst (ForAll vs ty) =
     let filteredSubst = filterWithKey (\k _ -> notElem k vs) subst
     in ForAll vs (apply filteredSubst ty)
-apply subst t@(TypeVariable x) = fromMaybe t (mfind x subst)
-apply subst (TypeArrow x y) = TypeArrow (apply subst x) (apply subst y)
-apply subst (TypeApplication x y) = TypeApplication (apply subst x) (apply subst y)
-apply _ t@(TypeConstructor _) = t
-apply subst (TypeInfixOperator t1 op t2) =
-    TypeInfixOperator (apply subst t1) op (apply subst t2)
-apply _ t@(UniVariable _) = t
-apply _ t@(SkolemConstant _) = t
-apply subst (ParenthesizedType t) = ParenthesizedType (apply subst t)
+apply subst ty@(TypeVariable x) = fromMaybe ty (mfind x subst)
+apply subst ty = descend (apply subst) ty
 
 -- substitute unification variables with types
 zonk ty =

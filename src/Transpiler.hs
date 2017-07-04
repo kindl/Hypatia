@@ -78,17 +78,21 @@ This is a trick to allow recursion, otherwise:
 Definition of 'Example.Vec3' depends on 'Example.Vec3' whose type could not be resolved because of a cycle.
 -}
 toUnityScriptS (Assign x e@(Func _ _)) =
-    text "var" <+> pPrint x <+> text ": Object" <+> equals <+> toUnityScriptE e <> text ";"
+    text "var" <+> pPrint x <+> text ": Object" <+> equals $$ toUnityScriptE e <> text ";"
 toUnityScriptS (Assign x e) =
     text "var" <+> pPrint x <+> equals <+> toUnityScriptE e <> text ";"
 toUnityScriptS (Imp _) =
     mempty
 toUnityScriptS (Ret e) =
     text "return" <+> toUnityScriptE e <> text ";"
+-- UnityScript does not have block scoping, therefore we use immediate to generate a function for each block
 toUnityScriptS (If e th []) =
-    text "if" <> parens (toUnityScriptE e) $$ block (vcatMap toUnityScriptS th)
+    text "if" <> parens (toUnityScriptE e)
+        $$ block (toUnityScriptS (Ret (immediate th)))
 toUnityScriptS (If e th el) =
-    text "if" <> parens (toUnityScriptE e) $$ block (vcatMap toUnityScriptS th) $$ text "else" $$ block (vcatMap toUnityScriptS el)
+    text "if" <> parens (toUnityScriptE e)
+        $$ block (toUnityScriptS (Ret (immediate th)))
+        $$ text "else" $$ block (toUnityScriptS (Ret (immediate th)))
 
 toUnityScriptE (Var x) = pPrint x
 toUnityScriptE (LitD d) = double d
@@ -123,10 +127,10 @@ transpileE (LambdaExpression [Wildcard] e) =
     Func [makeId "_w"] [Ret (transpileE e)]
 transpileE (LambdaExpression [p] e) =
     Func [makeId "_v"] (transpileAlt (p, e) :
-        [Ret (Call (makeVar "error") [LitT (pack "failed pattern match lambda")])])
+        [Ret (Call (makeVar "Native.error") [LitT (pack "failed pattern match lambda")])])
 transpileE (CaseLambdaExpression alts) =
     Func [makeId "_v"] (fmap transpileAlt alts ++
-        [Ret (Call (makeVar "error") [LitT (pack "failed pattern match case lambda")])])
+        [Ret (Call (makeVar "Native.error") [LitT (pack "failed pattern match case lambda")])])
 transpileE (LiteralExpression l) = transpileL l
 transpileE (LetExpression decls e) =
     immediate (foldMap transpileD decls ++ [Ret (transpileE e)])

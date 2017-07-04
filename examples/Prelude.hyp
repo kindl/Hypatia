@@ -50,7 +50,7 @@ sin : Numeral -> Numeral
 cos : Numeral -> Numeral
 
 # Arrays
-get : Numeral -> Array a -> a
+getn : Numeral -> Array a -> a
 
 size : Array a -> Numeral
 
@@ -100,7 +100,7 @@ seqComp comp l r = let {
 
 seqCompAux comp n l r =
     primLazyOr (eq n 0) (fun _ ->
-        primLazyAnd (comp (get n l) (get n r)) (fun _ -> seqCompAux comp (n - 1) l r))
+        primLazyAnd (comp (getn n l) (getn n r)) (fun _ -> seqCompAux comp (n - 1) l r))
 
 # Working with built in boolean values
 primIf : bool -> val -> val -> val
@@ -115,7 +115,11 @@ primLazyAnd : bool -> (Unit -> bool) -> bool
 primLazyAnd x f = primIf x f (fun _ -> x) Unit
 
 # IO
-print : Text -> Unit
+write : Text -> Unit
+
+debug x = write (inspect x)
+
+printTest t x = write (t & inspect x)
 
 file : Path -> Text
 
@@ -128,13 +132,13 @@ toNumber : Text -> Numeral
 
 arrayMap f a = arrayMapAux 1 (size a) f a (empty Unit)
 
-arrayMapAux i s f a acc =
-    primIf (eq i (s + 1)) (fun _ -> acc) (fun _ -> arrayMapAux (i + 1) s f a (insert acc (f (get i a)))) Unit
+arrayMapAux n s f a acc =
+    primIf (eq n (s + 1)) (fun _ -> acc) (fun _ -> arrayMapAux (n + 1) s f a (insert acc (f (getn n a)))) Unit
 
 arrayFoldl f z a = arrayFoldlAux 1 (size a) f z a
 
-arrayFoldlAux i s f z a =
-    primIf (eq i (s + 1)) (fun _ -> z) (fun _ -> arrayFoldlAux (i + 1) s f (f z (get i a)) a) Unit
+arrayFoldlAux n s f z a =
+    primIf (eq n (s + 1)) (fun _ -> z) (fun _ -> arrayFoldlAux (n + 1) s f (f z (getn n a)) a) Unit
 
 repeatN f n =
     primIf (eq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit

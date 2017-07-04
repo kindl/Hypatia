@@ -1,7 +1,7 @@
 module Tests
 
 import Prelude((&), (==), (*), (+),
-    matches, print, inspect, boolToString, arrayFoldl,
+    matches, printTest, debug, boolToString, arrayFoldl,
         Unit, Tuple, insert, empty)
 import Geometry(Vec4, Mat4, transpose, multiply, dot)
 import List(foldl, append, Element, Empty)
@@ -26,7 +26,7 @@ testTranspose =
             (Vec4 3 13 29 43)
             (Vec4 5 17 31 47)
             (Vec4 7 19 37 53)
-    } in print ("transpose " & boolToString (transpose m1 == m1t))
+    } in printTest "transpose" (boolToString (transpose m1 == m1t))
 
 testMultiply =
     let {
@@ -35,27 +35,40 @@ testMultiply =
             (Vec4 5318 5562 5980 6246)
             (Vec4 10514 11006 11840 12378)
             (Vec4 15894 16634 17888 18710)
-    } in print ("multiply " & boolToString (multiply m1 m2 == m))
+    } in printTest "multiply" (boolToString (multiply m1 m2 == m))
 
 testPrecedence =
     let {
         v1 = 5 + 3 * 4
         v2 = 3 * 4 + 5
-    } in print ("precedence " & boolToString (v1 == v2))
+    } in printTest "precedence" (boolToString (v1 == v2))
 
-testDot = print ("dot prod " & boolToString (dot (Vec4 2 3 5 7) (Vec4 11 13 17 19) == 279))
+testDot =
+    let {
+        v1 = Vec4 2 3 5 7
+        v2 = Vec4 11 13 17 19
+    } in printTest "dot prod" (boolToString (dot v1 v2 == 279))
 
 testParens =
     let {
         v1 = (2 * 3) + (5 * 7) + (11 * 13)
         v2 =  2 * 3  +  5 * 7  +  11 * 13
-    } in print ("parens " & boolToString (v1 == v2))
+    } in printTest "parens" (boolToString (v1 == v2))
 
-testRight = print (inspect (matches m1 m1))
-testWrong = print (inspect (matches m1 m2))
-testInspect = print (inspect (multiply m2 m1))
+testEq =
+    let {
+        m = Mat4
+            (Vec4 2 3 5 7)
+            (Vec4 11 13 17 19)
+            (Vec4 23 29 31 37)
+            (Vec4 41 43 47 53)
+    } in printTest "eq" (boolToString (m1 == m))
+
+testRight = debug (matches m1 m1)
+testWrong = debug (matches m1 m2)
+testInspect = debug (multiply m2 m1)
 
 listToArray = foldl insert (empty Unit)
 arrayToList = arrayFoldl (fun z e -> append z (Element e Empty)) Empty
 
-testFoldls = print ("folds " & boolToString ((listToArray (arrayToList [1,2,3])) == [1,2,3]))
+testFoldls = printTest "folds " (boolToString ((listToArray (arrayToList [1,2,3])) == [1,2,3]))

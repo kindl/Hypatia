@@ -1,7 +1,7 @@
 module List
 
 import Prelude((&), (-), (+), Tuple, Unit,
-    split, get, size, empty, insert, compose)
+    split, getn, size, empty, insert, compose)
 
 enum List a = Empty | Element a (List a)
 
@@ -40,7 +40,7 @@ split sep text =
         splitted = Prelude.split sep text
             } in case size splitted of {
                 0 -> Empty
-                2 -> Element (get 1 splitted) (split sep (get 2 splitted))
+                2 -> Element (getn 1 splitted) (split sep (getn 2 splitted))
                     }
 
 words = split "%s+"

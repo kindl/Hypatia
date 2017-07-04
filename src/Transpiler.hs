@@ -101,7 +101,7 @@ toUnityScriptE (Func vs sts) =
     parens (text "function" <> parens (commas (fmap pPrint vs))
         $$ block (vcatMap toUnityScriptS sts))
 toUnityScriptE (Access v indices) =
-    pPrint v <> foldMap (\x -> brackets (int (x + 1))) indices
+    pPrint v <> foldMap (\x -> brackets (int x)) indices
 toUnityScriptE (Call e es) = toUnityScriptE e <> parens (commas (fmap toUnityScriptE es))
 toUnityScriptE (Arr es) = brackets (commas (fmap toUnityScriptE es))
 

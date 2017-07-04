@@ -85,9 +85,9 @@ function Native.isArray(t)
     return type(t) == "table"
 end
 
-function Native.get(i)
+function Native.getn(n)
     return function(a)
-        local r = a[i]
+        local r = a[n]
         if r == nil then error "Indexed nil" else return r end
     end
 end
@@ -142,7 +142,7 @@ end
 
 Native.sin = math.sin
 Native.cos = math.cos
-Native.print = print
+Native.write = print
 Native.file = love.filesystem.read
 Native.image = love.graphics.newImage
 Native.getWidth = love.graphics.getWidth

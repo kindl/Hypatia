@@ -8,7 +8,11 @@ import System.Environment
 compileFile path =
   do
     program <- loadProgram path
-    mapM_ (\mod -> writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (transpile mod))) program
+    mapM_ writeResult program
+
+writeResult mod = do
+    writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (transpile mod))
+    writeFile ("unityscript/" ++ pretty (getName mod) ++ ".js") (renderUnityScript (transpile mod))
 
 main =
   do

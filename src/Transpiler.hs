@@ -62,8 +62,48 @@ toLuaE (Access v indices) =
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 
-vcatMap f x = vcat (fmap f x) 
+{- UnityScript -}
+renderUnityScript sts = render (toUnityScript sts)
+
+-- tail and init drop the array and return needed for lua
+toUnityScript sts = vcatMap toUnityScriptT (tail (init sts))
+
+-- top level decls have to be static so that Example.x works
+toUnityScriptT (Assign (Name _ i) e) =
+    text "static" <+> toUnityScriptS (Assign (Name [] i) e)
+toUnityScriptT s = toUnityScriptS s
+
+{-
+This is a trick to allow recursion, otherwise:
+Definition of 'Example.Vec3' depends on 'Example.Vec3' whose type could not be resolved because of a cycle.
+-}
+toUnityScriptS (Assign x e@(Func _ _)) =
+    text "var" <+> pPrint x <+> text ": Object" <+> equals <+> toUnityScriptE e <> text ";"
+toUnityScriptS (Assign x e) =
+    text "var" <+> pPrint x <+> equals <+> toUnityScriptE e <> text ";"
+toUnityScriptS (Imp _) =
+    mempty
+toUnityScriptS (Ret e) =
+    text "return" <+> toUnityScriptE e <> text ";"
+toUnityScriptS (If e th []) =
+    text "if" <> parens (toUnityScriptE e) $$ block (vcatMap toUnityScriptS th)
+toUnityScriptS (If e th el) =
+    text "if" <> parens (toUnityScriptE e) $$ block (vcatMap toUnityScriptS th) $$ text "else" $$ block (vcatMap toUnityScriptS el)
+
+toUnityScriptE (Var x) = pPrint x
+toUnityScriptE (LitD d) = double d
+toUnityScriptE (LitT t) = text (show t)
+toUnityScriptE (Func vs sts) =
+    parens (text "function" <> parens (commas (fmap pPrint vs))
+        $$ block (vcatMap toUnityScriptS sts))
+toUnityScriptE (Access v indices) =
+    pPrint v <> foldMap (\x -> brackets (int (x + 1))) indices
+toUnityScriptE (Call e es) = toUnityScriptE e <> parens (commas (fmap toUnityScriptE es))
+toUnityScriptE (Arr es) = brackets (commas (fmap toUnityScriptE es))
+
+vcatMap f x = vcat (fmap f x)
 commas x = mintercalate (text ", ") x
+block s = text "{" $$ s $$ text "}"
 
 -- Transpile to simplified language
 transpile (ModuleDeclaration modName decls) =

@@ -1,11 +1,13 @@
 module Tests
 
 import Prelude((&), (==), (*), (+),
-    matches, printTest, debug, boolToString, arrayFoldl,
+    matches, write, inspect, boolToString, arrayFoldl,
         Unit, Tuple, insert, empty)
 import Geometry(Vec4, Mat4, transpose, multiply, dot)
 import List(foldl, append, Element, Empty)
 
+
+test name result = write (name & " " & inspect result)
 
 m1 = Mat4
     (Vec4 2 3 5 7)
@@ -26,7 +28,7 @@ testTranspose =
             (Vec4 3 13 29 43)
             (Vec4 5 17 31 47)
             (Vec4 7 19 37 53)
-    } in printTest "transpose" (boolToString (transpose m1 == m1t))
+    } in test "transpose" (boolToString (transpose m1 == m1t))
 
 testMultiply =
     let {
@@ -35,25 +37,31 @@ testMultiply =
             (Vec4 5318 5562 5980 6246)
             (Vec4 10514 11006 11840 12378)
             (Vec4 15894 16634 17888 18710)
-    } in printTest "multiply" (boolToString (multiply m1 m2 == m))
+    } in test "multiply" (boolToString (multiply m1 m2 == m))
 
 testPrecedence =
     let {
         v1 = 5 + 3 * 4
         v2 = 3 * 4 + 5
-    } in printTest "precedence" (boolToString (v1 == v2))
+    } in test "precedence" (boolToString (v1 == v2))
 
 testDot =
     let {
         v1 = Vec4 2 3 5 7
         v2 = Vec4 11 13 17 19
-    } in printTest "dot prod" (boolToString (dot v1 v2 == 279))
+    } in test "dot prod" (boolToString (dot v1 v2 == 279))
 
-testParens =
+testParens1 =
+    let {
+        v1 = (2 * 3) + (5 * 7)
+        v2 =  2 * 3  +  5 * 7
+    } in test "parens1" (boolToString (v1 == v2))
+
+testParens2 =
     let {
         v1 = (2 * 3) + (5 * 7) + (11 * 13)
         v2 =  2 * 3  +  5 * 7  +  11 * 13
-    } in printTest "parens" (boolToString (v1 == v2))
+    } in test "parens2" (boolToString (v1 == v2))
 
 testEq =
     let {
@@ -62,13 +70,13 @@ testEq =
             (Vec4 11 13 17 19)
             (Vec4 23 29 31 37)
             (Vec4 41 43 47 53)
-    } in printTest "eq" (boolToString (m1 == m))
+    } in test "eq" (boolToString (m1 == m))
 
-testRight = debug (matches m1 m1)
-testWrong = debug (matches m1 m2)
-testInspect = debug (multiply m2 m1)
+testRight = test "should be true:" (matches m1 m1)
+testWrong = test "should be false:" (matches m1 m2)
+testInspect = test "inspect" (multiply m2 m1)
 
 listToArray = foldl insert (empty Unit)
 arrayToList = arrayFoldl (fun z e -> append z (Element e Empty)) Empty
 
-testFoldls = printTest "folds " (boolToString ((listToArray (arrayToList [1,2,3])) == [1,2,3]))
+testFoldls = test "folds" (boolToString ((listToArray (arrayToList [1,2,3])) == [1,2,3]))

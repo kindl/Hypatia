@@ -117,10 +117,6 @@ primLazyAnd x f = primIf x f (fun _ -> x) Unit
 # IO
 write : Text -> Unit
 
-debug x = write (inspect x)
-
-printTest t x = write (t & inspect x)
-
 file : Path -> Text
 
 # Strings

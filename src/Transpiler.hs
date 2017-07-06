@@ -174,7 +174,7 @@ curryFunc e [] = e
 curryFunc e (v:vs) = Func [v] [Ret (curryFunc e vs)]
 
 transpileAlt (p, e) =
-    If (Call (Call (makeVar "Prelude.matches") [signat p]) [makeVar "_v"])
+    If (Call (Call (makeVar "Prelude.matches") [transpileP p]) [makeVar "_v"])
         (getAssignments [] p ++ [Ret (transpileE e)]) []
 
 getAssignments i (VariablePattern x) =
@@ -182,26 +182,26 @@ getAssignments i (VariablePattern x) =
 getAssignments i (AliasPattern x p) =
     Assign (fromId x) (Access (makeId "_v") i):getAssignments i p
 getAssignments i (ConstructorPattern _ ps) =
-    descAssignments i 1 ps
+    descendAssignments i 1 ps
 getAssignments i (ArrayPattern ps) =
-    descAssignments i 0 ps
+    descendAssignments i 0 ps
 getAssignments _ (LiteralPattern _) = []
 getAssignments _ Wildcard = []
 getAssignments _ p = error ("getAssignments on " ++ pretty p)
 
-descAssignments _ _ [] = []
-descAssignments i j (p:ps) =
-    getAssignments (i ++ [j]) p ++ descAssignments i (j + 1) ps
+descendAssignments _ _ [] = []
+descendAssignments i j (p:ps) =
+    getAssignments (i ++ [j]) p ++ descendAssignments i (j + 1) ps
 
 
-signat (ConstructorPattern c []) = Var c
-signat (ConstructorPattern c ps) = Arr (Var c : fmap signat ps)
-signat (VariablePattern _) = makeVar "Native.wildcard"
-signat (AliasPattern _ p) = signat p
-signat (LiteralPattern l) = transpileL l
-signat Wildcard = makeVar "Native.wildcard"
-signat (ArrayPattern ps) = Arr (fmap signat ps)
-signat p = error ("signat does not work on " ++ pretty p)
+transpileP (ConstructorPattern c []) = Var c
+transpileP (ConstructorPattern c ps) = Arr (Var c : fmap transpileP ps)
+transpileP (VariablePattern _) = makeVar "Native.wildcard"
+transpileP (AliasPattern _ p) = transpileP p
+transpileP (LiteralPattern l) = transpileL l
+transpileP Wildcard = makeVar "Native.wildcard"
+transpileP (ArrayPattern ps) = Arr (fmap transpileP ps)
+transpileP p = error ("transpileP does not work on " ++ pretty p)
 
 immediate sts = Call (Func [] sts) []
 

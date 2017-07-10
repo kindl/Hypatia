@@ -59,7 +59,7 @@ getDepsE e =
         f (Variable v) _ = [v]
         f (ConstructorExpression c) _ = [c]
         f (CaseLambdaExpression alts) cs =
-            excluding (foldMap (fmap fromId . getDefsP . fst) alts) (concat cs)
+            concat (zipWith (\(p, _) c -> excluding (fmap fromId (getDefsP p)) c) alts cs)
         f (LambdaExpression ps _) cs =
             excluding (foldMap (fmap fromId . getDefsP) ps) (concat cs)
         f (LetExpression decls _) cs =

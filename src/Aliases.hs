@@ -34,7 +34,7 @@ aliasOperators aliasTable = transformBi f . transformBi g . transformBi j
         ConstructorExpression (find c aliasTable)
     f e = e
 
-    g (InfixConstructorPattern a n b) =
+    g (PatternInfixOperator a n b) =
         makeOpPat (find n aliasTable) a b
     g (ConstructorPattern c ps) | isOperator (getId c) =
         ConstructorPattern (find c aliasTable) ps
@@ -80,7 +80,7 @@ aliasDeclarations (ModuleDeclaration modName decls) =
         
         h (TypeSignature op t) | isOperator op =
             TypeSignature (find op aliases) t
-        h d@(ExpressionDeclaration (InfixConstructorPattern p1 op p2) e) | isUnqualified op =
+        h d@(ExpressionDeclaration (PatternInfixOperator p1 op p2) e) | isUnqualified op =
             let alias = find (getId op) aliases
             in if isConstructor alias then d else FunctionDeclaration alias [p1, p2] e
         h (FunctionDeclaration op ps e) | isOperator op =

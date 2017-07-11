@@ -14,8 +14,8 @@ to the specified precedence and associativity
 -}
 fixAssoc operatorTable =
   let
-    g (InfixConstructorPattern a o1 (InfixConstructorPattern b o2 c)) =
-        fixAssocO operatorTable InfixConstructorPattern a o1 b o2 c
+    g (PatternInfixOperator a o1 (PatternInfixOperator b o2 c)) =
+        fixAssocO operatorTable PatternInfixOperator a o1 b o2 c
     g p = p
 
     f (InfixOperator a o1 (InfixOperator b o2 c)) =

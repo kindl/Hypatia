@@ -228,12 +228,12 @@ alt = do
     return (p, e)
 
 {- Patterns -}
-pat = infixConstructorPattern <|> lpat
-infixConstructorPattern = do
+pat = patternInfixOperator <|> lpat
+patternInfixOperator = do
     l <- lpat
     o <- qvarsym
     r <- pat
-    return (InfixConstructorPattern l o r)
+    return (PatternInfixOperator l o r)
  
 lpat = negativePattern <|> constructorPattern <|> apat
 negativePattern = do

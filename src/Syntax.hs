@@ -95,7 +95,7 @@ data Pattern
     | ConstructorPattern Name [Pattern]
     | ParenthesizedPattern Pattern
     | ArrayPattern [Pattern]
-    | InfixConstructorPattern Pattern Name Pattern
+    | PatternInfixOperator Pattern Name Pattern
     | AliasPattern Id Pattern
         deriving (Show, Data, Typeable)
 
@@ -161,7 +161,7 @@ instance Pretty Pattern where
     pPrint Wildcard = text "_"
     pPrint (ConstructorPattern name ps) =
         parens (pPrint name <+> mintercalate (text " ") (fmap pPrint ps))
-    pPrint (InfixConstructorPattern a op b) =
+    pPrint (PatternInfixOperator a op b) =
         parens (pPrint a <+> pPrint op <+> pPrint b)
     pPrint (ParenthesizedPattern p) =
         parens (pPrint p)

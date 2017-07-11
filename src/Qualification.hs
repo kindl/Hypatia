@@ -42,8 +42,8 @@ qualifyP quals pat =
     let
         f (ConstructorPattern c ps) =
             ConstructorPattern (findName c quals) ps
-        f (InfixConstructorPattern p1 op p2) =
-            InfixConstructorPattern p1 (findName op quals) p2
+        f (PatternInfixOperator p1 op p2) =
+            PatternInfixOperator p1 (findName op quals) p2
         f p = p
     in transform f pat
 
@@ -53,7 +53,7 @@ qualifyE quals (ConstructorExpression c) =
     ConstructorExpression (findName c quals)
 qualifyE quals (LetExpression decls e) =
     let newQuals = toLocals (foldMap captureNameD decls) `mappend` quals
-    in  LetExpression (fmap (qualifyD newQuals) decls) (qualifyE newQuals e)
+    in LetExpression (fmap (qualifyD newQuals) decls) (qualifyE newQuals e)
 qualifyE quals (CaseLambdaExpression alts) =
     CaseLambdaExpression (fmap (qualifyA quals) alts)
 qualifyE quals (LambdaExpression [p] e) =

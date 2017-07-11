@@ -245,14 +245,17 @@ constructorPattern = do
     ps <- some apat
     return (ConstructorPattern c ps)
 
-apat = asPattern <|> wildcard <|> variablePattern
+apat = wildcard <|> variablePattern
     <|> constructor <|> literalPattern  <|> parenthesizedPattern
         <|> arrayPattern
+{-
+TODO this should be apat and then var but it is left recursive
 asPattern = do
     v <- var
     token "as"
     p <- apat
     return (AliasPattern v p)
+-}
 variablePattern = fmap VariablePattern var
 constructor = do
     c <- qcon

@@ -111,11 +111,6 @@ function Native.insert(a)
     end
 end
 
-function Native.empty()
-    return {}
-end
-
--- access to a global state
 function Native.getState()
     return state
 end

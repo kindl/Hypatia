@@ -1,12 +1,10 @@
 module List
 
-import Prelude((&), (-), (+), Tuple, Unit,
-    split, getn, size, empty, insert, compose)
+import Prelude((&), (-), (+), Tuple, Unit, getn, size, empty, compose)
+import Array(insert)
+
 
 enum List a = Empty | Element a (List a)
-
-join s Empty = ""
-join s (Element e es) = e & s & join s es
 
 map f Empty = Empty
 map f (Element e es) = Element (f e) (map f es)
@@ -29,23 +27,7 @@ foldl f z (Element x xs) = foldl f (f z x) xs
 
 foldMap f = foldl (fun z e -> append z (f e)) Empty
 
-listToArray = foldl insert (empty Unit)
+listToArray = foldl insert []
 
 nth 1 (Element e _) = e
-nth n (Element _ es) = nth (n - 1) es 
-
-# Splits
-split sep text =
-    let {
-        splitted = Prelude.split sep text
-            } in case size splitted of {
-                0 -> Empty
-                2 -> Element (getn 1 splitted) (split sep (getn 2 splitted))
-                    }
-
-words = split "%s+"
-
-lines = split newline
-
-newline = "
-"
+nth n (Element _ es) = nth (n - 1) es

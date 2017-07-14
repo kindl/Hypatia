@@ -29,6 +29,7 @@ alias Numeral = Native.Numeral
 alias Text = Native.Text
 alias Path = Native.Text
 alias Array = Native.Array
+alias Bool = Native.Bool
 
 # Math
 negate : Numeral -> Numeral
@@ -49,6 +50,11 @@ sin : Numeral -> Numeral
 
 cos : Numeral -> Numeral
 
+# Primitive
+coerce : a -> b
+
+error : Text -> a
+
 # Arrays
 geti i = getn (i + 1)
 
@@ -56,16 +62,7 @@ getn : Numeral -> Array a -> a
 
 size : Array a -> Numeral
 
-isArray : a -> bool
-
-empty : Unit -> Array a
-
-insert : Array a -> a -> Array a
-
-# Primitive
-coerce : a -> b
-
-error : Text -> a
+isArray : a -> Bool
 
 # Logic
 
@@ -74,7 +71,7 @@ error : Text -> a
 genEq l r = toBoolean (genComp eq l r)
 
 ### Comparing Numerals, Strings and Constructors
-eq : e -> e -> b
+eq : e -> e -> Bool
 
 ## Matching
 wildcard : z
@@ -105,15 +102,15 @@ seqCompAux comp i maxN l r =
         primLazyAnd (comp (geti i l) (geti i r)) (fun _ -> seqCompAux comp (i + 1) maxN l r))
 
 # Working with built in boolean values
-primIf : bool -> val -> val -> val
+primIf : Bool -> val -> val -> val
 
 ### turn foreign bool into Boolean
 toBoolean val = primIf val True False
 
-primLazyOr : bool -> (Unit -> bool) -> bool
+primLazyOr : Bool -> (Unit -> Bool) -> Bool
 primLazyOr x f = primIf x (fun _ -> x) f Unit
 
-primLazyAnd : bool -> (Unit -> bool) -> bool
+primLazyAnd : Bool -> (Unit -> Bool) -> Bool
 primLazyAnd x f = primIf x f (fun _ -> x) Unit
 
 # IO
@@ -121,28 +118,15 @@ write : Text -> Unit
 
 file : Path -> Text
 
+repeatN f n =
+    primIf (eq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
+
 # Strings
 toString : a -> Text
 
 concat : Text -> Text -> Text
 
 toNumber : Text -> Numeral
-
-arrayMap f a = arrayMapAux 0 (size a) f a (empty Unit)
-
-arrayMapAux i maxN f a acc =
-    primIf (eq i maxN) (fun _ -> acc) (fun _ -> arrayMapAux (i + 1) maxN f a (insert acc (f (geti i a)))) Unit
-
-arrayFoldl f z a = arrayFoldlAux 0 (size a) f z a
-
-arrayFoldlAux i maxN f z a =
-    primIf (eq i maxN) (fun _ -> z) (fun _ -> arrayFoldlAux (i + 1) maxN f (f z (geti i a)) a) Unit
-
-repeatN f n =
-    primIf (eq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
-
-inspect x =
-    primIf (isArray x) (fun _ -> "{" & arrayFoldl (fun z i -> z & " " & inspect i) "" (coerce x) & "}") (fun _ -> toString x) Unit
 
 # Basic Types
 enum Option a = None | A a
@@ -179,6 +163,6 @@ fix f x = f (fix f) x
 sqrt x = x ^ 0.5
 
 # Categories
-id x = x
+identity x = x
 
 compose f g x = f (g x)

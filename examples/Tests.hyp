@@ -1,10 +1,10 @@
 module Tests
 
 import Prelude((&), (==), (*), (+),
-    matches, write, inspect, boolToString, arrayFoldl,
+    matches, write, boolToString, arrayFoldl,
         Unit, Tuple, insert, empty)
 import Geometry(Vec4, Mat4, transpose, multiply, dot)
-import List(foldl, append, Element, Empty)
+import Array(foldl, append, inspect)
 
 
 test name result = write (name & " " & inspect result)
@@ -75,8 +75,3 @@ testEq =
 testRight = test "should be true:" (matches m1 m1)
 testWrong = test "should be false:" (matches m1 m2)
 testInspect = test "inspect" (multiply m2 m1)
-
-listToArray = foldl insert (empty Unit)
-arrayToList = arrayFoldl (fun z e -> append z (Element e Empty)) Empty
-
-testFoldls = test "folds" (boolToString ((listToArray (arrayToList [1,2,3])) == [1,2,3]))

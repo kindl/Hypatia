@@ -1,10 +1,9 @@
 module Obj
 
-import Prelude((&), toNumber, file,
-    Numeral, compose)
+import Prelude((&), toNumber, file, geti,
+    Numeral, compose, arrayFoldMap, arrayMap)
 import Geometry(Vector, Vec4)
-import List(Empty, Element, List,
-    split, map, foldMap, lines, words)
+import Array(split, map, foldMap, lines, words, Array)
 
 
 alias V = Vector Native.Numeral
@@ -19,17 +18,17 @@ enum ObjElement
     = Vertex V
     | TextureCoordinate V
     | Normal V
-    | Face (List VertexIndex)
+    | Face (Array VertexIndex)
     | Comment
 
-toFace (Face f) = Element f Empty
-toFace _ = Empty
+toFace (Face f) = [f]
+toFace _ = []
 
-toVertex (Vertex v) = Element v Empty
-toVertex _ = Empty
+toVertex (Vertex v) = [v]
+toVertex _ = []
 
-toNormal (Normal n) = Element n Empty
-toNormal _ = Empty
+toNormal (Normal n) = [n]
+toNormal _ = []
 
 getFaces = foldMap toFace
 getVertices = foldMap toVertex
@@ -37,28 +36,30 @@ getNormals = foldMap toNormal
 
 load filePath = map (compose matchLine words) (lines (file filePath))
 
-matchLine (Element "v" es) = Vertex (readVector es)
-matchLine (Element "vn" es) = Normal (readVector es)
-matchLine (Element "vt" es) = TextureCoordinate (readVector es)
-matchLine (Element "f" es) = Face (map readVI es)
-matchLine _ = Comment
+matchLine es =
+    case geti 0 es of {
+        "v" -> Vertex (readVector es)
+        "vn" -> Normal (readVector es)
+        "vt" -> TextureCoordinate (readVector es)
+        "f" -> Face (foldMap readVI es)
+        _ -> Comment
+    }
 
-readVector es = listToVector (map toNumber es)
-
-listToVector (Element v1 (Element v2 (Element v3 (Element v4 Empty)))) =
-    Vec4 v1 v2 v3 v4
-listToVector (Element v1 (Element v2 (Element v3 Empty))) =
-    Vec4 v1 v2 v3 1
-listToVector (Element v1 (Element v2 Empty)) =
-    Vec4 v1 v2 0 1
-listToVector (Element v1 Empty) =
-    Vec4 v1 0 0 1
+readVector [_, v1, v2, v3, v4] =
+    Vec4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)
+readVector [_, v1, v2, v3] =
+    Vec4 (toNumber v1) (toNumber v2) (toNumber v3) 1
+readVector [_, v1, v2] =
+    Vec4 (toNumber v1) (toNumber v2) 0 1
+readVector [_, v1] =
+    Vec4 (toNumber v1) 0 0 1
 
 readVI s = case split "/" s of {
-    Element vi Empty -> VI (toNumber vi)
-    # TODO why this line?
-    Element vi (Element "" Empty) -> VI (toNumber vi)
-    Element vi (Element vt Empty) -> VTI (toNumber vi) (toNumber vt)
-    Element vi (Element "" (Element vn Empty)) -> VNI (toNumber vi) (toNumber vn)
-    Element vi (Element vt (Element vn Empty)) -> VTNI (toNumber vi) (toNumber vt) (toNumber vn)
+    # ignore first letter
+    ["f"] -> []
+    [vi] -> [VI (toNumber vi)]
+    [vi, ""] -> [VI (toNumber vi)]
+    [vi, vt] -> [VTI (toNumber vi) (toNumber vt)]
+    [vi, "", vn] -> [VNI (toNumber vi) (toNumber vn)]
+    [vi, vt, vn] -> [VTNI (toNumber vi) (toNumber vt) (toNumber vn)]
 }

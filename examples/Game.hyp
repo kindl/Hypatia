@@ -1,12 +1,12 @@
 module Game
 
-import Prelude((/), Tuple, Unit,
-    Numeral, Array, empty, insert, compose)
+import Prelude((/), Tuple, Unit, getn,
+    Numeral, Array, insert, compose)
 import Obj(getFaces, getVertices, getNormals,
     VTNI, VNI, VTI, VI)
 import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, normalize, to2d, multiply, transform)
-import List(map, nth, Empty, Element)
+import Array(map)
 
 
 # Primitives
@@ -33,10 +33,10 @@ faces = getFaces model
 
 vertices = getVertices model
 
-getPoint (VTNI v _ _) = nth v vertices
-getPoint (VNI v _) = nth v vertices
-getPoint (VTI v _) = nth v vertices
-getPoint (VI v) = nth v vertices
+getPoint (VTNI v _ _) = getn v vertices
+getPoint (VNI v _) = getn v vertices
+getPoint (VTI v _) = getn v vertices
+getPoint (VI v) = getn v vertices
 
 transformPoint vector =
     let {
@@ -52,5 +52,6 @@ transformFace face = map (compose transformPoint getPoint) face
 
 drawFaces _ = map polygon trFaces
 
-tuplesToArray Empty = empty Unit
-tuplesToArray (Element (Tuple a b) es) = insert (insert (tuplesToArray es) a) b
+#tuplesToArray Empty = empty Unit
+#tuplesToArray (Element (Tuple a b) es) = insert (insert (tuplesToArray es) a) b
+tuplesToArray = Prelude.error "TODO"

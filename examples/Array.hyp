@@ -1,0 +1,43 @@
+module Array
+
+import Prelude((&), size, primIf, eq, (+), identity,
+    geti, Unit, isArray, coerce, toString)
+
+
+alias Array = Native.Array
+
+# Beware that insert is impure and changes the array
+insert : Array a -> a -> Array a
+
+split sep text =
+    case Prelude.split sep text of {
+        [] -> []
+        [a, b] -> append [a] (split sep b)
+    }
+
+words = split "%s+"
+
+lines = split newline
+
+newline = "
+"
+
+# Lua's insert changes the array
+# map applies a function and inserts the result in an empty array
+# so mapping the identity function yields a copy of the array
+copy a = map identity a
+
+# The first array is copied to avoid inserting the elements into a
+append a = foldl insert (copy a)
+
+map f = foldl (fun z e -> insert z (f e)) []
+
+foldMap f = foldl (fun z e -> append z (f e)) []
+
+foldl f z a = foldlAux 0 (size a) f z a
+
+foldlAux i maxN f z a =
+    primIf (eq i maxN) (fun _ -> z) (fun _ -> foldlAux (i + 1) maxN f (f z (geti i a)) a) Unit
+
+inspect x =
+    primIf (isArray x) (fun _ -> "{" & foldl (fun z i -> z & " " & inspect i) "" (coerce x) & "}") (fun _ -> toString x) Unit 

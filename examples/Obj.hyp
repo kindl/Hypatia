@@ -1,9 +1,9 @@
 module Obj
 
-import Prelude((&), toNumber, file, geti,
+import Prelude((&), toNumber, file, geti, error,
     Numeral, compose, arrayFoldMap, arrayMap)
 import Geometry(Vector, Vec4)
-import Array(split, map, foldMap, lines, words, Array)
+import Array(inspect, split, map, foldMap, lines, words, Array)
 
 
 alias V = Vector Native.Numeral
@@ -62,4 +62,5 @@ readVI s = case split "/" s of {
     [vi, vt] -> [VTI (toNumber vi) (toNumber vt)]
     [vi, "", vn] -> [VNI (toNumber vi) (toNumber vn)]
     [vi, vt, vn] -> [VTNI (toNumber vi) (toNumber vt) (toNumber vn)]
+    [] -> []
 }

@@ -15,24 +15,21 @@ split sep text =
         [a, b] -> append [a] (split sep b)
     }
 
-words = split "%s+"
+words a = split "%s+" a
 
-lines = split newline
+lines a = split newline a
 
 newline = "
 "
 
-# Lua's insert changes the array
-# map applies a function and inserts the result in an empty array
-# so mapping the identity function yields a copy of the array
-copy a = map identity a
+copy a = foldl insert [] a
 
 # The first array is copied to avoid inserting the elements into a
-append a = foldl insert (copy a)
+append a b = foldl insert (copy a) b
 
-map f = foldl (fun z e -> insert z (f e)) []
+map f a = foldl (fun z e -> insert z (f e)) [] a
 
-foldMap f = foldl (fun z e -> append z (f e)) []
+foldMap f a = foldl (fun z e -> append z (f e)) [] a
 
 foldl f z a = foldlAux 0 (size a) f z a
 

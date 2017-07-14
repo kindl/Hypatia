@@ -6,7 +6,7 @@ import Obj(getFaces, getVertices, getNormals,
     VTNI, VNI, VTI, VI)
 import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, normalize, to2d, multiply, transform)
-import Array(map)
+import Array(map, foldMap)
 
 
 # Primitives
@@ -52,6 +52,5 @@ transformFace face = map (compose transformPoint getPoint) face
 
 drawFaces _ = map polygon trFaces
 
-#tuplesToArray Empty = empty Unit
-#tuplesToArray (Element (Tuple a b) es) = insert (insert (tuplesToArray es) a) b
-tuplesToArray = Prelude.error "TODO"
+tuplesToArray a = foldMap tupleToArray a
+tupleToArray (Tuple a b) = [a, b]

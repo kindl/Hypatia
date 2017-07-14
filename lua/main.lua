@@ -1,4 +1,4 @@
-local Game = require "Spheres"
+local Game = require "Game"
 
 love.load = Game.load
 

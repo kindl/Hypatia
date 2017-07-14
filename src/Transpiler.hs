@@ -127,10 +127,12 @@ transpileE (LambdaExpression [Wildcard] e) =
     Func [makeId "_w"] [Ret (transpileE e)]
 transpileE (LambdaExpression [p] e) =
     Func [makeId "_v"] (transpileAlt (p, e) :
-        [Ret (Call (makeVar "Native.error") [LitT (pack "failed pattern match lambda")])])
+        [Ret (Call (makeVar "Native.error")
+            [LitT (pack ("failed pattern match lambda at " ++ positionInfoP p))])])
 transpileE (CaseLambdaExpression alts) =
     Func [makeId "_v"] (fmap transpileAlt alts ++
-        [Ret (Call (makeVar "Native.error") [LitT (pack "failed pattern match case lambda")])])
+        [Ret (Call (makeVar "Native.error")
+            [LitT (pack ("failed pattern match case lambda at " ++ positionInfoP (fst (head alts))))])])
 transpileE (LiteralExpression l) = transpileL l
 transpileE (LetExpression decls e) =
     immediate (foldMap transpileD decls ++ [Ret (transpileE e)])

@@ -240,6 +240,15 @@ find o m = mfind o m ()
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
+positionInfo (Id s p) = show p
+
+positionInfoName (Name _ i) = positionInfo i
+
+positionInfoP (VariablePattern v) = positionInfo v
+positionInfoP (ConstructorPattern c _) = positionInfoName c
+positionInfoP (ArrayPattern ps) = mintercalate " " (fmap positionInfoP ps)
+positionInfoP other = pretty other
+
 instance Monoid e => MonadPlus (Either e) where
     mzero = Left mempty
     mplus (Left sa) (Left sb) = Left (mappend sa sb)

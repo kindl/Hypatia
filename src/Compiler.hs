@@ -1,4 +1,4 @@
-module Transpiler where
+module Compiler where
 
 
 import Syntax
@@ -109,63 +109,63 @@ vcatMap f x = vcat (fmap f x)
 commas x = mintercalate (text ", ") x
 block s = text "{" $$ s $$ text "}"
 
--- Transpile to simplified language
-transpile (ModuleDeclaration modName decls) =
+-- Compile to simplified language
+compile (ModuleDeclaration modName decls) =
     -- TODO qualified module names
     -- A qualified module name leads to
     -- A.B.C = {} which is an error because A is undefined
     [Assign modName (Arr []), Imp (fromString "Native")]
-        ++ makeForeigns modName decls ++ foldMap (transpileTopD modName) decls
+        ++ makeForeigns modName decls ++ foldMap (compileTopD modName) decls
                     ++ [Ret (Var modName)]
 
-transpileE (Variable v) = Var v
-transpileE (ConstructorExpression c) = Var c
-transpileE (FunctionApplication f e) = Call (transpileE f) [transpileE e]
-transpileE (LambdaExpression [VariablePattern v] e) =
-    Func [v] [Ret (transpileE e)]
-transpileE (LambdaExpression [Wildcard] e) =
-    Func [makeId "_w"] [Ret (transpileE e)]
-transpileE (LambdaExpression [p] e) =
-    Func [makeId "_v"] (transpileAlt (p, e) :
+compileE (Variable v) = Var v
+compileE (ConstructorExpression c) = Var c
+compileE (FunctionApplication f e) = Call (compileE f) [compileE e]
+compileE (LambdaExpression [VariablePattern v] e) =
+    Func [v] [Ret (compileE e)]
+compileE (LambdaExpression [Wildcard] e) =
+    Func [makeId "_w"] [Ret (compileE e)]
+compileE (LambdaExpression [p] e) =
+    Func [makeId "_v"] (compileAlt (p, e) :
         [Ret (Call (makeVar "Native.error")
             [LitT (pack ("failed pattern match lambda at " ++ positionInfoP p))])])
-transpileE (CaseLambdaExpression alts) =
-    Func [makeId "_v"] (fmap transpileAlt alts ++
+compileE (CaseLambdaExpression alts) =
+    Func [makeId "_v"] (fmap compileAlt alts ++
         [Ret (Call (makeVar "Native.error")
             [LitT (pack ("failed pattern match case lambda at " ++ positionInfoP (fst (head alts))))])])
-transpileE (LiteralExpression l) = transpileL l
-transpileE (LetExpression decls e) =
-    immediate (foldMap transpileD decls ++ [Ret (transpileE e)])
-transpileE (IfExpression c th el) =
-    immediate [If (eqTrue (transpileE c)) [Ret (transpileE th)] [Ret (transpileE el)]]
-transpileE (ArrayExpression es) =
-    Arr (fmap transpileE es)
-transpileE e = error ("transpileE does not work on " ++ show e)
+compileE (LiteralExpression l) = compileL l
+compileE (LetExpression decls e) =
+    immediate (foldMap compileD decls ++ [Ret (compileE e)])
+compileE (IfExpression c th el) =
+    immediate [If (eqTrue (compileE c)) [Ret (compileE th)] [Ret (compileE el)]]
+compileE (ArrayExpression es) =
+    Arr (fmap compileE es)
+compileE e = error ("compileE does not work on " ++ show e)
 
 eqTrue e =
     Call (Call (makeVar "Native.eq") [makeVar "Prelude.True"]) [e]
 
-transpileL (Numeral n) = LitD n
-transpileL (Text t) = LitT t
+compileL (Numeral n) = LitD n
+compileL (Text t) = LitT t
 
-transpileTopD _ (ImportDeclaration modName _) = [Imp modName]
-transpileTopD _ (FixityDeclaration _ _ _ _) = []
-transpileTopD modName (EnumDeclaration _ _ cs) = fmap (transpileEnum modName) cs
-transpileTopD modName (ExpressionDeclaration (VariablePattern x) e) =
-    [Assign (qualifyId modName x) (transpileE e)]
-transpileTopD _ other = transpileD other
+compileTopD _ (ImportDeclaration modName _) = [Imp modName]
+compileTopD _ (FixityDeclaration _ _ _ _) = []
+compileTopD modName (EnumDeclaration _ _ cs) = fmap (compileEnum modName) cs
+compileTopD modName (ExpressionDeclaration (VariablePattern x) e) =
+    [Assign (qualifyId modName x) (compileE e)]
+compileTopD _ other = compileD other
 
-transpileD (ExpressionDeclaration (VariablePattern x) e) =
-    [Assign (fromId x) (transpileE e)]
-transpileD (ExpressionDeclaration Wildcard e) =
-    [Assign (fromString "_w") (transpileE e)]
-transpileD (TypeSignature _ _) = []
-transpileD (AliasDeclaration _ _) = []
-transpileD other = error ("transpileD does not work on " ++ show other)
+compileD (ExpressionDeclaration (VariablePattern x) e) =
+    [Assign (fromId x) (compileE e)]
+compileD (ExpressionDeclaration Wildcard e) =
+    [Assign (fromString "_w") (compileE e)]
+compileD (TypeSignature _ _) = []
+compileD (AliasDeclaration _ _) = []
+compileD other = error ("compileD does not work on " ++ show other)
 
-transpileEnum modName (c, []) =
+compileEnum modName (c, []) =
     Assign (qualifyId modName c) (Func [] [])
-transpileEnum modName (c, vs) =
+compileEnum modName (c, vs) =
     let
         name = qualifyId modName c
         vars = nNewVars (length vs)
@@ -175,9 +175,9 @@ transpileEnum modName (c, vs) =
 curryFunc e [] = e
 curryFunc e (v:vs) = Func [v] [Ret (curryFunc e vs)]
 
-transpileAlt (p, e) =
-    If (Call (Call (makeVar "Prelude.matches") [transpileP p]) [makeVar "_v"])
-        (getAssignments [] p ++ [Ret (transpileE e)]) []
+compileAlt (p, e) =
+    If (Call (Call (makeVar "Prelude.matches") [compileP p]) [makeVar "_v"])
+        (getAssignments [] p ++ [Ret (compileE e)]) []
 
 getAssignments i (VariablePattern x) =
     [Assign (fromId x) (Access (makeId "_v") i)]
@@ -196,14 +196,14 @@ descendAssignments i j (p:ps) =
     getAssignments (i ++ [j]) p ++ descendAssignments i (j + 1) ps
 
 
-transpileP (ConstructorPattern c []) = Var c
-transpileP (ConstructorPattern c ps) = Arr (Var c : fmap transpileP ps)
-transpileP (VariablePattern _) = makeVar "Native.wildcard"
-transpileP (AliasPattern _ p) = transpileP p
-transpileP (LiteralPattern l) = transpileL l
-transpileP Wildcard = makeVar "Native.wildcard"
-transpileP (ArrayPattern ps) = Arr (fmap transpileP ps)
-transpileP p = error ("transpileP does not work on " ++ pretty p)
+compileP (ConstructorPattern c []) = Var c
+compileP (ConstructorPattern c ps) = Arr (Var c : fmap compileP ps)
+compileP (VariablePattern _) = makeVar "Native.wildcard"
+compileP (AliasPattern _ p) = compileP p
+compileP (LiteralPattern l) = compileL l
+compileP Wildcard = makeVar "Native.wildcard"
+compileP (ArrayPattern ps) = Arr (fmap compileP ps)
+compileP p = error ("compileP does not work on " ++ pretty p)
 
 immediate sts = Call (Func [] sts) []
 

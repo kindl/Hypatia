@@ -1,7 +1,7 @@
 module Main(main) where
 
 import ModuleSystem
-import Transpiler
+import Compiler
 import Syntax
 import System.Environment
 
@@ -11,8 +11,8 @@ compileFile path =
     mapM_ writeResult program
 
 writeResult mod = do
-    writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (transpile mod))
-    writeFile ("unityscript/" ++ pretty (getName mod) ++ ".js") (renderUnityScript (transpile mod))
+    writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (compile mod))
+    writeFile ("unityscript/" ++ pretty (getName mod) ++ ".js") (renderUnityScript (compile mod))
 
 main =
   do

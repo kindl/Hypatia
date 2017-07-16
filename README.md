@@ -2,7 +2,7 @@
 Hello stranger,
 
 
-How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML family. As it is tradition, my name was given to honour a [dead mathematician](https://en.wikipedia.org/wiki/Hypatia). Who I am? Well isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, Purescript and Elm, but I transpile to Lua. I am walking in the footsteps of my ancestors, but I want to be different: I want to make games. So let me tell you about me.
+How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML family. As it is tradition, my name was given to honour a [dead mathematician](https://en.wikipedia.org/wiki/Hypatia). Who I am? Well isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, Purescript and Elm, but I compile to Lua. I am walking in the footsteps of my ancestors, but I want to be different: I want to make games. So let me tell you about me.
 
 ### My Appearance
 ```
@@ -38,8 +38,8 @@ Let me tell you about my daily routine:
 * Simplifier: I can't think before I had my coffee. A sip from the Simplifier and my world looks much clearer.
 * Aliases: Time to brush my teeth. The Aliases brushes out all the bacteria and rename complicated patterns and types to simpler ones.
 * Typechecker: Now I start with the actual work and I check if my types are correct.
-* Sorting: In the evening, my creativity awakes. I sort my let-bindings and transpile my syntax tree into an imperative dynamic language.
-* Transpiler: At night, I write the result down in lua, so that I don't forget anything.
+* Sorting: In the evening, my creativity awakes. I sort my let-bindings and compile my syntax tree into an imperative dynamic language.
+* Compiler: At night, I write the result down in lua, so that I don't forget anything.
 * ModuleSystem: Is it bedtime already? Again? Tomorrow will be a good day, good that I have everything planned in my ModuleSystem.
 
 It was nice to talk with you stranger.

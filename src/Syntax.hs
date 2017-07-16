@@ -132,11 +132,11 @@ pretty p = render (pPrint p)
 
 instance Pretty Position where
     pPrint (Position l c) =
-        text "line" <+> pPrint l <+> text "column" <+> pPrint c
+        text "line:" <+> pPrint l <+> text "column:" <+> pPrint c
 
 instance Pretty Location where
     pPrint (Location s e f) =
-        text "start" <+> pPrint s <+> text "end" <+> pPrint e <+> pPrint f    
+        text "start:" <+> pPrint s <+> text "end:" <+> pPrint e <+> pPrint f    
 
 instance Pretty Type where
     pPrint (UniVariable _) = text "u."
@@ -240,7 +240,7 @@ find o m = mfind o m ()
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
-positionInfo (Id s p) = show p
+positionInfo (Id s l) = pretty l
 
 positionInfoName (Name _ i) = positionInfo i
 

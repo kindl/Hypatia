@@ -261,7 +261,9 @@ toText = foldr Text.cons mempty
 
 verbatim = do
     char '"'
-    -- TODO escape quote
-    cs <- takeWhile (/='"')
+    cs <- many (stringChar <|> escapeSeq)
     char '"'
-    return cs
+    return (Text.pack cs)
+
+stringChar = satisfy (\x -> x /='"' && x /= '\\')
+escapeSeq = char '\\' *> (char '\\' <|> char '"')

@@ -7,7 +7,7 @@ import Prelude((+), (*), (/), (-),
 # Vectors
 enum Vector a = Vec4 a a a a
 
-to2d (Vec4 x y _ w) = Tuple (x / w) (y / 2)
+to2d (Vec4 x y _ w) = Tuple (x / w) (y / w)
 
 scale f (Vec4 a b c d) = 
     Vec4 (f * a) (f * b) (f * c) (f * d)

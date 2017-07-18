@@ -128,12 +128,12 @@ compileE (LambdaExpression [Wildcard] e) =
 compileE (LambdaExpression [p] e) =
     Func [makeId "_v"] (compileAlt (p, e) :
         [Ret (Call (makeVar "Native.error")
-            [LitT (pack ("failed pattern match lambda at " ++ positionInfoP p))])])
+            [LitT (pack ("failed pattern match lambda at " ++ locationInfoP p))])])
 compileE (CaseLambdaExpression alts) =
     Func [makeId "_v"] (fmap compileAlt alts ++
         [Ret (Call (makeVar "Native.error")
             [LitT (pack ("failed pattern match case lambda at "
-                ++ mintercalate " " (fmap (positionInfoP . fst) alts)))])])
+                ++ mintercalate " " (fmap (locationInfoP . fst) alts)))])])
 compileE (LiteralExpression l) = compileL l
 compileE (LetExpression decls e) =
     immediate (foldMap compileD decls ++ [Ret (compileE e)])

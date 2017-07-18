@@ -50,6 +50,8 @@ sin : Numeral -> Numeral
 
 cos : Numeral -> Numeral
 
+sqrt x = x ^ 0.5
+
 # Primitive
 coerce : a -> b
 
@@ -156,13 +158,20 @@ enum Tuple a b = Tuple a b
 # Text
 split : Text -> Text -> Array Text
 
-# Fix
+# Functions
 fix f x = f (fix f) x
 
-# Game
-sqrt x = x ^ 0.5
 
-# Categories
+infixr 0 <| reverseApply
+
+reverseApply f a = f a
+
+
+infixl 0 |> apply
+
+apply a f = f a
+
+
 identity x = x
 
 compose f g x = f (g x)

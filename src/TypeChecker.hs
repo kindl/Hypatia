@@ -270,7 +270,7 @@ generalize ty = do
     env <- getEnv
     envVars <- traverse freeVars env
     qualVars <- fmap (excluding (concat envVars)) (freeVars ty)
-    ids <- traverse newBound qualVars
+    ids <- traverse newBound (nub qualVars)
     z <- zonk ty
     return (makeForAll ids z)
 

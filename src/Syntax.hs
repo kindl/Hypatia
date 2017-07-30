@@ -136,7 +136,9 @@ instance Pretty Position where
 
 instance Pretty Location where
     pPrint (Location s e f) =
-        text "start:" <+> pPrint s <+> text "end:" <+> pPrint e <+> pPrint f    
+        text "start" <+> parens (pPrint s)
+            <+> text "end" <+> parens (pPrint e)
+            <+> text "in" <+> pPrint f    
 
 instance Pretty Type where
     pPrint (UniVariable _) = text "u."
@@ -245,8 +247,10 @@ locationInfo (Id s l) = pretty l
 locationInfoName (Name _ i) = locationInfo i
 
 locationInfoP (VariablePattern v) = locationInfo v
-locationInfoP (ConstructorPattern c _) = locationInfoName c
-locationInfoP (ArrayPattern ps) = mintercalate " " (fmap locationInfoP ps)
+locationInfoP (ConstructorPattern c ps) =
+    "(" ++ locationInfoName c ++ mintercalate " " (fmap locationInfoP ps) ++ ")"
+locationInfoP (ArrayPattern ps) =
+    mintercalate " " (fmap locationInfoP ps)
 locationInfoP other = pretty other
 
 instance Monoid e => MonadPlus (Either e) where

@@ -11,7 +11,7 @@ insert : Array a -> a -> Array a
 
 split sep text =
     case Prelude.split sep text of {
-        [] -> []
+        [] -> [text]
         [a, b] -> append [a] (split sep b)
     }
 

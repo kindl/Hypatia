@@ -56,12 +56,11 @@ end
 
 function Native.split(seperator)
     return function(s)
-        local l, r = s:match('(.-)' .. seperator ..'(.*)')
-        if l == nil then
-            return {}
-        else
-            return {l, r}
+        local result = {}
+        for item in s:gmatch("([^"..seperator.."]*)") do
+            table.insert(result, item)
         end
+        return result
     end
 end
 
@@ -88,7 +87,10 @@ end
 function Native.getn(n)
     return function(a)
         local r = a[n]
-        if r == nil then error "Indexed nil" else return r end
+        if r == nil
+            then error("Indexed nil with key " .. tostring(n))
+            else return r
+        end
     end
 end
 
@@ -143,7 +145,14 @@ Native.image = love.graphics.newImage
 Native.getWidth = love.graphics.getWidth
 Native.getHeight = love.graphics.getHeight
 Native.toString = tostring
-Native.toNumber = tonumber
+Native.toNumber = function(s)
+    r = tonumber(s)
+    if r == nil then
+        error("\"" .. s .. "\" is not a number")
+    else
+        return r
+    end
+end
 Native.error = error
 
 return Native

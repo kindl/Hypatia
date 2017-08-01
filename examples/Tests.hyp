@@ -2,10 +2,13 @@ module Tests
 
 import Prelude((&), (==), (*), (+),
     matches, write, boolToString, arrayFoldl,
-        Unit, Tuple, insert, empty)
+        Unit, Tuple, insert, empty, size)
 import Geometry(Vec4, Mat4, transpose, multiply, dot)
-import Array(foldl, append, inspect)
+import Array(foldl, append, inspect, words)
+import Obj
 
+
+testLoad = test "Obj.load" (Obj.load "cube.obj")
 
 test name result = write (name & " " & inspect result)
 
@@ -55,13 +58,13 @@ testParens1 =
     let {
         v1 = (2 * 3) + (5 * 7)
         v2 =  2 * 3  +  5 * 7
-    } in test "parens1" (boolToString (v1 == v2))
+    } in test "parens 1" (boolToString (v1 == v2))
 
 testParens2 =
     let {
         v1 = (2 * 3) + (5 * 7) + (11 * 13)
         v2 =  2 * 3  +  5 * 7  +  11 * 13
-    } in test "parens2" (boolToString (v1 == v2))
+    } in test "parens 2" (boolToString (v1 == v2))
 
 testEq =
     let {
@@ -72,6 +75,8 @@ testEq =
             (Vec4 41 43 47 53)
     } in test "eq" (boolToString (m1 == m))
 
-testRight = test "should be true:" (matches m1 m1)
-testWrong = test "should be false:" (matches m1 m2)
+testRight = test "should be true" (matches m1 m1)
+testWrong = test "should be false" (matches m1 m2)
 testInspect = test "inspect" (multiply m2 m1)
+
+testWords = test "words should be 3" (size (words "Hello Little World!"))

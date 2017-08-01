@@ -1,7 +1,7 @@
 module Array
 
 import Prelude((&), size, primIf, eq, (+), identity,
-    geti, Unit, isArray, coerce, toString)
+    geti, Unit, Text, isArray, coerce, toString)
 
 
 alias Array = Native.Array
@@ -9,18 +9,16 @@ alias Array = Native.Array
 # Beware that insert is impure and changes the array
 insert : Array a -> a -> Array a
 
-split sep text =
-    case Prelude.split sep text of {
-        [] -> [text]
-        [a, b] -> append [a] (split sep b)
-    }
+split : Text -> Text -> Array Text
 
-words a = split "%s+" a
+words a = split "%s" a
 
 lines a = split newline a
 
 newline = "
 "
+
+filter p a = foldMap (fun a -> if p a then [a] else []) a
 
 copy a = foldl insert [] a
 

@@ -109,6 +109,8 @@ primIf : Bool -> val -> val -> val
 ### turn foreign bool into Boolean
 toBoolean val = primIf val True False
 
+notEq a b = primIf (eq a b) False True
+
 primLazyOr : Bool -> (Unit -> Bool) -> Bool
 primLazyOr x f = primIf x (fun _ -> x) f Unit
 
@@ -155,8 +157,6 @@ enum Unit = Unit
 
 enum Tuple a b = Tuple a b
 
-# Text
-split : Text -> Text -> Array Text
 
 # Functions
 fix f x = f (fix f) x

@@ -1,9 +1,9 @@
 module Obj
 
-import Prelude((&), toNumber, file, geti, error,
+import Prelude((&), notEq, toNumber, file, getn, error,
     Numeral, compose, arrayFoldMap, arrayMap)
 import Geometry(Vector, Vec4)
-import Array(inspect, split, map, foldMap, lines, words, Array)
+import Array(filter, inspect, split, map, foldMap, lines, words, Array)
 
 
 alias V = Vector Native.Numeral
@@ -34,14 +34,17 @@ getFaces = foldMap toFace
 getVertices = foldMap toVertex
 getNormals = foldMap toNormal
 
-load filePath = map (compose matchLine words) (lines (file filePath))
+filteredWords s = filter (notEq "") (words s)
 
+load filePath = map (compose matchLine filteredWords) (lines (file filePath))
+
+matchLine [] = Comment
 matchLine es =
-    case geti 0 es of {
+    case getn 1 es of {
         "v" -> Vertex (readVector es)
         "vn" -> Normal (readVector es)
         "vt" -> TextureCoordinate (readVector es)
-        "f" -> Face (foldMap readVI es)
+        "f" -> Face (map readVI (filter (notEq "f") es))
         _ -> Comment
     }
 
@@ -55,12 +58,9 @@ readVector [_, v1] =
     Vec4 (toNumber v1) 0 0 1
 
 readVI s = case split "/" s of {
-    # ignore first letter
-    ["f"] -> []
-    [vi] -> [VI (toNumber vi)]
-    [vi, ""] -> [VI (toNumber vi)]
-    [vi, vt] -> [VTI (toNumber vi) (toNumber vt)]
-    [vi, "", vn] -> [VNI (toNumber vi) (toNumber vn)]
-    [vi, vt, vn] -> [VTNI (toNumber vi) (toNumber vt) (toNumber vn)]
-    [] -> []
+    [vi] -> VI (toNumber vi)
+    [vi, vt] -> VTI (toNumber vi) (toNumber vt)
+    [vi, "", vn] -> VNI (toNumber vi) (toNumber vn)
+    [vi, vt, vn] -> VTNI (toNumber vi) (toNumber vt) (toNumber vn)
+    other -> error (inspect other)
 }

@@ -59,18 +59,18 @@ aliasDecls decls =
         h (TypeSignature op t) | isOperator op =
             TypeSignature (find op aliases) t
         h (AliasDeclaration op a) =
-            AliasDeclaration (makeConstructor aliases op) a
+            AliasDeclaration (findConstructor aliases op) a
         h (EnumDeclaration op vars constructors) =
-            EnumDeclaration (makeConstructor aliases op) vars
-                (fmap (first (makeConstructor aliases)) constructors)
+            EnumDeclaration (findConstructor aliases op) vars
+                (fmap (first (findConstructor aliases)) constructors)
         h d = d
     in fmap h decls
 
-makeConstructor aliases op | isOperator op =
+findConstructor aliases op | isOperator op =
     let alias = find op aliases in
         if isConstructor alias then alias else
             error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
-makeConstructor _ op = op
+findConstructor _ op = op
 
 removeParens m = (transformBi f . transformBi g . transformBi h) m
   where

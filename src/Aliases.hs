@@ -3,8 +3,9 @@ module Aliases where
 import Syntax
 import Data.Generics.Uniplate.Data(transformBi)
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, fromList)
+import Data.HashMap.Strict(lookup, fromList, HashMap)
 import Data.Maybe(fromMaybe)
+import Control.Arrow(first)
 
 
 -- TODO rename modules with aliases
@@ -22,29 +23,51 @@ aliasTypes aliasTable = transformBi f . transformBi g . transformBi j
         fromMaybe t (lookup c aliasTable)
     j t = t
 
-aliasOperators aliasTable = transformBi f . transformBi g . transformBi j
+aliasOperators aliases = transformBi f . transformBi g . transformBi j
   where
     f (PrefixNegation e) =
         FunctionApplication (Variable (fromString "Prelude.negate")) e  
     f (InfixOperator a n b) =
-        makeOp (find n aliasTable) a b
+        makeOp (find n aliases) a b
     f (Variable x) | isOperator (getId x) =
-        Variable (find x aliasTable)
+        Variable (find x aliases)
     f (ConstructorExpression c) | isOperator (getId c) =
-        ConstructorExpression (find c aliasTable)
+        ConstructorExpression (find c aliases)
     f e = e
 
     g (PatternInfixOperator a n b) =
-        makeOpPat (find n aliasTable) a b
+        makeOpPat (find n aliases) a b
     g (ConstructorPattern c ps) | isOperator (getId c) =
-        ConstructorPattern (find c aliasTable) ps
+        ConstructorPattern (find c aliases) ps
     g p = p
 
     j (TypeInfixOperator a n b) =
-        makeOpTyp (find n aliasTable) a b
+        makeOpTyp (find n aliases) a b
     j (TypeConstructor c) | isOperator (getId c) =
-        TypeConstructor (find c aliasTable)
+        TypeConstructor (find c aliases)
     j t = t
+
+aliasDecls decls =
+    let
+        aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
+
+        h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
+            ExpressionDeclaration (VariablePattern (find op aliases)) e
+        h (TypeSignature op t) | isOperator op =
+            TypeSignature (find op aliases) t
+        h (AliasDeclaration op a) =
+            AliasDeclaration (makeConstructor aliases op) a
+        h (EnumDeclaration op vars constructors) =
+            EnumDeclaration (makeConstructor aliases op) vars
+                (fmap (first (makeConstructor aliases)) constructors)
+        h d = d
+    in fmap h decls
+
+makeConstructor aliases op | isOperator op =
+    let alias = find op aliases in
+        if isConstructor alias then alias else
+            error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
+makeConstructor _ op = op
 
 removeParens m = (transformBi f . transformBi g . transformBi h) m
   where
@@ -56,57 +79,6 @@ removeParens m = (transformBi f . transformBi g . transformBi h) m
     
     h (ParenthesizedType t) = t
     h t = t
-
-{-
-Removes operators without imports
-
-infix + mul
-(+) : Number -> Number -> Number
-==> plus : Number -> Number -> Number
-
-Function Declaration
-infix * mul
-a * b = x
-==> (*) a b = x
-
-Constructor Pattern
-infix * Tuple
-a * b = x
-==> ((*) a b) = x
--}
-aliasDeclarations (ModuleDeclaration modName decls) =
-    let
-        aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
-        
-        h (TypeSignature op t) | isOperator op =
-            TypeSignature (find op aliases) t
-        h d@(ExpressionDeclaration (PatternInfixOperator p1 op p2) e) | isUnqualified op =
-            let alias = find (getId op) aliases
-            in if isConstructor alias then d else FunctionDeclaration alias [p1, p2] e
-        h (FunctionDeclaration op ps e) | isOperator op =
-            let alias = find op aliases
-            in if isConstructor alias
-                  then error ("Function Declaration with Constructor " ++ pretty op)
-                  else FunctionDeclaration alias ps e
-        h (EnumDeclaration op vars constructors) | isOperator op =
-            let alias = find op aliases
-            in if isConstructor alias
-                  then EnumDeclaration alias vars (fmap q constructors)
-                  else error ("Enum Declaration with Variable " ++ pretty op)
-        h (AliasDeclaration op a) | isOperator op =
-            let alias = find op aliases
-            in if isConstructor alias
-                  then AliasDeclaration op a
-                  else error ("Alias Declaration with Variable " ++ pretty op)
-        h d = d
-
-        q (op, ty) | isOperator op =
-            let alias = find op aliases
-            in if isConstructor alias
-                  then (alias, ty)
-                  else error ("Constructor with Variable " ++ pretty op)
-        q c = c
-    in ModuleDeclaration modName (fmap h decls)
 
 
 captureAliases (ModuleDeclaration modName decls) =

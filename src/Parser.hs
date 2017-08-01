@@ -92,7 +92,8 @@ aliasDeclaration = do
     
 decls = curlyBraces (sepBy decl (token ";"))
 decl = typeSignature <|> fixityDeclaration
-    <|> functionDeclaration <|> expressionDeclaration
+    <|> operatorDeclaration <|> functionDeclaration
+    <|> expressionDeclaration
     
 typeSignature = do
     v <- var
@@ -110,8 +111,14 @@ functionDeclaration = do
     ps <- some apat
     r <- rhs
     return (FunctionDeclaration v ps r)
+operatorDeclaration = do
+    p1 <- lpat
+    o <- varsym
+    p2 <- lpat
+    r <- rhs
+    return (FunctionDeclaration o [p1, p2] r)
 expressionDeclaration = do
-    p <- pat
+    p <- lpat
     r <- rhs
     return (ExpressionDeclaration p r)
 
@@ -246,8 +253,8 @@ constructorPattern = do
     return (ConstructorPattern c ps)
 
 apat = wildcard <|> variablePattern
-    <|> constructor <|> literalPattern  <|> parenthesizedPattern
-        <|> arrayPattern
+    <|> constructor <|> literalPattern
+    <|> parenthesizedPattern <|> arrayPattern
 {-
 TODO this should be apat and then var but it is left recursive
 asPattern = do

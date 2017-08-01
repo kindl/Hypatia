@@ -26,13 +26,17 @@ loadProgram path =
     return (fmap fst simplified)
 
 pipeline :: [(ModuleDeclaration, [(Name, Maybe [Id])])] -> [(ModuleDeclaration, [(Name, Maybe [Id])])]
-pipeline = sortDeclsMod . aliasProgram . aliasOperatorsProgram .
-    removeParens . fixAssocProgram . qualification .
-        simplifications . aliasDeclarationsProgram
+pipeline = sortDeclsMod . aliasProgram
+    . aliasOperatorsProgram . removeParens
+    . fixAssocProgram . qualification
+    . aliasDeclsProgram . simplifications
 
 qualification = fmap (first qualifyM)
 
-aliasDeclarationsProgram = fmap (first aliasDeclarations)
+aliasDeclsProgram = fmap (first aliasDeclsMod)
+
+aliasDeclsMod (ModuleDeclaration modName decls) =
+    ModuleDeclaration modName (aliasDecls decls)
 
 -- TODO search path
 -- Allow qualified modules

@@ -29,14 +29,9 @@ pipeline :: [(ModuleDeclaration, [(Name, Maybe [Id])])] -> [(ModuleDeclaration, 
 pipeline = sortDeclsMod . aliasProgram
     . aliasOperatorsProgram . removeParens
     . fixAssocProgram . qualification
-    . aliasDeclsProgram . simplifications
+    . simplifications
 
 qualification = fmap (first qualifyM)
-
-aliasDeclsProgram = fmap (first aliasDeclsMod)
-
-aliasDeclsMod (ModuleDeclaration modName decls) =
-    ModuleDeclaration modName (aliasDecls decls)
 
 -- TODO search path
 -- Allow qualified modules

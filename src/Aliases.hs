@@ -23,7 +23,7 @@ aliasTypes aliasTable = transformBi f . transformBi g . transformBi j
         fromMaybe t (lookup c aliasTable)
     j t = t
 
-aliasOperators aliases = transformBi f . transformBi g . transformBi j
+aliasOperators aliases = transformBi f . transformBi g . transformBi j . transformBi h
   where
     f (PrefixNegation e) =
         FunctionApplication (Variable (fromString "Prelude.negate")) e  
@@ -46,6 +46,9 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j
     j (TypeConstructor c) | isOperator (getId c) =
         TypeConstructor (find c aliases)
     j t = t
+    
+    h (ModuleDeclaration modName decls) =
+        ModuleDeclaration modName (aliasDecls decls)
 
 aliasDecls decls =
     let

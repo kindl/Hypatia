@@ -62,5 +62,4 @@ readVI s = case split "/" s of {
     [vi, vt] -> VTI (toNumber vi) (toNumber vt)
     [vi, "", vn] -> VNI (toNumber vi) (toNumber vn)
     [vi, vt, vn] -> VTNI (toNumber vi) (toNumber vt) (toNumber vn)
-    other -> error (inspect other)
 }

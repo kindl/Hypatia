@@ -56,11 +56,16 @@ end
 
 function Native.split(seperator)
     return function(s)
-        local result = {}
-        for item in s:gmatch("([^"..seperator.."]*)") do
-            table.insert(result, item)
+        from, to = s:find(seperator)
+        if from == nil then
+            return {s}
+        else
+            result = s:sub(1, from)
+            tail = s:sub(to + 1)
+            rest = Native.split(seperator)(tail)
+            table.insert(rest, 1, result)
+            return rest
         end
-        return result
     end
 end
 

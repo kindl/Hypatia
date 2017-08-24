@@ -11,8 +11,8 @@ import Control.Monad(when, zipWithM)
 import Data.IORef(readIORef, writeIORef, newIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, transformM, descend)
 
-type Scheme = Type
-type Environment = HashMap Name Scheme
+
+type Environment = HashMap Name Type
 
 data TypecheckerState = TypecheckerState Environment (IORef Integer)
 
@@ -51,14 +51,14 @@ typecheck (CaseLambdaExpression alts) ty =
     alpha <- newTyVar
     beta <- newTyVar
     mapM_ (typecheckAlt alpha beta) alts
-    unify ty (TypeArrow alpha beta)
+    subsume (TypeArrow alpha beta) ty
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
     beta <- newTyVar
     info ("Typechecking lambda " ++ pretty p)
     typecheckAlt alpha beta (p, e)
-    unify ty (TypeArrow alpha beta)
+    subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
     let types = mapKeys fromId (foldMap gatherTypeSig decls)
@@ -80,8 +80,7 @@ typecheckVar x ty =
   do
     env <- getEnv
     scheme <- mfind x env
-    varTy <- instantiate scheme
-    unify varTy ty
+    subsume scheme ty
 
 typecheckAlt pty ety (pat, expr)  =
   do

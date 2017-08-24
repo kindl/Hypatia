@@ -82,7 +82,6 @@ data Type
     | ForAll [Id] Type
     | TypeVariable Id 
     | SkolemConstant Id
-    | UniVariable (IORef (Maybe Type))
         deriving (Data, Typeable)
 
 instance Show Type where
@@ -141,7 +140,6 @@ instance Pretty Location where
             <+> text "in" <+> pPrint f    
 
 instance Pretty Type where
-    pPrint (UniVariable _) = text "u."
     pPrint (TypeArrow a b) = parens (pPrint a <+> text "->" <+> pPrint b)
     pPrint (TypeInfixOperator a op b) =
         parens (pPrint a <+> pPrint op <+> pPrint b)

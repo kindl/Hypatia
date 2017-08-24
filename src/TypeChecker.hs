@@ -1,27 +1,30 @@
 module TypeChecker where
 
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, filterWithKey)
+import Data.HashMap.Strict(HashMap, fromList, filterWithKey, insert)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, ask, local)
 import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
 import Data.List(nub)
 import Data.Maybe(fromMaybe)
 import Control.Monad(when, zipWithM)
-import Data.IORef(readIORef, writeIORef, newIORef, IORef)
+import Data.IORef(readIORef, writeIORef, newIORef, modifyIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, transformM, descend)
 
 
 type Environment = HashMap Name Type
 
-data TypecheckerState = TypecheckerState Environment (IORef Integer)
+type Substitution = HashMap Id Type
+
+data TypecheckerState = TypecheckerState Environment (IORef Integer) (IORef Substitution)
 
 type Typechecker a = ReaderT TypecheckerState IO a
 
 typecheckModule env m =
   do
     r <- newIORef 0
-    runReaderT (inferModule m) (TypecheckerState env r)
+    s <- newIORef mempty
+    runReaderT (inferModule m) (TypecheckerState env r s)
 
 inferModule (ModuleDeclaration modName decls) =
   do
@@ -101,7 +104,7 @@ constructorToType ty vars (name, tys) =
     let
         res = foldl TypeApplication ty (fmap TypeVariable vars)
         resTy = foldr TypeArrow res tys
-        frees = excluding vars (bounds resTy)
+        frees = excluding vars (freeVars resTy)
     in case frees of
         [] -> singleton name (makeForAll vars resTy)
         _  -> error ("Type variables " ++ pretty frees
@@ -112,7 +115,7 @@ arrowsToList x = [x]
 
 -- Typecheck Bindings
 gatherTypeSig (TypeSignature name ty) =
-    singleton name (makeForAll (bounds ty) ty)
+    singleton name (makeForAll (freeVars ty) ty)
 gatherTypeSig _ = mempty
 
 -- the function assumes that the let bindings are already sorted
@@ -177,101 +180,89 @@ typecheckLiteral (Text _) ty =
     unify (TypeConstructor (fromString "Native.Text")) ty
 
 -- Unification
-unify (SkolemConstant x) (SkolemConstant y) | x == y = return ()
-unify (UniVariable r1) (UniVariable r2) | r1 == r2 = return ()
-unify (UniVariable r1) ty = unifyVar r1 ty
-unify ty (UniVariable r1) = unifyVar r1 ty
-unify (TypeApplication f1 e1) (TypeApplication f2 e2) =
+unify x y =
+  do
+    subst <- getSubst
+    unify' (apply subst x) (apply subst y) 
+
+unify' (SkolemConstant x) (SkolemConstant y) | x == y = return ()
+unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
+unify' (TypeVariable x) ty = unifyVar x ty
+unify' ty (TypeVariable x) = unifyVar x ty
+unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
   do
     unify f1 f2
     unify e1 e2
-unify (TypeArrow a1 b1) (TypeArrow a2 b2) =
+unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
   do
     unify a1 a2
     unify b1 b2
-unify (TypeConstructor a) (TypeConstructor b) =
+unify' (TypeConstructor a) (TypeConstructor b) =
     when (a /= b) (fail ("Cannot unify type constructors " ++ pretty a ++ " and " ++ pretty b))
-unify a b =
+unify' a b =
     fail ("Cannot unify " ++ pretty a ++ " and " ++ pretty b)
 
-unifyVar r ty2 = do
-    mty <- readRef r
-    case mty of
-        Just ty1 -> unify ty1 ty2
-        Nothing -> case ty2 of
-            UniVariable r2 -> do
-                mty2 <- readRef r2
-                case mty2 of
-                    Just ty -> unify (UniVariable r) ty
-                    Nothing -> writeRef r (Just (UniVariable r2))
-            _ -> do
-                when (occurs r ty2) (fail ("occurs in " ++ pretty ty2))
-                writeRef r (Just ty2)
+unifyVar x ty =
+  do
+    when (occurs x ty) (fail ("Occurs check"))
+    insertSubst x ty
 
 -- Does a type variable occur in a type?
-occurs x ty = elem x (unis ty)
+occurs x ty = elem x (freeVars ty)
 
 -- substitute bound variables with unification variables
 apply subst (ForAll vs ty) =
     let filteredSubst = filterWithKey (\k _ -> notElem k vs) subst
     in ForAll vs (apply filteredSubst ty)
-apply subst ty@(TypeVariable x) = fromMaybe ty (mfind x subst)
+apply subst ty@(TypeVariable x) = maybe ty (apply subst) (mfind x subst)
 apply subst ty = descend (apply subst) ty
 
--- substitute unification variables with types
-zonk ty =
-    let
-        f t@(UniVariable r) =
-            do
-                mty <- readRef r
-                maybe (return t) zonk mty
-        f t = return t
-    in transformM f ty
-
 -- Environment
-getEnv = fmap (\(TypecheckerState env _) -> env) ask
+getEnv = fmap (\(TypecheckerState env _ _) -> env) ask
+
+insertSubst k v =
+  do
+    r <- fmap (\(TypecheckerState _ _ s) -> s) ask
+    modifyRef r (insert k v)
+
+getSubst =
+  do
+    r <- fmap (\(TypecheckerState _ _ s) -> s) ask
+    readRef r
 
 with binds =
-    local (\(TypecheckerState env r) -> TypecheckerState (mappend binds env) r)
+    local (\(TypecheckerState env r s) -> TypecheckerState (mappend binds env) r s)
 
 -- Type Variables
 newUnique =
   do
-    TypecheckerState _ r <- ask
+    TypecheckerState _ r _ <- ask
     i <- readRef r
     writeRef r (i + 1)
     return i
 
-newTyVar = fmap UniVariable (newRef Nothing)
+newTyVar = fmap TypeVariable newUniqueName
 
--- extract unification variables
-unis ty = [u | UniVariable u <- universe ty]
+newUniqueName = fmap (makeId . ("t" ++) . show) newUnique
 
 -- extract skolem constants
 skolems ty = [c | SkolemConstant c <- universe ty]
 
--- extract bound variables
-bounds ty =
+-- extract free variables
+freeVars ty =
     let
         f (ForAll vars _) cs = excluding vars (concat cs)
         f (TypeVariable v) _ = [v]
         f _ cs = concat cs
     in para f ty
 
-freeVars ty = fmap unis (zonk ty)
-
-newBound r = do
-    n <- newUniqueName
-    writeRef r (Just (TypeVariable n))
-    return n
-
 generalize ty = do
+    subst <- getSubst
+    let ty' = apply subst ty
     env <- getEnv
-    envVars <- traverse freeVars env
-    qualVars <- fmap (excluding (concat envVars)) (freeVars ty)
-    ids <- traverse newBound (nub qualVars)
-    z <- zonk ty
-    return (makeForAll ids z)
+    let envVars = foldMap freeVars env
+    let qualVars = excluding envVars (freeVars ty')
+    return (makeForAll qualVars ty')
 
 instantiate (ForAll vars ty) =
   do
@@ -295,8 +286,6 @@ subsume (TypeArrow s1 s2) (TypeArrow s3 s4) =
     subsume s2 s4
 subsume t1 t2 = unify t1 t2
 
-newUniqueName = fmap (makeId . ("t" ++) . show) newUnique
-
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 ++ tvs2) ty
 makeForAll tvs ty =
@@ -307,8 +296,8 @@ makeForAll tvs ty =
 skolemise (ForAll vars ty) =
   do
     skolVars <- traverse (const newUniqueName) vars
-    let subs = zip vars (fmap SkolemConstant skolVars)
-    return (skolVars, apply (fromList subs) ty)
+    let subs = fromList (zip vars (fmap SkolemConstant skolVars))
+    return (skolVars, apply subs ty)
 skolemise ty = return ([], ty)
 
 info s = lift (putStrLn s)
@@ -318,6 +307,8 @@ writeRef s v = lift (writeIORef s v)
 readRef s = lift (readIORef s)
 
 newRef v = lift (newIORef v)
+
+modifyRef s f = lift (modifyIORef s f)
 
 mapKeys f m = fromList (fmap (first f) m)
 

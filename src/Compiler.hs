@@ -92,7 +92,7 @@ toUnityScriptS (If e th []) =
 toUnityScriptS (If e th el) =
     text "if" <> parens (toUnityScriptE e)
         $$ block (toUnityScriptS (Ret (immediate th)))
-        $$ text "else" $$ block (toUnityScriptS (Ret (immediate th)))
+        $$ text "else" $$ block (toUnityScriptS (Ret (immediate el)))
 
 toUnityScriptE (Var x) = pPrint x
 toUnityScriptE (LitD d) = double d

@@ -11,7 +11,6 @@ import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), parens, brackets, render)
-import Data.IORef(IORef)
 import Data.Generics.Uniplate.Data(universe)
 
 type Line = Integer

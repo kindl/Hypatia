@@ -3,7 +3,7 @@ module Aliases where
 import Syntax
 import Data.Generics.Uniplate.Data(transformBi)
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, fromList, HashMap)
+import Data.HashMap.Strict(lookup, fromList)
 import Data.Maybe(fromMaybe)
 import Control.Arrow(first)
 

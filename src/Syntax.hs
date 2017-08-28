@@ -32,7 +32,7 @@ instance Eq Id where
 instance Hashable Id where
     hashWithSalt s (Id t _) = hashWithSalt s t
 
-data Name = Name [Id] Id
+data Name = Name [Text] Id
     deriving (Show, Data, Typeable, Eq)
 
 instance Hashable Name where
@@ -121,8 +121,10 @@ mintercalate _ [] = mempty
 mintercalate p (x:xs) =
     x `mappend` foldMap (mappend p) xs
 
-qualify (Name modQs modName) (Name [] name) = Name (modQs ++ [modName]) name
+qualify (Name modQs modName) (Name [] name) = Name (modQs ++ [getText modName]) name
 qualify _ n = n
+
+getText (Id t _) = t
 
 qualifyId q n = qualify q (fromId n)
 
@@ -170,18 +172,21 @@ instance Pretty Pattern where
         brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint (Name qs s) = mintercalate (text ".") (fmap pPrint (qs ++ [s]))
+    pPrint (Name qs s) = mintercalate (text ".") (fmap pPrint qs ++ [pPrint s])
 
 instance Pretty Id where
-    pPrint (Id s _) = text (unpack s)
+    pPrint (Id s _) = pPrint s
+
+instance Pretty Text where
+    pPrint t = text (unpack t)
 
 prettyEnv m = render (foldrWithKey (\k v r -> pPrint k <+> text ":" <+> pPrint v $$ r) mempty m)
 
 fromString = fromText builtinLocation . pack
 
-fromText l s = case fmap (flip Id l) (split (== '.') s) of
-    [] -> error "Name from empty"
-    is -> Name (init is) (last is)
+fromText l s =
+    let is = split (== '.') s
+    in Name (init is) (Id (last is) l)
 
 fromId i = Name [] i
 

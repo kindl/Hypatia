@@ -13,6 +13,7 @@ import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), parens, brackets, render)
 import Data.Generics.Uniplate.Data(universe)
 
+
 type Line = Integer
 type Column = Integer
 data Position = Position Line Column
@@ -38,8 +39,6 @@ data Name = Name [Text] Id
 instance Hashable Name where
     hashWithSalt s (Name a b) = hashWithSalt s (a, b)
 
-type Precedence = Integer
-
 data ModuleDeclaration =
     ModuleDeclaration Name [Declaration]
         deriving (Show, Data, Typeable)
@@ -59,6 +58,8 @@ stringToFixity "infixr" = RightAssociative
 stringToFixity "infix" = None
 stringToFixity x = error ("Unknow associativity " ++ x)
 
+type Precedence = Integer
+type Alias = Id
 
 data Declaration
     = ImportDeclaration Name (Maybe [Id])
@@ -67,7 +68,7 @@ data Declaration
     | AliasDeclaration Id Type
     -- simplified to an expression declaration
     | FunctionDeclaration Id [Pattern] Expression
-    | FixityDeclaration Associativity Precedence Id Id
+    | FixityDeclaration Associativity Precedence Id Alias
     | TypeSignature Id Type
         deriving (Show, Data, Typeable)
 
@@ -81,10 +82,8 @@ data Type
     | ForAll [Id] Type
     | TypeVariable Id 
     | SkolemConstant Id
-        deriving (Data, Typeable)
+        deriving (Show, Data, Typeable)
 
-instance Show Type where
-    show = pretty
 
 data Pattern
     = VariablePattern Id
@@ -116,6 +115,7 @@ data Expression
 -- We could define type annotation as a function with type application
 --  | TypeAnnotation Expression Type
         deriving (Show, Data, Typeable)
+
 
 mintercalate _ [] = mempty
 mintercalate p (x:xs) =

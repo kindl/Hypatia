@@ -182,10 +182,11 @@ typecheckLiteral (Text _) ty =
 unify x y =
   do
     subst <- getSubst
-    unify' (apply subst x) (apply subst y) 
+    unify' (apply subst x) (apply subst y)
 
 unify' (SkolemConstant x) (SkolemConstant y) | x == y = return ()
 unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
+unify' (TypeConstructor a) (TypeConstructor b) | a == b = return ()
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
 unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
@@ -196,14 +197,12 @@ unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
   do
     unify a1 a2
     unify b1 b2
-unify' (TypeConstructor a) (TypeConstructor b) =
-    when (a /= b) (fail ("Cannot unify type constructors " ++ pretty a ++ " and " ++ pretty b))
 unify' a b =
     fail ("Cannot unify " ++ pretty a ++ " and " ++ pretty b)
 
 unifyVar x ty =
   do
-    when (occurs x ty) (fail ("Occurs check"))
+    when (occurs x ty) (fail ("Occurs check: " ++ pretty x ++ " occurs in " ++ pretty ty))
     insertSubst x ty
 
 -- Does a type variable occur in a type?
@@ -269,21 +268,27 @@ instantiate (ForAll vars ty) =
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 
-subsume scheme1 scheme2@(ForAll _ _) =
+subsume x y =
+  do
+    subst <- getSubst
+    subsume' (apply subst x) (apply subst y)
+
+subsume' scheme1 scheme2@(ForAll _ _) =
   do
     (skolVars, ty) <- skolemise scheme2
     subsume scheme1 ty
     let escVars = skolems scheme1 ++ skolems scheme2
-    when (null (including escVars skolVars)) (fail "Escape")
-subsume scheme@(ForAll _ _) t2 =
+    let escaped = including escVars skolVars
+    when (null escaped) (fail ("Escape check: " ++ pretty escaped))
+subsume' scheme@(ForAll _ _) t2 =
   do
     t1 <- instantiate scheme
     subsume t1 t2
-subsume (TypeArrow s1 s2) (TypeArrow s3 s4) =
+subsume' (TypeArrow s1 s2) (TypeArrow s3 s4) =
   do
     subsume s3 s1
     subsume s2 s4
-subsume t1 t2 = unify t1 t2
+subsume' t1 t2 = unify' t1 t2
 
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 ++ tvs2) ty

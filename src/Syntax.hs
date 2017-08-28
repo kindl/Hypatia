@@ -124,8 +124,6 @@ mintercalate p (x:xs) =
 qualify (Name modQs modName) (Name [] name) = Name (modQs ++ [getText modName]) name
 qualify _ n = n
 
-getText (Id t _) = t
-
 qualifyId q n = qualify q (fromId n)
 
 pretty p = render (pPrint p)
@@ -202,7 +200,11 @@ builtinLocation = Location (Position 0 0) (Position 0 0) ""
 
 makeId s = Id (pack s) builtinLocation
 
+getQualifiers (Name q _) = q
+
 getId (Name _ i) = i
+
+getText (Id t _) = t
 
 excluding xs = filter (flip notElem xs)
 
@@ -241,7 +243,7 @@ find o m = mfind o m ()
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
-locationInfo (Id s l) = pretty l
+locationInfo (Id _ l) = pretty l
 
 locationInfoName (Name _ i) = locationInfo i
 

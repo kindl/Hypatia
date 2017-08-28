@@ -172,13 +172,10 @@ instance Pretty Pattern where
         brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint (Name qs s) = mintercalate (text ".") (fmap pPrint qs ++ [pPrint s])
+    pPrint (Name qs s) = mintercalate (text ".") (fmap (text . unpack) qs ++ [pPrint s])
 
 instance Pretty Id where
-    pPrint (Id s _) = pPrint s
-
-instance Pretty Text where
-    pPrint t = text (unpack t)
+    pPrint (Id s _) = text (unpack s)
 
 prettyEnv m = render (foldrWithKey (\k v r -> pPrint k <+> text ":" <+> pPrint v $$ r) mempty m)
 

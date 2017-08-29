@@ -4,11 +4,12 @@ import ModuleSystem
 import Compiler
 import Syntax
 import System.Environment
+import Data.Foldable(traverse_)
 
 compileFile path =
   do
     program <- loadProgram path
-    mapM_ writeResult program
+    traverse_ writeResult program
 
 writeResult mod = do
     writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (compile mod))

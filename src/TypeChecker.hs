@@ -9,6 +9,7 @@ import Data.List(nub)
 import Control.Monad(when, zipWithM)
 import Data.IORef(readIORef, writeIORef, newIORef, modifyIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
+import Data.Foldable(traverse_)
 
 
 type Environment = HashMap Name Type
@@ -52,7 +53,7 @@ typecheck (CaseLambdaExpression alts) ty =
   do
     alpha <- newTyVar
     beta <- newTyVar
-    mapM_ (typecheckAlt alpha beta) alts
+    traverse_ (typecheckAlt alpha beta) alts
     subsume (TypeArrow alpha beta) ty
 typecheck (LambdaExpression [p] e) ty =
   do
@@ -74,7 +75,7 @@ typecheck (IfExpression c th el) ty =
 typecheck (ArrayExpression es) ty =
   do
     alpha <- newTyVar
-    mapM_ (flip typecheck alpha) es
+    traverse_ (flip typecheck alpha) es
     unify (TypeApplication (TypeConstructor (fromString "Native.Array")) alpha) ty
 typecheck other _ = fail ("Typecheck " ++ show other)
 

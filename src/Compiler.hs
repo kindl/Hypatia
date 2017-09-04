@@ -149,7 +149,7 @@ eqTrue e =
 compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
 
-compileTopD _ (ImportDeclaration modName _) = [Imp modName]
+compileTopD _ (ImportDeclaration modName _ _) = [Imp modName]
 compileTopD _ (FixityDeclaration _ _ _ _) = []
 compileTopD modName (EnumDeclaration _ _ cs) = fmap (compileEnum modName) cs
 compileTopD modName (ExpressionDeclaration (VariablePattern x) e) =

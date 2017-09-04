@@ -62,7 +62,7 @@ type Precedence = Integer
 type Alias = Id
 
 data Declaration
-    = ImportDeclaration Name (Maybe [Id])
+    = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
     | EnumDeclaration Id [Id] [(Id, [Type])]
     | ExpressionDeclaration Pattern Expression
     | AliasDeclaration Id Type

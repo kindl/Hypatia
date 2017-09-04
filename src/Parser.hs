@@ -71,7 +71,8 @@ impdecl = do
     token "import"
     name <- modid
     spec <- optional impspec
-    return (ImportDeclaration name spec)
+    asAlias <- optional (token "as" *> modid)
+    return (ImportDeclaration name spec asAlias)
 
 impspec = parenthesized (sepBy spec (token ","))
 

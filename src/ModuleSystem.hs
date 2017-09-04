@@ -118,4 +118,4 @@ getDecls (ModuleDeclaration _ decls) = decls
 getName (ModuleDeclaration name _) = name
 
 gatherImports decls = 
-    [(name, spec) | ImportDeclaration name spec <- decls]
+    [(name, spec) | ImportDeclaration name spec _ <- decls]

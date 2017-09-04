@@ -21,10 +21,8 @@ qualifyD quals (TypeSignature id t) =
     TypeSignature id (qualifyT quals t)
 qualifyD quals (FunctionDeclaration id ps e) =
     FunctionDeclaration id (fmap (qualifyP quals) ps) (qualifyE quals e)
-qualifyD _ (ImportDeclaration modName spec) =
-    ImportDeclaration modName spec
-qualifyD _ (FixityDeclaration a p id name) =
-    FixityDeclaration a p id name
+qualifyD _ decl@(ImportDeclaration _ _ _) = decl
+qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
 
 qualifyC quals (c, ts) =
     (c, fmap (qualifyT quals) ts)
@@ -68,7 +66,7 @@ qualifyA quals (p, e) =
     let newQuals = toLocals (getDefsP p) `mappend` quals
     in (qualifyP newQuals p, qualifyE newQuals e)
 
-captureImport (ImportDeclaration modName (Just ids)) =
+captureImport (ImportDeclaration modName (Just ids) _) =
     toQualifieds modName ids
 captureImport _ = mempty
 

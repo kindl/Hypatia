@@ -13,7 +13,7 @@ compileFile path =
 
 writeResult mod = do
     writeFile ("lua/" ++ pretty (getName mod) ++ ".lua") (renderLua (compile mod))
-    writeFile ("unityscript/" ++ pretty (getName mod) ++ ".js") (renderUnityScript (compile mod))
+    writeFile ("javascript/" ++ pretty (getName mod) ++ ".js") (renderJavaScript (compile mod))
 
 main =
   do

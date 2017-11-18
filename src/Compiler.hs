@@ -62,48 +62,39 @@ toLuaE (Access v indices) =
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 
-{- UnityScript -}
-renderUnityScript sts = render (toUnityScript sts)
+{- JavaScript -}
+renderJavaScript sts = render (toJavaScript sts)
 
--- tail and init drop the array and return needed for lua
-toUnityScript sts = vcatMap toUnityScriptT (tail (init sts))
+-- init drops the return needed for lua
+-- TODO use {} instead of [] and module.exports instead of return
+toJavaScript sts = vcatMap toJavaScriptS (init sts)
 
--- top level decls have to be static so that Example.x works
-toUnityScriptT (Assign (Name _ i) e) =
-    text "static" <+> toUnityScriptS (Assign (Name [] i) e)
-toUnityScriptT s = toUnityScriptS s
+toJavaScriptS (Assign x e) | isUnqualified x=
+    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
+toJavaScriptS (Assign x e) =
+    pPrint x <+> equals <+> toJavaScriptE e <> text ";"
+toJavaScriptS (Imp modName) =
+    text "const" <+> pPrint modName <+> equals <+> text "require" <> parens (pPrint (pretty modName)) <> text ";"
+toJavaScriptS (Ret e) =
+    text "return" <+> toJavaScriptE e <> text ";"
+toJavaScriptS (If e th []) =
+    text "if" <> parens (toJavaScriptE e)
+        $$ block (vcatMap toJavaScriptS th)
+toJavaScriptS (If e th el) =
+    text "if" <> parens (toJavaScriptE e)
+        $$ block (vcatMap toJavaScriptS th)
+        $$ text "else" $$ block (vcatMap toJavaScriptS el)
 
-{-
-This is a trick to allow recursion, otherwise:
-Definition of 'Example.Vec3' depends on 'Example.Vec3' whose type could not be resolved because of a cycle.
--}
-toUnityScriptS (Assign x e@(Func _ _)) =
-    text "var" <+> pPrint x <+> text ": Object" <+> equals $$ toUnityScriptE e <> text ";"
-toUnityScriptS (Assign x e) =
-    text "var" <+> pPrint x <+> equals <+> toUnityScriptE e <> text ";"
-toUnityScriptS (Imp _) =
-    mempty
-toUnityScriptS (Ret e) =
-    text "return" <+> toUnityScriptE e <> text ";"
--- UnityScript does not have block scoping, therefore we use immediate to generate a function for each block
-toUnityScriptS (If e th []) =
-    text "if" <> parens (toUnityScriptE e)
-        $$ block (toUnityScriptS (Ret (immediate th)))
-toUnityScriptS (If e th el) =
-    text "if" <> parens (toUnityScriptE e)
-        $$ block (toUnityScriptS (Ret (immediate th)))
-        $$ text "else" $$ block (toUnityScriptS (Ret (immediate el)))
-
-toUnityScriptE (Var x) = pPrint x
-toUnityScriptE (LitD d) = double d
-toUnityScriptE (LitT t) = text (show t)
-toUnityScriptE (Func vs sts) =
+toJavaScriptE (Var x) = pPrint x
+toJavaScriptE (LitD d) = double d
+toJavaScriptE (LitT t) = text (show t)
+toJavaScriptE (Func vs sts) =
     parens (text "function" <> parens (commas (fmap pPrint vs))
-        $$ block (vcatMap toUnityScriptS sts))
-toUnityScriptE (Access v indices) =
-    pPrint v <> foldMap (\x -> brackets (int x)) indices
-toUnityScriptE (Call e es) = toUnityScriptE e <> parens (commas (fmap toUnityScriptE es))
-toUnityScriptE (Arr es) = brackets (commas (fmap toUnityScriptE es))
+        $$ block (vcatMap toJavaScriptS sts))
+toJavaScriptE (Access v indices) =
+    pPrint v <> foldMap (brackets . int) indices
+toJavaScriptE (Call e es) = toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
+toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
 
 vcatMap f x = vcat (fmap f x)
 commas x = mintercalate (text ", ") x

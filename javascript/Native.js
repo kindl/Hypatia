@@ -1,6 +1,8 @@
-﻿static var wildcard = function(){};
+﻿const Native = {};
 
-static var eq = function(v1)
+Native.wildcard = function(){};
+
+Native.eq = function(v1)
 {
     return function(v2)
     {
@@ -8,7 +10,7 @@ static var eq = function(v1)
     };
 };
 
-static var times = function(v1)
+Native.times = function(v1)
 {
     return function(v2)
     {
@@ -16,7 +18,7 @@ static var times = function(v1)
     };
 };
 
-static var divide = function(v1)
+Native.divide = function(v1)
 {
     return function(v2)
     {
@@ -24,7 +26,7 @@ static var divide = function(v1)
     };
 };
 
-static var modulo = function(v1)
+Native.modulo = function(v1)
 {
     return function(v2)
     {
@@ -32,7 +34,7 @@ static var modulo = function(v1)
     };
 };
 
-static var plus = function(v1)
+Native.plus = function(v1)
 {
     return function(v2)
     {
@@ -40,7 +42,7 @@ static var plus = function(v1)
     };
 };
 
-static var minus = function(v1)
+Native.minus = function(v1)
 {
     return function(v2)
     {
@@ -48,7 +50,7 @@ static var minus = function(v1)
     };
 };
 
-static var concat = function(v1)
+Native.concat = function(v1)
 {
     return function(v2)
     {
@@ -56,30 +58,30 @@ static var concat = function(v1)
     };
 };
 
-static var negate = function(v)
+Native.negate = function(v)
 {
     return -v;
 };
 
-static var size = function(v)
+Native.size = function(v)
 {
     return v.length;
 };
 
-static var isArray = function(v)
+Native.isArray = function(v)
 {
     return typeof(v) === typeof([]);
 };
 
-static var getn = function(n)
+Native.getn = function(n)
 {
-    return function(a : Object[])
+    return function(a)
     {
         return a[n - 1];
     };
 };
 
-static var primIf = function(val)
+Native.primIf = function(val)
 {
     return function(x)
     {
@@ -92,45 +94,38 @@ static var primIf = function(val)
             else
             {
                 return y;
-            };
+            }
         };
     };
 };
 
-static var coerce = function(x)
+Native.coerce = function(x)
 {
     return x;
 };
 
-static var insert = function(a)
+Native.insert = function(a)
 {
     return function(e)
     {
-        // TODO pushing to native arrays?
-        a.Push(e);
-        return a.ToBuiltin();
+        a.push(e);
+        return a;
     };
 };
 
-static var empty = function(x)
+Native.toString = function(x)
 {
-    return [];
+    return x.toString();
 };
 
-static var toString = function(x)
+Native.write = function(x)
 {
-    return x.ToString();
+    console.log(x);
 };
 
-static var write = function(x)
+Native.error = function(x)
 {
-    Debug.Log(x);
-    return null;
+    throw x;
 };
 
-static var error = function(x)
-{
-    // TODO throw
-    Debug.LogError(x);
-    return null;
-};
+module.exports = Native

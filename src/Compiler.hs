@@ -7,10 +7,11 @@ import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
     equals, text, int, braces, parens, brackets, double, render)
 import Text.PrettyPrint.HughesPJClass(pPrint)
 
+data Mod = Mod Name [Statement]
 
 data Statement
     = Ret Expr
-    | Assign Name Expr
+    | Assign Id Expr
     | If Expr [Statement] [Statement]
     | Imp Name
         deriving (Show)
@@ -27,29 +28,36 @@ data Expr
 
         
 -- Simplified language to Lua
-renderLua sts = render (toLua sts)
+renderLua sts = render (toLuaM sts)
 
-toLua sts =
-  let
-    forwards = vcatMap forwardLocals sts
-    top = vcatMap toLuaS sts
-  in forwards $$ top
+toLuaM (Mod modName sts) =
+    text "local" <+> pPrint modName <+> equals <+> text "{}"
+        $$ vcatMap (toLuaT modName) sts
+        $$ text "return" <+> pPrint modName
 
-forwardLocals (Assign x _) | isUnqualified x =
+toLuaT modName (Assign x e) =
+    pPrint (qualifyId modName x) <+> equals <+> toLuaE e
+toLuaT _ s = toLuaS s
+
+toLua sts = vcatMap forwardLocals sts $$ vcatMap toLuaS sts
+
+forwardLocals (Assign x _) =
     text "local" <+> pPrint x
 forwardLocals _ = mempty
 
 toLuaS (Assign x e) =
     pPrint x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
-    text "local" <+>
-        pPrint modName <+> equals <+> text "require" <+> pPrint (pretty modName)
+    text "local" <+> pPrint modName <+> equals
+        <+> text "require" <+> pPrint (pretty modName)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
     text "if" <+> toLuaE e <+> text "then" $$ toLua th $$ text "end"
 toLuaS (If e th el) =
-    text "if" <+> toLuaE e <+> text "then" $$ toLua th $$ text "else" $$ toLua el $$ text "end"
+    text "if" <+> toLuaE e <+> text "then"
+        $$ toLua th $$ text "else"
+        $$ toLua el $$ text "end"
 
 toLuaE (Var x) = pPrint x
 toLuaE (LitD d) = double d
@@ -63,18 +71,22 @@ toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 
 {- JavaScript -}
-renderJavaScript sts = render (toJavaScript sts)
+renderJavaScript sts = render (toJavaScriptM sts)
 
--- init drops the return needed for lua
--- TODO use {} instead of [] and module.exports instead of return
-toJavaScript sts = vcatMap toJavaScriptS (init sts)
+toJavaScriptM (Mod modName sts) =
+    text "const" <+> pPrint modName <+> equals <+> text "{}" <> text ";"
+        $$ vcatMap (toJavaScriptT modName) sts
+        $$ text "module.exports" <+> equals <+> pPrint modName <> text ";"
 
-toJavaScriptS (Assign x e) | isUnqualified x=
-    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
+toJavaScriptT modName (Assign x e) =
+    pPrint (qualifyId modName x) <+> equals <+> toJavaScriptE e <> text ";"
+toJavaScriptT _ s = toJavaScriptS s
+
 toJavaScriptS (Assign x e) =
-    pPrint x <+> equals <+> toJavaScriptE e <> text ";"
+    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
 toJavaScriptS (Imp modName) =
-    text "const" <+> pPrint modName <+> equals <+> text "require" <> parens (pPrint (pretty modName)) <> text ";"
+    text "const" <+> pPrint modName <+> equals <+>
+        text "require" <> parens (pPrint (pretty modName)) <> text ";"
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> text ";"
 toJavaScriptS (If e th []) =
@@ -105,9 +117,8 @@ compile (ModuleDeclaration modName decls) =
     -- TODO qualified module names
     -- A qualified module name leads to
     -- A.B.C = {} which is an error because A is undefined
-    [Assign modName (Arr []), Imp (fromString "Native")]
-        ++ makeForeigns modName decls ++ foldMap (compileTopD modName) decls
-                    ++ [Ret (Var modName)]
+    -- Should Modules stay tables or should it be flattened to A_B_C = {}?
+    Mod modName (makeForeigns decls ++ foldMap (compileT modName) decls)
 
 compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c
@@ -140,29 +151,28 @@ eqTrue e =
 compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
 
-compileTopD _ (ImportDeclaration modName _ _) = [Imp modName]
-compileTopD _ (FixityDeclaration _ _ _ _) = []
-compileTopD modName (EnumDeclaration _ _ cs) = fmap (compileEnum modName) cs
-compileTopD modName (ExpressionDeclaration (VariablePattern x) e) =
-    [Assign (qualifyId modName x) (compileE e)]
-compileTopD _ other = compileD other
+compileT modName (EnumDeclaration _ _ cs) =
+    fmap (compileEnum modName) cs
+compileT _ (ImportDeclaration modName _ _) = [Imp modName]
+compileT _ (FixityDeclaration _ _ _ _) = []
+compileT _ other = compileD other
 
 compileD (ExpressionDeclaration (VariablePattern x) e) =
-    [Assign (fromId x) (compileE e)]
+    [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
-    [Assign (fromString "_w") (compileE e)]
+    [Assign (makeId "_w") (compileE e)]
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
-compileEnum modName (c, []) =
-    Assign (qualifyId modName c) (Func [] [])
+compileEnum _ (c, []) =
+    Assign c (Func [] [])
 compileEnum modName (c, vs) =
     let
         name = qualifyId modName c
         vars = nNewVars (length vs)
         body = Arr (fmap Var (name:fmap fromId vars))
-    in Assign name (curryFunc body vars)
+    in Assign c (curryFunc body vars)
 
 curryFunc e [] = e
 curryFunc e (v:vs) = Func [v] [Ret (curryFunc e vs)]
@@ -172,9 +182,9 @@ compileAlt (p, e) =
         (getAssignments [] p ++ [Ret (compileE e)]) []
 
 getAssignments i (VariablePattern x) =
-    [Assign (fromId x) (Access (makeId "_v") i)]
+    [Assign x (Access (makeId "_v") i)]
 getAssignments i (AliasPattern x p) =
-    Assign (fromId x) (Access (makeId "_v") i):getAssignments i p
+    Assign x (Access (makeId "_v") i):getAssignments i p
 getAssignments i (ConstructorPattern _ ps) =
     descendAssignments i 1 ps
 getAssignments i (ArrayPattern ps) =
@@ -199,13 +209,12 @@ compileP p = error ("compileP does not work on " ++ pretty p)
 
 immediate sts = Call (Func [] sts) []
 
-makeForeigns modName decls =
+makeForeigns decls =
   let
     defs = foldMap getDefsD decls
     sigs = getSignatures decls
     foreigns = excluding defs sigs
-  in
-    fmap (\x -> Assign (qualifyId modName x) (makeNat x)) foreigns
+  in Imp (fromString "Native"):fmap (ap Assign makeNat) foreigns
 
 getSignatures decls =
     [name | TypeSignature name _ <- decls]

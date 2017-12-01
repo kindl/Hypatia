@@ -39,9 +39,13 @@ data Name = Name [Text] Id
 instance Hashable Name where
     hashWithSalt s (Name a b) = hashWithSalt s (a, b)
 
+
 data ModuleDeclaration =
     ModuleDeclaration Name [Declaration]
         deriving (Show, Data, Typeable)
+
+getDecls (ModuleDeclaration _ decls) = decls
+getName (ModuleDeclaration name _) = name
 
 
 data Literal
@@ -183,7 +187,7 @@ fromText l s =
     let is = split (== '.') s
     in Name (init is) (Id (last is) l)
 
-fromId i = Name [] i
+fromId = Name []
 
 isConstructor i = isUpper (head (pretty i))
 

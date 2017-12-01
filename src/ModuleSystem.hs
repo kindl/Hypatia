@@ -8,7 +8,7 @@ import Parser
 import TypeChecker
 import Operators
 import Qualification
-import Data.List(nub, partition)
+import Data.List(nub)
 import Control.Arrow(first)
 import System.FilePath(takeDirectory, takeBaseName, (</>))
 
@@ -19,8 +19,7 @@ loadProgram path =
 
     mod <- loadModuleWithSpec dir modName
     mods <- growModuleEnv dir [mod]
-    let sorted = sortModules [] mods
-    let simplified = pipeline sorted
+    let simplified = pipeline mods
     typechecking simplified
 
     return (fmap fst simplified)
@@ -29,7 +28,7 @@ pipeline :: [(ModuleDeclaration, [(Name, Maybe [Id])])] -> [(ModuleDeclaration, 
 pipeline = sortDeclsMod . aliasProgram
     . aliasOperatorsProgram . removeParens
     . fixAssocProgram . qualification
-    . simplifications
+    . simplifications . sortModules
 
 qualification = fmap (first qualifyM)
 
@@ -102,20 +101,6 @@ feedback action capture envs specMods =
 
 filterEnvs imports envs =
     foldMap snd (filter (\(k, _) -> elem k (fmap fst imports)) envs)
-
---TODO allow cyclic module imports?
-sortModules sorted [] = sorted
-sortModules sorted specMods =
-    let checked = map (getName . fst) sorted
-    in case partition (isCandidate checked) specMods of
-         ([], _) -> error "Cyclic module dependency"
-         (candidates, rest) -> sortModules (sorted ++ candidates) rest
-
-isCandidate checked (_, imports) =
-    null (excluding checked (map fst imports))
-
-getDecls (ModuleDeclaration _ decls) = decls
-getName (ModuleDeclaration name _) = name
 
 gatherImports decls = 
     [(name, spec) | ImportDeclaration name spec _ <- decls]

@@ -17,39 +17,32 @@ sortDeclsMod x = (transformBi f . transformBi k) x
     k (ModuleDeclaration modName decls) =
         ModuleDeclaration modName (sortDecls (qualifyId modName) decls)
 
-sortDecls fQual decls =
+sortDecls qual decls =
     let
-        triples = fmap (second (fmap fQual) . defPair) decls
-        defs = foldMap (fst . snd) triples
-        locals = keepDeps defs triples
-    in sortPairs locals
+        -- Top-level definitions have to be qualified with the module name
+        getDefs = fmap qual . getDefsD
 
-defPair decl =
-    (decl, (getDefsD decl, getDepsD decl))
+        -- Only look at the dependency on local variables
+        localDefs = foldMap getDefs decls
+        getLocalDeps = including localDefs . getDepsD
 
-removeDeps xs =
-    fmap (third (excluding xs))
+        -- Remove recursive dependency on itself
+        getDeps decl = excluding (getDefs decl) (getLocalDeps decl)
+        
+        resolved = resolve getDefs getDeps decls
+    in resolved
 
-keepDeps xs =
-    fmap (third (including xs))
+resolve getDefs getDeps vs =
+    case partition (null . getDeps) vs of
+        ([], []) -> []
+        ([], bs) ->
+            error ("Cyclic dependency in " ++ pretty (fmap getDeps vs))
+        (as, bs) ->
+            let
+                done = concatMap getDefs as
+            in as ++ resolve getDefs (excluding done . getDeps) bs
 
-second f (a, (b, c)) = (a, (f b, c))
-
-third f (a, (b, c)) = (a, (b, f c))
-
-isDepless (_, (defs, deps)) = null (excluding defs deps)
-
-sortPairs pairs =
-    case partition isDepless pairs of
-         ([], []) -> []
-         ([], xs) ->
-            error ("Possible mutual recursion " ++ pretty (fmap snd xs))
-         (withoutDep, withDep) ->
-              let
-                defs = foldMap (fst . snd) withoutDep
-                rest = removeDeps defs withDep
-                decls = fmap fst withoutDep
-              in decls ++ sortPairs rest
+sortModules = resolve (return . getName . fst) (fmap fst . snd)
 
 {-
 Gather variables used in an expression

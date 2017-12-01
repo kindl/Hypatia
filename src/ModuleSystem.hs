@@ -11,6 +11,8 @@ import Qualification
 import Data.List(nub)
 import Control.Arrow(first)
 import System.FilePath(takeDirectory, takeBaseName, (</>))
+import Control.Monad.Trans.State(StateT(StateT), runStateT)
+
 
 loadProgram path =
   do
@@ -79,25 +81,26 @@ aliasProgram = performSimple aliasTypes captureAliases
 performSimple action capture = feedback action (captureSimple capture) []
 
 captureSimple capture importedTable mod =
-    let localTable = capture mod
-    in localTable `mappend` importedTable
+    capture mod `mappend` importedTable
 
 {-
-Grow an environment and perform an action on all modules
+Incrementally grow an environment and perform an action on all modules
 capture : captures the environment e.g. the operators and their aliases
-envs : an assoc list of the mod name and the finished action
+envs : an association list of the module name and its captured environment
 -}
-feedbackM _ _ _ [] = return []
-feedbackM action capture envs ((mod, imports):rest) =
-    let importedEnv = filterEnvs imports envs
-    in do
-        captured <- capture importedEnv mod
-        result <- action captured mod
-        results <- feedbackM action capture ((getName mod, captured):envs) rest
-        return ((result, imports):results)
+feedbackM action capture envs mods =
+    fmap fst (mapAccumM (step action capture) envs mods)
 
-feedback action capture envs specMods =
-    feedbackM (\a b -> return (action a b)) (\a b -> return (capture a b)) envs specMods ()
+feedback action capture envs mods =
+    feedbackM (\a b -> return (action a b)) (\a b -> return (capture a b)) envs mods ()
+
+step action capture envs (mod, imports) =
+    do
+        captured <- capture (filterEnvs imports envs) mod
+        result <- action captured mod
+        return ((result, imports), (getName mod, captured):envs)
+
+mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterEnvs imports envs =
     foldMap snd (filter (\(k, _) -> elem k (fmap fst imports)) envs)

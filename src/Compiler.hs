@@ -39,17 +39,16 @@ toLuaT modName (Assign x e) =
     pPrint (qualifyId modName x) <+> equals <+> toLuaE e
 toLuaT _ s = toLuaS s
 
-toLua sts = vcatMap forwardLocals sts $$ vcatMap toLuaS sts
+toLua sts = forwardLocals sts $$ vcatMap toLuaS sts
 
-forwardLocals (Assign x _) =
-    text "local" <+> pPrint x
-forwardLocals _ = mempty
+forwardLocals sts =
+    vcat [text "local" <+> pPrint x | Assign x _ <- sts]
 
 toLuaS (Assign x e) =
     pPrint x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> pPrint modName <+> equals
-        <+> text "require" <+> pPrint (pretty modName)
+        <+> text "require" <+> pPrint (toPath modName)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
@@ -66,7 +65,7 @@ toLuaE (Func vs sts) =
     parens (text "function" <> parens (commas (fmap pPrint vs))
         $$ toLua sts $$ text "end")
 toLuaE (Access v indices) =
-    pPrint v <> foldMap (\x -> brackets (int (x + 1))) indices
+    pPrint v <> foldMap (brackets . int . (+ 1)) indices
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 
@@ -86,7 +85,7 @@ toJavaScriptS (Assign x e) =
     text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
 toJavaScriptS (Imp modName) =
     text "const" <+> pPrint modName <+> equals <+>
-        text "require" <> parens (pPrint (pretty modName)) <> text ";"
+        text "require" <> parens (pPrint (toPath modName)) <> text ";"
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> text ";"
 toJavaScriptS (If e th []) =
@@ -105,7 +104,8 @@ toJavaScriptE (Func vs sts) =
         $$ block (vcatMap toJavaScriptS sts))
 toJavaScriptE (Access v indices) =
     pPrint v <> foldMap (brackets . int) indices
-toJavaScriptE (Call e es) = toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
+toJavaScriptE (Call e es) =
+    toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
 
 vcatMap f x = vcat (fmap f x)
@@ -174,8 +174,7 @@ compileEnum modName (c, vs) =
         body = Arr (fmap Var (name:fmap fromId vars))
     in Assign c (curryFunc body vars)
 
-curryFunc e [] = e
-curryFunc e (v:vs) = Func [v] [Ret (curryFunc e vs)]
+curryFunc = foldr (\v r -> Func [v] [Ret r])
 
 compileAlt (p, e) =
     If (Call (Call (makeVar "Prelude.matches") [compileP p]) [makeVar "_v"])
@@ -214,7 +213,7 @@ makeForeigns decls =
     defs = foldMap getDefsD decls
     sigs = getSignatures decls
     foreigns = excluding defs sigs
-  in Imp (fromString "Native"):fmap (ap Assign makeNat) foreigns
+  in Imp (fromString "Native"):fmap (Assign <*> makeNat) foreigns
 
 getSignatures decls =
     [name | TypeSignature name _ <- decls]
@@ -222,3 +221,6 @@ getSignatures decls =
 makeNat = Var . qualifyId (fromString "Native")
 
 makeVar = Var . fromString
+
+-- TODO
+toPath = pretty

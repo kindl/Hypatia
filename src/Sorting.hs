@@ -36,7 +36,7 @@ resolve getDefs getDeps vs =
     case partition (null . getDeps) vs of
         ([], []) -> []
         ([], bs) ->
-            error ("Cyclic dependency in " ++ pretty (fmap getDeps vs))
+            error ("Cyclic dependency in " ++ pretty (fmap getDeps bs))
         (as, bs) ->
             let
                 done = concatMap getDefs as

@@ -1,8 +1,8 @@
 module TypeChecker where
 
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, filterWithKey, insert)
-import Control.Monad.Trans.Reader(ReaderT, runReaderT, ask, local)
+import Data.HashMap.Strict(HashMap, fromList, filterWithKey, insert, foldrWithKey)
+import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
 import Data.List(nub)
@@ -16,7 +16,8 @@ type Environment = HashMap Name Type
 
 type Substitution = HashMap Id Type
 
-data TypecheckerState = TypecheckerState Environment (IORef Integer) (IORef Substitution)
+data TypecheckerState =
+    TypecheckerState Environment (IORef Integer) (IORef Substitution)
 
 type Typechecker a = ReaderT TypecheckerState IO a
 
@@ -31,10 +32,11 @@ inferModule (ModuleDeclaration modName decls) =
     info "---------------------------------"
     info ("Typechecking Module " ++ pretty modName)
     let enums = foldMap (gatherEnum (qualifyId modName)) decls
+    let enums' = mapKeys (qualifyId modName) enums
     let signatures = foldMap gatherTypeSig decls
-    let types = mapKeys (qualifyId modName) (enums `mappend` signatures)
-    binds <- with types (inferDecls (qualifyId modName) generalize decls)
-    return (types `mappend` binds)
+    let signatures' = mapKeys (qualifyId modName) signatures
+    binds <- with enums' (inferDecls (qualifyId modName) generalize signatures' decls)
+    return (enums' `mappend` binds)
 
 -- Typecheck Expressions
 typecheck :: Expression -> Type -> Typechecker ()
@@ -65,7 +67,7 @@ typecheck (LambdaExpression [p] e) ty =
 typecheck (LetExpression decls e) ty =
   do
     let types = mapKeys fromId (foldMap gatherTypeSig decls)
-    binds <- with types (inferDecls fromId return decls)
+    binds <- with types (inferDecls fromId return types decls)
     with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
@@ -118,24 +120,29 @@ gatherTypeSig (TypeSignature name ty) =
     singleton name (makeForAll (freeVars ty) ty)
 gatherTypeSig _ = mempty
 
--- the function assumes that the let bindings are already sorted
--- we have to sort the let bindings for the translation anyway
--- but we do not want to transform the bindings before type checking
--- TODO solve without sorting
--- TODO type annotations
-inferDecls qual gen (ExpressionDeclaration p e:decls) =
+-- Assumes that the let bindings are already sorted
+-- Should we solve it without sorting?
+-- We have to sort the let bindings for the translation anyway
+inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
   do
     info ("Typechecking declaration " ++ pretty p)
 
     ty <- newTyVar
     binds <- fmap (mapKeys qual) (typecheckPattern p ty)
-    with binds (typecheck e ty)
+    with (signatures `mappend` binds) (typecheck e ty)
 
     generalized <- traverse gen binds
-    next <- with generalized (inferDecls qual gen decls)
+    checkAgainst signatures generalized
+    next <- with (signatures `mappend` generalized) (inferDecls qual gen signatures decls)
     return (next `mappend` generalized)
-inferDecls qual gen (_:decls) = inferDecls qual gen decls
-inferDecls _ _ [] = return mempty
+inferDecls qual gen signatures (_:decls) = inferDecls qual gen signatures decls
+inferDecls _ _ signatures [] = return signatures
+
+-- Check the type signatures against the inferred types
+checkAgainst signatures = traverseWithKey_ (\k v ->
+    maybe (return ()) (subsume v) (mfind k signatures))
+
+traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty =
@@ -160,7 +167,7 @@ typecheckPattern (ConstructorPattern c ps) ty =
     let resultTy = last tys
     let consTys = init tys
 
-    when (length ps /= length consTys) 
+    when (length ps /= length consTys)
         (fail ("Constructor " ++ pretty c ++ " was given wrong number of arguments"))
     binds <- zipWithM typecheckPattern ps consTys
     unify resultTy ty
@@ -217,16 +224,16 @@ apply subst ty@(TypeVariable x) = maybe ty (apply subst) (mfind x subst)
 apply subst ty = descend (apply subst) ty
 
 -- Environment
-getEnv = fmap (\(TypecheckerState env _ _) -> env) ask
+getEnv = asks (\(TypecheckerState env _ _) -> env)
 
 insertSubst k v =
   do
-    r <- fmap (\(TypecheckerState _ _ s) -> s) ask
+    r <- asks (\(TypecheckerState _ _ s) -> s)
     modifyRef r (insert k v)
 
 getSubst =
   do
-    r <- fmap (\(TypecheckerState _ _ s) -> s) ask
+    r <- asks (\(TypecheckerState _ _ s) -> s)
     readRef r
 
 with binds =
@@ -235,7 +242,7 @@ with binds =
 -- Type Variables
 newUnique =
   do
-    TypecheckerState _ r _ <- ask
+    r <- asks (\(TypecheckerState _ u _) -> u)
     i <- readRef r
     writeRef r (i + 1)
     return i

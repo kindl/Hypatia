@@ -5,11 +5,8 @@ import Data.HashMap.Strict(fromList)
 import Data.Generics.Uniplate.Data(transform, descend)
 
 
-qualifyM (ModuleDeclaration modName decls) =
-    let
-        imps = foldMap captureImport decls
-        quals = toQualifieds modName (foldMap captureNameD decls) `mappend` imps
-    in ModuleDeclaration modName (fmap (qualifyD quals) decls)
+qualifyNames quals (ModuleDeclaration name decls) =
+    ModuleDeclaration name (fmap (qualifyD quals) decls)
 
 qualifyD quals (EnumDeclaration id vars constructors) =
     EnumDeclaration id vars (fmap (qualifyC quals) constructors)
@@ -66,9 +63,9 @@ qualifyA quals (p, e) =
     let newQuals = toLocals (getDefsP p) `mappend` quals
     in (qualifyP newQuals p, qualifyE newQuals e)
 
-captureImport (ImportDeclaration modName (Just ids) _) =
-    toQualifieds modName ids
-captureImport _ = mempty
+
+captureNames (ModuleDeclaration modName decls) =
+    toQualifieds modName (foldMap captureNameD decls)
 
 captureNameD (EnumDeclaration t _ cs) =
     t : fmap fst cs

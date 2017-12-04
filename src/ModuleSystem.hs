@@ -9,7 +9,7 @@ import TypeChecker
 import Operators
 import Qualification
 import Data.List(nub)
-import Control.Arrow(first)
+import Data.HashMap.Strict(insert)
 import System.FilePath(takeDirectory, takeBaseName, (</>))
 import Control.Monad.Trans.State(StateT(StateT), runStateT)
 
@@ -26,13 +26,13 @@ loadProgram path =
 
     return (fmap fst simplified)
 
-pipeline :: [(ModuleDeclaration, [(Name, Maybe [Id])])] -> [(ModuleDeclaration, [(Name, Maybe [Id])])]
+pipeline ::
+    [(ModuleDeclaration, [(Name, Maybe [Id])])] ->
+    [(ModuleDeclaration, [(Name, Maybe [Id])])]
 pipeline = sortDeclsMod . aliasProgram
     . aliasOperatorsProgram . removeParens
-    . fixAssocProgram . qualification
+    . fixAssocProgram . qualifyProgram
     . simplifications . sortModules
-
-qualification = fmap (first qualifyM)
 
 -- TODO search path
 -- Allow qualified modules
@@ -63,7 +63,8 @@ growModuleEnv dir env =
             growModuleEnv dir (mods ++ env)
 
 {- Typechecking -}
-typechecking = feedbackM logEnv typecheckModule []
+typechecking =
+    feedbackM (ret filterNames) logEnv typecheckModule mempty
 
 logEnv env mod =
     do
@@ -72,13 +73,18 @@ logEnv env mod =
         return mod
 
 {- Operators and Aliasing -}
+qualifyProgram =
+    feedback filterIds qualifyNames (captureSimple captureNames) mempty
+
 fixAssocProgram = performSimple fixAssoc captureAssocs
 
-aliasOperatorsProgram = performSimple aliasOperators captureOperatorAliases
+aliasOperatorsProgram =
+    performSimple aliasOperators captureOperatorAliases
 
 aliasProgram = performSimple aliasTypes captureAliases
 
-performSimple action capture = feedback action (captureSimple capture) []
+performSimple action capture =
+    feedback filterNames action (captureSimple capture) mempty
 
 captureSimple capture importedTable mod =
     capture mod `mappend` importedTable
@@ -88,22 +94,30 @@ Incrementally grow an environment and perform an action on all modules
 capture : captures the environment e.g. the operators and their aliases
 envs : an association list of the module name and its captured environment
 -}
-feedbackM action capture envs mods =
-    fmap fst (mapAccumM (step action capture) envs mods)
+feedbackM envFilter action capture envs mods =
+    fmap fst (mapAccumM (step envFilter action capture) envs mods)
 
-feedback action capture envs mods =
-    feedbackM (\a b -> return (action a b)) (\a b -> return (capture a b)) envs mods ()
+-- Convenience function to make a regular function monadic
+ret f a b = return (f a b)
 
-step action capture envs (mod, imports) =
+feedback envFilter action capture envs mods =
+    feedbackM (ret envFilter) (ret action) (ret capture) envs mods ()
+
+step envFilter action capture envs (mod, imports) =
     do
-        captured <- capture (filterEnvs imports envs) mod
+        filtered <- envFilter imports envs
+        captured <- capture filtered mod
         result <- action captured mod
-        return ((result, imports), (getName mod, captured):envs)
+        return ((result, imports), insert (getName mod) captured envs)
 
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
-filterEnvs imports envs =
-    foldMap snd (filter (\(k, _) -> elem k (fmap fst imports)) envs)
+filterIds imports envs =
+    foldMap (\(modName, Just ids) ->
+        includingKeys ids (find modName envs)) imports
+
+filterNames imports envs =
+    foldMap (\(modName, _) -> find modName envs) imports
 
 gatherImports decls = 
     [(name, spec) | ImportDeclaration name spec _ <- decls]

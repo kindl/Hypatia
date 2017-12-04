@@ -8,7 +8,7 @@ import Data.Char(isUpper, isSymbol)
 import Control.Monad(MonadPlus, mzero, mplus)
 import Control.Applicative(Alternative, empty, (<|>))
 import Data.Hashable(Hashable, hashWithSalt)
-import Data.HashMap.Strict(lookup, keys, foldrWithKey)
+import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), parens, brackets, render)
 import Data.Generics.Uniplate.Data(universe)
@@ -213,6 +213,8 @@ getText (Id t _) = t
 excluding xs = filter (flip notElem xs)
 
 including xs = filter (flip elem xs)
+
+includingKeys xs = filterWithKey (const . flip elem xs)
 
 getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (EnumDeclaration _ _ cs) = fmap fst cs

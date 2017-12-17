@@ -1,12 +1,12 @@
 module TypeChecker where
 
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, filterWithKey, insert, foldrWithKey)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
 import Data.List(nub)
-import Control.Monad(when, zipWithM)
+import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, writeIORef, newIORef, modifyIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_)
@@ -67,7 +67,7 @@ typecheck (LambdaExpression [p] e) ty =
 typecheck (LetExpression decls e) ty =
   do
     let types = mapKeys fromId (foldMap gatherTypeSig decls)
-    binds <- with types (inferDecls fromId return types decls)
+    binds <- inferDecls fromId return types decls
     with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
@@ -218,7 +218,7 @@ occurs x ty = elem x (freeVars ty)
 
 -- substitute bound variables with unification variables
 apply subst (ForAll vs ty) =
-    let filteredSubst = filterWithKey (\k _ -> notElem k vs) subst
+    let filteredSubst = excludingKeys vs subst
     in ForAll vs (apply filteredSubst ty)
 apply subst ty@(TypeVariable x) = maybe ty (apply subst) (mfind x subst)
 apply subst ty = descend (apply subst) ty
@@ -287,7 +287,7 @@ subsume' scheme1 scheme2@(ForAll _ _) =
     subsume scheme1 ty
     let escVars = skolems scheme1 ++ skolems scheme2
     let escaped = including escVars skolVars
-    when (null escaped) (fail ("Escape check: " ++ pretty escaped))
+    unless (null escaped) (fail ("Escape check: " ++ pretty escaped))
 subsume' scheme@(ForAll _ _) t2 =
   do
     t1 <- instantiate scheme

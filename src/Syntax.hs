@@ -214,6 +214,8 @@ excluding xs = filter (flip notElem xs)
 
 including xs = filter (flip elem xs)
 
+excludingKeys xs = filterWithKey (const . flip notElem xs)
+
 includingKeys xs = filterWithKey (const . flip elem xs)
 
 getDefsD (ExpressionDeclaration p _) = getDefsP p

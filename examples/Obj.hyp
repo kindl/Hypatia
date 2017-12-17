@@ -40,13 +40,12 @@ load filePath = map (compose matchLine filteredWords) (lines (file filePath))
 
 matchLine [] = Comment
 matchLine es =
-    case getn 1 es of {
+    case getn 1 es of
         "v" -> Vertex (readVector es)
         "vn" -> Normal (readVector es)
         "vt" -> TextureCoordinate (readVector es)
         "f" -> Face (map readVI (filter (notEq "f") es))
         _ -> Comment
-    }
 
 readVector [_, v1, v2, v3, v4] =
     Vec4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)
@@ -57,9 +56,8 @@ readVector [_, v1, v2] =
 readVector [_, v1] =
     Vec4 (toNumber v1) 0 0 1
 
-readVI s = case split "/" s of {
+readVI s = case split "/" s of
     [vi] -> VI (toNumber vi)
     [vi, vt] -> VTI (toNumber vi) (toNumber vt)
     [vi, "", vn] -> VNI (toNumber vi) (toNumber vn)
     [vi, vt, vn] -> VTNI (toNumber vi) (toNumber vt) (toNumber vn)
-}

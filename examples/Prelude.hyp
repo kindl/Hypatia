@@ -96,11 +96,12 @@ trySeqComp comp l r =
 
 bothArray l r = primLazyAnd (isArray l) (fun _ -> isArray r)
 
-seqComp comp l r = let {
-    lsize = size l
-    rsize = size r
-        } in primLazyAnd (eq lsize rsize)
-            (fun _ -> seqCompAux comp 0 lsize l r)
+seqComp comp l r =
+    let
+        lsize = size l
+        rsize = size r
+    in primLazyAnd (eq lsize rsize)
+        (fun _ -> seqCompAux comp 0 lsize l r)
 
 seqCompAux comp i maxN l r =
     primLazyOr (eq i maxN) (fun _ ->

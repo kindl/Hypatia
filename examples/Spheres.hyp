@@ -1,8 +1,8 @@
 module Spheres
 
-import Prelude(insert, empty, Unit, Numeral,
-    (+), (*), (%), Array, arrayMap, repeatN)
-
+import Prelude(Unit, Numeral,
+    (+), (*), (%), repeatN)
+import Array(Array, map, insert)
 
 random : Numeral -> Numeral -> Numeral
 
@@ -37,31 +37,35 @@ position (Sphere p _ _ _) = p
 
 radius (Sphere _ _ _ r) = r
 
-addSphere spheres = let {
-    pos = Vec2 (random 0 500) (random 0 500)
-    vel = Vec2 (random (-100) 100) (random (-100) 100)
-    col = Vec3 (random 0 255) (random 0 255) (random 0 255)
-    rad = random 30 100
-        } in insert spheres (Sphere pos vel col rad)
+addSphere spheres =
+    let
+        pos = Vec2 (random 0 500) (random 0 500)
+        vel = Vec2 (random (-100) 100) (random (-100) 100)
+        col = Vec3 (random 0 255) (random 0 255) (random 0 255)
+        rad = random 30 100
+    in insert spheres (Sphere pos vel col rad)
 
-load _ = let {
-    state = empty Unit
-    _ = repeatN (fun _ -> addSphere state) 5
-        } in setState state
+load _ =
+    let
+        state = []
+        _ = repeatN (fun _ -> addSphere state) 5
+    in setState state
 
-update dt = let {
-    spheres = getState Unit
-    newSpheres = arrayMap (updateSphere dt) spheres
-        } in setState newSpheres
+update dt =
+    let
+        spheres = getState Unit
+        newSpheres = map (updateSphere dt) spheres
+    in setState newSpheres
 
 updateSphere dt (Sphere p v c r) =
     Sphere (updatePosition p v dt) v c r
 
-updatePosition (Vec2 x y) (Vec2 vx vy) dt = let {
-    nx = (x + vx * dt) % getWidth Unit
-    ny = (y + vy * dt) % getHeight Unit
-        } in Vec2 nx ny
+updatePosition (Vec2 x y) (Vec2 vx vy) dt =
+    let
+        nx = (x + vx * dt) % getWidth Unit
+        ny = (y + vy * dt) % getHeight Unit
+    in Vec2 nx ny
 
 mousepressed _ = addSphere (getState Unit)
 
-draw _ = arrayMap drawSphere (getState Unit)
+draw _ = map drawSphere (getState Unit)

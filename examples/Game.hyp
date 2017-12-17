@@ -38,13 +38,12 @@ getPoint (VNI v _) = getn v vertices
 getPoint (VTI v _) = getn v vertices
 getPoint (VI v) = getn v vertices
 
-transformPoint vector =
-    let {
+transformPoint vector = let
         rotated = transform rotation vector
         transformed = transform modelview rotated
         projected = transform projection transformed
         divided = to2d projected
-     } in divided
+    in divided
 
 trFaces = map (compose tuplesToArray transformFace) faces
 

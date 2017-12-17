@@ -43,28 +43,28 @@ testMultiply =
     } in test "multiply" (boolToString (multiply m1 m2 == m))
 
 testPrecedence =
-    let {
+    let
         v1 = 5 + 3 * 4
         v2 = 3 * 4 + 5
-    } in test "precedence" (boolToString (v1 == v2))
+    in test "precedence" (boolToString (v1 == v2))
 
 testDot =
-    let {
+    let
         v1 = Vec4 2 3 5 7
         v2 = Vec4 11 13 17 19
-    } in test "dot prod" (boolToString (dot v1 v2 == 279))
+    in test "dot prod" (boolToString (dot v1 v2 == 279))
 
 testParens1 =
-    let {
+    let
         v1 = (2 * 3) + (5 * 7)
         v2 =  2 * 3  +  5 * 7
-    } in test "parens 1" (boolToString (v1 == v2))
+    in test "parens 1" (boolToString (v1 == v2))
 
 testParens2 =
-    let {
+    let
         v1 = (2 * 3) + (5 * 7) + (11 * 13)
         v2 =  2 * 3  +  5 * 7  +  11 * 13
-    } in test "parens 2" (boolToString (v1 == v2))
+    in test "parens 2" (boolToString (v1 == v2))
 
 testEq =
     let {

@@ -53,94 +53,96 @@ eitherResult (Just (r, LexerState t pos)) =
     if Text.null t then return r
         else throwString ("Incomplete lex at " ++ pretty pos)
 
+lexFileDebug2 path = do
+    str <- readFile path
+    return (fmap (fmap extractLexeme) (lexlex path str))
+
 lexFileDebug path = do
     str <- readFile path
     return (runStateT (program path) (startState str))
 
 lexDebug str = runStateT (program "") (startState str)
 
-pipeline = insertSemicolons . filter (not . null)
-    . setIndentation . filter isSignificant
 
-isSignificant x = isSignificantWhite x || not (isWhite x)
+{-
+Layout
+A simplified version of the function presented in the Haskell 2010 report
+-}
+layout ls@(LocatedLexeme (Indent n) _:ts) (m:ms)
+    | n == m = semi : layout ts (m:ms)
+    | n < m = close : layout ls ms
+    | otherwise = layout ts (m:ms)
+layout (LocatedLexeme (Block n) _:ts) (m:ms)
+    | n > m = open : layout ts (n : m : ms)
+layout (LocatedLexeme (Block n) _:ts) []
+    | n > 0 = open : layout ts [n]
+layout (LocatedLexeme (Block n) loc:ts) ms =
+    open : close : layout (LocatedLexeme (Indent n) loc:ts) ms
+layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
+    | l == Text.pack "}" = t : layout ts ms
+layout (t@(LocatedLexeme (Reserved l) _):ts) ms
+    | l == Text.pack "}" =
+        error ("Parse Error: Explicit " ++ prettyLocated t ++ " without open brace.")
+layout (t@(LocatedLexeme (Reserved l) _):ts) ms
+    | l == Text.pack "{" = t : layout ts (0:ms)
+-- rule left out: no info from parser
+layout (t:ts) ms = t:layout ts ms
+layout [] [] = []
+layout [] (m:ms) = close : layout [] ms
 
-isWhite (LocatedLexeme (Whitespace _) _ _) = True
-isWhite (LocatedLexeme (Comment _) _ _) = True
+semi = LocatedLexeme (Reserved (Text.pack ";")) builtinLocation
+open = LocatedLexeme (Reserved (Text.pack "{")) builtinLocation
+close = LocatedLexeme (Reserved (Text.pack "}")) builtinLocation
+
+isLayout (LocatedLexeme (Reserved t) _)
+    | elem t (fmap Text.pack ["let", "where", "of"]) = True
+isLayout _ = False
+
+-- + 1 because it is the column
+indLength ws = Text.length (last (Text.lines ws)) + 1
+
+getBlock (LocatedLexeme (Whitespace ws) _) =
+    LocatedLexeme (Block (indLength ws)) builtinLocation
+
+getIndent (LocatedLexeme (Whitespace ws) _) =
+    LocatedLexeme (Indent (indLength ws)) builtinLocation
+
+followedByOpen rest = case dropWhile isWhite rest of
+    (LocatedLexeme (Reserved t) _:_) | t == Text.pack "{" -> True
+    _ -> False
+
+insertIndentTokens (l:rest@(r:rs))
+    | isLayout l && followedByOpen rest = l:insertIndentTokens rest
+    | isLayout l = l:getBlock r:insertIndentTokens rs
+insertIndentTokens (l:rest)
+    | isSignificantWhite l = getIndent l:insertIndentTokens rest
+insertIndentTokens (l:rest)
+    | isWhite l = insertIndentTokens rest
+insertIndentTokens (l:ls) = l:insertIndentTokens ls
+insertIndentTokens [] = []
+
+-- Cut the open and close braces
+cut xs = init (tail xs)
+
+pipeline ls = cut (layout (
+    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
+
+isWhite (LocatedLexeme (Whitespace _) _) = True
+isWhite (LocatedLexeme (Comment _) _) = True
 isWhite _ = False
 
--- TODO brace insertion
-
-{- Semicolon insertion -}
-insertSemicolons [] = []
--- Lines have to be non empty
-insertSemicolons ls = foldl1 semiMerge ls
-
-semiMerge [] _ = error "semiMerge impossible empty left"
-semiMerge _ [] = error "semiMerge impossible empty right"
-semiMerge line1 line2 =
-  let
-    prevLexeme = last line1
-    nextLexeme = head line2
-
-    Location start _ path = extractLocation prevLexeme
-    Location _ end _ = extractLocation nextLexeme
-    l = Reserved (Text.pack ";")
-    loc = Location start end path
-
-    ind1 = extractIndentation prevLexeme
-    ind2 = extractIndentation nextLexeme
-
-    le = LocatedLexeme l loc ind1
-  in case extractLexeme nextLexeme of 
-    Reserved r | r == Text.pack "}" -> line1 ++ line2
-{-
-TODO rework this hack allowing aligning enums e.g.
-enum Vector a
-    = Vec2 a a
-    | Vec4 a a a a
--}
-    Reserved r | r == Text.pack "|" -> line1 ++ line2
-{-
-TODO rework this hack allowing aligning Matrixes e.g.
-m1 = Mat2
-    (Vec2 1 2)
-    (Vec2 3 4)
--}
-    Reserved r | r == Text.pack "(" && ind2 > 0 -> line1 ++ line2
-    _ -> case extractLexeme prevLexeme of
-      Reserved r | r == Text.pack ";" -> line1 ++ line2
-      _ -> if ind1 < ind2 then line1 ++ line2 else line1 ++ le:line2
-
-{- Indentation -}
-setIndentation ls =
-    fmap setIndentLine (breaks isSignificantWhite ls)
-
--- breaks the lexemes into lines
-breaks f = groupBy (const (not . f))
-
-isSignificantWhite (LocatedLexeme (Whitespace ws) _ _) =
+isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
     Text.any (=='\n') ws
 isSignificantWhite _ = False
 
--- set the indentation of a line, if it starts with whitespace
-setIndentLine [] = error "setIndentLine impossible case"
-setIndentLine (l:ls) =
-    case extractLexeme l of
-        Whitespace ws ->
-            let ind = Text.length (last (Text.lines ws))
-            in fmap (toIndentedLexeme ind) ls
-        _ -> fmap (toIndentedLexeme 0) (l:ls)
 
-toIndentedLexeme ind (LocatedLexeme l loc _) =
-    LocatedLexeme l loc ind 
-
-type Indentation = Int
-data LocatedLexeme = LocatedLexeme Lexeme Location Indentation
+data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
 
-extractIndentation (LocatedLexeme _ _ i) = i
-extractLocation (LocatedLexeme _ p _) = p
-extractLexeme (LocatedLexeme l _ _) = l
+extractLocation (LocatedLexeme _ p) = p
+extractLexeme (LocatedLexeme l _) = l
+
+prettyLocated (LocatedLexeme l p) = show l ++ " " ++ pretty p
 
 extractText (Conid s) = s
 extractText (Varid s) = s
@@ -157,6 +159,8 @@ data Lexeme
     | Varsym Text
     | Conid Text
     | Comment Text
+    | Block Int
+    | Indent Int
         deriving (Show)
 
 dot c1 c2 = c1 `mappend` Text.pack "." `mappend` c2
@@ -174,7 +178,7 @@ located path l = do
     LexerState _ startPosition <- get
     result <- l
     LexerState _ endPosition <- get
-    return (LocatedLexeme result (Location startPosition endPosition path) (-1))
+    return (LocatedLexeme result (Location startPosition endPosition path))
 
 program path = many (located path (lexeme <|> whitespace))
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
@@ -214,8 +218,9 @@ large = satisfy isUpper
 
 {- Identifier -}
 isReserved x =
-    elem x (fmap Text.pack ["alias", "enum", "type", "forall", "import", "module", "fun", "let", "in", "where",
-        "case", "of", "if", "then", "else", "infix", "infixl", "infixr", "as"])
+    elem x (fmap Text.pack ["alias", "enum", "type", "forall",
+        "import", "module", "fun", "let", "in", "where", "case", "of",
+            "if", "then", "else", "infix", "infixl", "infixr", "as"])
 varid = do
     x <- small
     xs <- takeWhile isAlphaNum

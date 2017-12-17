@@ -26,8 +26,6 @@ parseFile path = do
 
 parseString s = parse "" s
 
-prettyLocated (LocatedLexeme l pos _) = show l ++ " " ++ pretty pos
-
 -- get the next lexeme
 next = StateT muncons
 muncons [] = throwString "Unexpected end"

@@ -113,8 +113,10 @@ step envFilter action capture envs (mod, imports) =
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =
-    foldMap (\(modName, Just ids) ->
-        includingKeys ids (find modName envs)) imports
+    foldMap (\(modName, spec) ->
+        case spec of
+            Just ids -> includingKeys ids (find modName envs)
+            Nothing -> mempty) imports
 
 filterNames imports envs =
     foldMap (\(modName, _) -> find modName envs) imports

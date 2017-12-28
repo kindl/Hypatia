@@ -7,6 +7,7 @@ import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
     equals, text, int, braces, parens, brackets, double, render)
 import Text.PrettyPrint.HughesPJClass(pPrint)
 
+
 data Mod = Mod Name [Statement]
 
 data Statement
@@ -31,12 +32,12 @@ data Expr
 renderLua sts = render (toLuaM sts)
 
 toLuaM (Mod modName sts) =
-    text "local" <+> pPrint modName <+> equals <+> text "{}"
+    text "local" <+> flatModName modName <+> equals <+> text "{}"
         $$ vcatMap (toLuaT modName) sts
-        $$ text "return" <+> pPrint modName
+        $$ text "return" <+> flatModName modName
 
 toLuaT modName (Assign x e) =
-    pPrint (qualifyId modName x) <+> equals <+> toLuaE e
+    flatVar (qualifyId modName x) <+> equals <+> toLuaE e
 toLuaT _ s = toLuaS s
 
 toLua sts = forwardLocals sts $$ vcatMap toLuaS sts
@@ -47,7 +48,7 @@ forwardLocals sts =
 toLuaS (Assign x e) =
     pPrint x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
-    text "local" <+> pPrint modName <+> equals
+    text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> pPrint (toPath modName)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
@@ -58,7 +59,7 @@ toLuaS (If e th el) =
         $$ toLua th $$ text "else"
         $$ toLua el $$ text "end"
 
-toLuaE (Var x) = pPrint x
+toLuaE (Var x) = flatVar x
 toLuaE (LitD d) = double d
 toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
@@ -73,19 +74,20 @@ toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 renderJavaScript sts = render (toJavaScriptM sts)
 
 toJavaScriptM (Mod modName sts) =
-    text "const" <+> pPrint modName <+> equals <+> text "{}" <> text ";"
+    text "const" <+> flatModName modName <+> equals <+> text "{}" <> text ";"
         $$ vcatMap (toJavaScriptT modName) sts
-        $$ text "module.exports" <+> equals <+> pPrint modName <> text ";"
+        $$ text "module.exports" <+> equals <+> flatModName modName <> text ";"
 
 toJavaScriptT modName (Assign x e) =
-    pPrint (qualifyId modName x) <+> equals <+> toJavaScriptE e <> text ";"
+    flatVar (qualifyId modName x) <+> equals <+> toJavaScriptE e <> text ";"
 toJavaScriptT _ s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
     text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
 toJavaScriptS (Imp modName) =
-    text "const" <+> pPrint modName <+> equals <+>
-        text "require" <> parens (pPrint (toPath modName)) <> text ";"
+    text "const" <+> flatModName modName <+> equals <+>
+        -- js needs the leading dot for local modules
+        text "require" <> parens (pPrint ("./" ++ toPath modName)) <> text ";"
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> text ";"
 toJavaScriptS (If e th []) =
@@ -96,7 +98,7 @@ toJavaScriptS (If e th el) =
         $$ block (vcatMap toJavaScriptS th)
         $$ text "else" $$ block (vcatMap toJavaScriptS el)
 
-toJavaScriptE (Var x) = pPrint x
+toJavaScriptE (Var x) = flatVar x
 toJavaScriptE (LitD d) = double d
 toJavaScriptE (LitT t) = text (show t)
 toJavaScriptE (Func vs sts) =
@@ -114,10 +116,6 @@ block s = text "{" $$ s $$ text "}"
 
 -- Compile to simplified language
 compile (ModuleDeclaration modName decls) =
-    -- TODO qualified module names
-    -- A qualified module name leads to
-    -- A.B.C = {} which is an error because A is undefined
-    -- Should Modules stay tables or should it be flattened to A_B_C = {}?
     Mod modName (makeForeigns decls ++ foldMap (compileT modName) decls)
 
 compileE (Variable v) = Var v
@@ -222,5 +220,6 @@ makeNat = Var . qualifyId (fromString "Native")
 
 makeVar = Var . fromString
 
--- TODO
+-- e.g. A module A.B is saved in the file A.B.lua
+-- local A_B = require("A.B")
 toPath = pretty

@@ -10,7 +10,7 @@ import Control.Applicative(Alternative, empty, (<|>))
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
-import Text.PrettyPrint(text, (<+>), ($$), parens, brackets, render)
+import Text.PrettyPrint(text, (<+>), ($$), (<>), parens, brackets, render)
 import Data.Generics.Uniplate.Data(universe)
 
 
@@ -174,10 +174,19 @@ instance Pretty Pattern where
         brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint (Name qs s) = mintercalate (text ".") (fmap (text . unpack) qs ++ [pPrint s])
+    pPrint = flatName (text ".") (text ".")
 
 instance Pretty Id where
     pPrint (Id s _) = text (unpack s)
+
+-- displays the module name joined with underscore
+flatVar = flatName (text "_") (text ".")
+
+flatModName = flatName (text "_") (text "_")
+
+flatName _ _ (Name [] s) = pPrint s
+flatName qualSep idSep (Name qs s) =
+    mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> pPrint s
 
 prettyEnv m = render (foldrWithKey (\k v r -> pPrint k <+> text ":" <+> pPrint v $$ r) mempty m)
 

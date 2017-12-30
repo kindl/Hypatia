@@ -8,6 +8,12 @@ function Native.eq(v1)
     end
 end
 
+function Native.lt(v1)
+    return function(v2)
+        return v1 < v2
+    end
+end
+
 function Native.times(v1)
     return function(v2)
         return v1 * v2
@@ -89,13 +95,9 @@ function Native.isArray(t)
     return type(t) == "table"
 end
 
-function Native.getn(n)
+function Native.geti(i)
     return function(a)
-        local r = a[n]
-        if r == nil
-            then error("Indexed nil with key " .. tostring(n))
-            else return r
-        end
+        return a[i + 1]
     end
 end
 

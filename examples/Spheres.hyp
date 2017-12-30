@@ -1,8 +1,10 @@
 module Spheres
 
 import Prelude(Unit, Numeral,
-    (+), (*), (%), repeatN)
+    (+), (*), (%), (^), (<), (-),
+    write, toString, repeatN, geti)
 import Array(Array, map, insert)
+
 
 random : Numeral -> Numeral -> Numeral
 
@@ -10,11 +12,13 @@ getWidth : Unit -> Numeral
 
 getHeight : Unit -> Numeral
 
-setColor : Vector Numeral -> Unit
-
 getState : Unit -> Array Sphere
 
 setState : Array Sphere -> Unit
+
+
+# Drawing
+setColor : Vector Numeral -> Unit
 
 circle : Vector Numeral -> Numeral -> Unit
 
@@ -48,14 +52,10 @@ addSphere spheres =
 load _ =
     let
         state = []
-        _ = repeatN (fun _ -> addSphere state) 5
+        _ = repeatN (fun _ -> addSphere state) 10
     in setState state
 
-update dt =
-    let
-        spheres = getState Unit
-        newSpheres = map (updateSphere dt) spheres
-    in setState newSpheres
+update dt = modifyState (map (updateSphere dt))
 
 updateSphere dt (Sphere p v c r) =
     Sphere (updatePosition p v dt) v c r
@@ -66,6 +66,36 @@ updatePosition (Vec2 x y) (Vec2 vx vy) dt =
         ny = (y + vy * dt) % getHeight Unit
     in Vec2 nx ny
 
-mousepressed _ = addSphere (getState Unit)
+mousepressed x y button isTouch =
+    modifyState (map (hideSphere (Vec2 x y)))
+
+mousemoved x y dx dy isTouch =
+    modifyState (map (moveSphere (Vec2 x y)))
+
+moveSphere screenPos (Sphere p v c r) =
+    if distance p screenPos < r
+        then Sphere screenPos v c r
+        else Sphere p v c r
+
+hideSphere screenPos (Sphere p v c r) =
+    if distance p screenPos < r
+        then Sphere p v c 0
+        else Sphere p v c r
+
+
+add (Vec2 a b) (Vec2 c d) =
+    Vec2 (a + c) (b + d)
+
+sub (Vec2 a b) (Vec2 c d) =
+    Vec2 (a - c) (b - d)
+
+dot (Vec2 a b) (Vec2 c d) =
+    (a * c) + (b * d)
+
+distance vec1 vec2 = length (sub vec1 vec2)
+
+length vec = dot vec vec ^ 0.5
 
 draw _ = map drawSphere (getState Unit)
+
+modifyState f = setState (f (getState Unit))

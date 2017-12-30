@@ -2,9 +2,9 @@ module Prelude
 
 
 # Operators
-infixl 4 < smallerThan
+infixl 4 < genLt
 infixl 4 > greaterThan
-infixl 4 <= smallerOrEqal
+infixl 4 <= lesserOrEqal
 infixl 4 >= greaterOrEqal
 
 infixl 6 + plus
@@ -61,9 +61,9 @@ error : Text -> a
 
 
 # Arrays
-geti i = getn (i + 1)
+geti : Numeral -> Array a -> a
 
-getn : Numeral -> Array a -> a
+getn n = geti (n - 1)
 
 size : Array a -> Numeral
 
@@ -73,9 +73,12 @@ isArray : a -> Bool
 # Equality
 genEq l r = toBoolean (genComp eq l r)
 
+genLt l r = toBoolean (genComp lt l r)
+
 # Comparing Numerals, Strings and Constructors
 eq : e -> e -> Bool
 
+lt : e -> e -> Bool
 
 # Matching
 wildcard : z
@@ -115,10 +118,8 @@ toBoolean val = primIf val True False
 
 notEq a b = primIf (eq a b) False True
 
-primLazyOr : Bool -> (Unit -> Bool) -> Bool
 primLazyOr x f = primIf x (fun _ -> x) f Unit
 
-primLazyAnd : Bool -> (Unit -> Bool) -> Bool
 primLazyAnd x f = primIf x f (fun _ -> x) Unit
 
 

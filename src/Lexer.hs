@@ -68,16 +68,16 @@ lexDebug str = runStateT (program "") (startState str)
 Layout
 A simplified version of the function presented in the Haskell 2010 report
 -}
-layout ls@(LocatedLexeme (Indent n) _:ts) (m:ms)
-    | n == m = semi : layout ts (m:ms)
-    | n < m = close : layout ls ms
+layout ls@(LocatedLexeme (Indent n) pos:ts) (m:ms)
+    | n == m = semi pos : layout ts (m:ms)
+    | n < m = close pos : layout ls ms
     | otherwise = layout ts (m:ms)
-layout (LocatedLexeme (Block n) _:ts) (m:ms)
-    | n > m = open : layout ts (n : m : ms)
-layout (LocatedLexeme (Block n) _:ts) []
-    | n > 0 = open : layout ts [n]
-layout (LocatedLexeme (Block n) loc:ts) ms =
-    open : close : layout (LocatedLexeme (Indent n) loc:ts) ms
+layout (LocatedLexeme (Block n) pos:ts) (m:ms)
+    | n > m = open pos : layout ts (n : m : ms)
+layout (LocatedLexeme (Block n) pos:ts) []
+    | n > 0 = open pos : layout ts [n]
+layout (LocatedLexeme (Block n) pos:ts) ms =
+    open pos : close pos : layout (LocatedLexeme (Indent n) pos:ts) ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
     | l == Text.pack "}" = t : layout ts ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
@@ -88,11 +88,11 @@ layout (t@(LocatedLexeme (Reserved l) _):ts) ms
 -- rule left out: no info from parser
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
-layout [] (m:ms) = close : layout [] ms
+layout [] (m:ms) = close builtinLocation : layout [] ms
 
-semi = LocatedLexeme (Reserved (Text.pack ";")) builtinLocation
-open = LocatedLexeme (Reserved (Text.pack "{")) builtinLocation
-close = LocatedLexeme (Reserved (Text.pack "}")) builtinLocation
+semi pos = LocatedLexeme (Reserved (Text.pack ";")) pos
+open pos = LocatedLexeme (Reserved (Text.pack "{")) pos
+close pos = LocatedLexeme (Reserved (Text.pack "}")) pos
 
 isLayout (LocatedLexeme (Reserved t) _)
     | elem t (fmap Text.pack ["let", "where", "of"]) = True
@@ -101,11 +101,11 @@ isLayout _ = False
 -- + 1 because it is the column
 indLength ws = Text.length (last (Text.lines ws)) + 1
 
-getBlock (LocatedLexeme (Whitespace ws) _) =
-    LocatedLexeme (Block (indLength ws)) builtinLocation
+getBlock (LocatedLexeme (Whitespace ws) pos) =
+    LocatedLexeme (Block (indLength ws)) pos
 
-getIndent (LocatedLexeme (Whitespace ws) _) =
-    LocatedLexeme (Indent (indLength ws)) builtinLocation
+getIndent (LocatedLexeme (Whitespace ws) pos) =
+    LocatedLexeme (Indent (indLength ws)) pos
 
 followedByOpen rest = case dropWhile isWhite rest of
     (LocatedLexeme (Reserved t) _:_) | t == Text.pack "{" -> True

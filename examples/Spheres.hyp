@@ -1,8 +1,8 @@
 module Spheres
 
 import Prelude(Unit, Numeral,
-    (+), (*), (%), (^), (<), (-),
-    write, toString, repeatN, geti)
+    (+), (*), (%), (<), (-),
+    sqrt, write, toString, repeatN, geti)
 import Array(Array, map, insert)
 
 
@@ -16,6 +16,13 @@ getState : Unit -> Array Sphere
 
 setState : Array Sphere -> Unit
 
+uncurry2 : a -> b -> c -> Native.Fun2 a b c
+
+uncurry3 : a -> b -> c -> d -> Native.Fun3 a b c d
+
+uncurry4 : a -> b -> c -> d -> e -> Native.Fun4 a b c d e
+
+uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
 
 # Drawing
 setColor : Vector Numeral -> Unit
@@ -66,10 +73,16 @@ updatePosition (Vec2 x y) (Vec2 vx vy) dt =
         ny = (y + vy * dt) % getHeight Unit
     in Vec2 nx ny
 
-mousepressed x y button isTouch =
+mousepressed = uncurry4 mousepressedC
+
+mousepressedC x y button isTouch =
     modifyState (map (hideSphere (Vec2 x y)))
 
-mousemoved x y dx dy isTouch =
+mousemoved = uncurry5 mousemovedC
+
+#TODO
+
+mousemovedC x y dx dy isTouch =
     modifyState (map (moveSphere (Vec2 x y)))
 
 moveSphere screenPos (Sphere p v c r) =
@@ -94,7 +107,7 @@ dot (Vec2 a b) (Vec2 c d) =
 
 distance vec1 vec2 = length (sub vec1 vec2)
 
-length vec = dot vec vec ^ 0.5
+length vec = sqrt (dot vec vec)
 
 draw _ = map drawSphere (getState Unit)
 

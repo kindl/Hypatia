@@ -99,7 +99,7 @@ isLayout (LocatedLexeme (Reserved t) _)
 isLayout _ = False
 
 -- + 1 because it is the column
-indLength ws = Text.length (last (Text.lines ws)) + 1
+indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Block (indLength ws)) pos
@@ -114,18 +114,25 @@ followedByOpen rest = case dropWhile isWhite rest of
 insertIndentTokens (l:rest@(r:rs))
     | isLayout l && followedByOpen rest = l:insertIndentTokens rest
     | isLayout l = l:getBlock r:insertIndentTokens rs
+    | isSignificantWhite l && isSignificantWhite r = insertIndentTokens rest
 insertIndentTokens (l:rest)
     | isSignificantWhite l = getIndent l:insertIndentTokens rest
-insertIndentTokens (l:rest)
-    | isWhite l = insertIndentTokens rest
 insertIndentTokens (l:ls) = l:insertIndentTokens ls
 insertIndentTokens [] = []
+
+-- TODO: can this be moved into insertIndentTokens?
+-- Unfortunately adding 
+-- insertIndentTokens (l:rest)
+--    | isWhite l && not (isSignificantWhite l) = insertIndentTokens rest
+-- did not work
+filterInsiginificant =
+    filter (\x -> if isWhite x then isSignificantWhite x else True)
 
 -- Cut the open and close braces
 cut xs = init (tail xs)
 
 pipeline ls = cut (layout (
-    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
+    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens (filterInsiginificant ls)) [])
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True

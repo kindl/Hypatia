@@ -27,7 +27,6 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 * No records. My father's Achilles heel... I am dreaming of a unified solution for first class modules, records and ad-hoc polymorphism when I am older.
 * Different keywords. `enum` instead of `data`, so that people do not have to learn about algebraic datatypes. `alias` instead of `type`, because it can be used for pattern- and type aliases and `fun` instead of `\` to be a little less cryptic.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
-* Mandatory braces. My layout is still quite hacky.
 
 ### My Stages
 Let me tell you about my daily routine:

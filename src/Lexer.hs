@@ -6,7 +6,6 @@ import Data.Text(Text)
 import Control.Applicative((<|>), many, some, optional, liftA2)
 import Control.Monad(guard)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum, isDigit, isHexDigit)
-import Data.List(groupBy)
 import Syntax
 import Control.Monad.Trans.State(StateT(..), runStateT, get)
 
@@ -111,28 +110,25 @@ followedByOpen rest = case dropWhile isWhite rest of
     (LocatedLexeme (Reserved t) _:_) | t == Text.pack "{" -> True
     _ -> False
 
+-- TODO find the logic error in here
+--insertIndentTokens (l:rest)
+--    | isWhite l && not (isSignificantWhite l)= insertIndentTokens rest
 insertIndentTokens (l:rest@(r:rs))
     | isLayout l && followedByOpen rest = l:insertIndentTokens rest
     | isLayout l = l:getBlock r:insertIndentTokens rs
     | isSignificantWhite l && isSignificantWhite r = insertIndentTokens rest
+    | isSignificantWhite l && isWhite r = insertIndentTokens (l:rs)
 insertIndentTokens (l:rest)
     | isSignificantWhite l = getIndent l:insertIndentTokens rest
-insertIndentTokens (l:ls) = l:insertIndentTokens ls
+    | isWhite l = insertIndentTokens rest
+    | otherwise = l:insertIndentTokens rest
 insertIndentTokens [] = []
-
--- TODO: can this be moved into insertIndentTokens?
--- Unfortunately adding 
--- insertIndentTokens (l:rest)
---    | isWhite l && not (isSignificantWhite l) = insertIndentTokens rest
--- did not work
-filterInsiginificant =
-    filter (\x -> if isWhite x then isSignificantWhite x else True)
 
 -- Cut the open and close braces
 cut xs = init (tail xs)
 
 pipeline ls = cut (layout (
-    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens (filterInsiginificant ls)) [])
+    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True

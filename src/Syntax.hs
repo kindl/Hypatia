@@ -57,11 +57,6 @@ data Literal
 data Associativity = None | LeftAssociative | RightAssociative
     deriving (Show, Data, Typeable)
 
-stringToFixity "infixl" = LeftAssociative
-stringToFixity "infixr" = RightAssociative
-stringToFixity "infix" = None
-stringToFixity x = error ("Unknow associativity " ++ x)
-
 type Precedence = Integer
 type Alias = Id
 
@@ -259,6 +254,8 @@ find o m = mfind o m ()
 
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
+
+prettyWithInfo i = pretty i ++ " " ++ locationInfo (getId i)
 
 locationInfo (Id _ l) = pretty l
 

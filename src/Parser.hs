@@ -3,6 +3,7 @@ module Parser where
 import Syntax
 import Data.Text(pack)
 import Data.Maybe(fromMaybe)
+import Data.Functor(($>))
 import Control.Applicative((<|>), some, many, optional)
 import Control.Monad(unless, mfilter, guard)
 import Control.Monad.Trans.State(StateT(..), runStateT)
@@ -34,15 +35,13 @@ muncons (x:xs) = return (x, xs)
 satisfy predicate = mfilter predicate next
 
 -- get a lexeme that equals this string
-token str = do
-    satisfy (\x -> case extractLexeme x of
-        Reserved s -> pack str == s
-        -- for token "-"
-        Varsym s -> pack str == s
-        -- for token "_"
-        Varid s -> pack str == s
-        _ -> False)
-    return str
+token str = satisfy (\x -> case extractLexeme x of
+    Reserved s -> pack str == s
+    -- for token "-"
+    Varsym s -> pack str == s
+    -- for token "_"
+    Varid s -> pack str == s
+    _ -> False)
 
 -- some combinators for parens for readability
 parenthesized p = token "(" *> p <* token ")"
@@ -104,7 +103,7 @@ fixityDeclaration = do
     i <- integer
     o <- varsym
     a <- al
-    return (FixityDeclaration (stringToFixity f) i o a)
+    return (FixityDeclaration f i o a)
 functionDeclaration = do
     v <- var
     ps <- some apat
@@ -129,7 +128,9 @@ exprWithWhere = do
     ws <- optional (token "where" *> decls)
     return (maybe e (flip LetExpression e) ws)
 
-fixity = token "infixl" <|> token "infixr" <|> token "infix"
+fixity = token "infixl" $> LeftAssociative
+    <|> token "infixr" $> RightAssociative
+    <|> token "infix" $> None
 
 {- Types -}
 qtype = forall <|> otype
@@ -267,7 +268,7 @@ constructor = do
     c <- qcon
     return (ConstructorPattern c [])
 literalPattern = fmap LiteralPattern literal
-wildcard = token "_" *> return Wildcard
+wildcard = token "_" $> Wildcard
 parenthesizedPattern = fmap ParenthesizedPattern (parenthesized pat)
 arrayPattern = fmap ArrayPattern (bracketed (sepBy pat (token ",")))
 

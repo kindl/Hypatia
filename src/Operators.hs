@@ -18,6 +18,8 @@ fixAssoc operatorTable =
         fixAssocO operatorTable PatternInfixOperator a o1 b o2 c
     g p = p
 
+    f (InfixOperator (InfixOperator a o1 b) o2 c) =
+        fixAssocO operatorTable InfixOperator a o1 b o2 c
     f (InfixOperator a o1 (InfixOperator b o2 c)) =
         fixAssocO operatorTable InfixOperator a o1 b o2 c
     f e = e
@@ -33,16 +35,18 @@ captureAssocs (ModuleDeclaration modName decls) =
     fromList [(qualifyId modName op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
 
 -- General helper function for patterns and expressions
---TODO prec1 == prec2 has to be an error if they don't have the same associativity
+-- TODO 2 * 3 + 5 * 7 + 11 * 13
 fixAssocO operatorTable constr f1 o1 fe1 o2 fe2 =
     let
         (assoc1, prec1) = find o1 operatorTable
         (assoc2, prec2) = find o2 operatorTable
-    in if o1 == o2
-        then (case assoc1 of
-            LeftAssociative -> constr (constr f1 o1 fe1) o1 fe2
-            RightAssociative -> constr f1 o1 (constr fe1 o1 fe2)
-            None -> error ("Operator " ++ pretty o1 ++ " has no associativity"))
-        else if prec1 > prec2
-            then constr (constr f1 o1 fe1) o2 fe2
-            else constr f1 o1 (constr fe1 o2 fe2)
+    in (case compare prec1 prec2 of
+        LT -> constr f1 o1 (constr fe1 o2 fe2)
+        GT -> constr (constr f1 o1 fe1) o2 fe2
+        EQ -> (case (assoc1, assoc2) of
+            (LeftAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
+            -- TODO this is probably an ambiguous parse?
+            (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
+            (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
+            (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
+            _ -> error ("Operator " ++ prettyWithInfo o1 ++ " has no associativity")))

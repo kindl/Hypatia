@@ -3,11 +3,10 @@ module Parser where
 import Syntax
 import Data.Text(pack)
 import Data.Maybe(fromMaybe)
-import Data.Functor(($>))
+import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional)
-import Control.Monad(unless, mfilter, guard)
+import Control.Monad(unless, mfilter, mzero)
 import Control.Monad.Trans.State(StateT(..), runStateT)
-import Control.Monad.Trans.Class(lift)
 import Lexer hiding (varsym, qvarsym, qconid,
     conid, varid, qvarid, literal, modid, satisfy, float)
 
@@ -35,13 +34,13 @@ muncons (x:xs) = return (x, xs)
 satisfy predicate = mfilter predicate next
 
 -- get a lexeme that equals this string
-token str = satisfy (\x -> case extractLexeme x of
+token str = void (satisfy (\x -> case extractLexeme x of
     Reserved s -> pack str == s
     -- for token "-"
     Varsym s -> pack str == s
     -- for token "_"
     Varid s -> pack str == s
-    _ -> False)
+    _ -> False))
 
 -- some combinators for parens for readability
 parenthesized p = token "(" *> p <* token ")"
@@ -67,9 +66,9 @@ impdecls = sepBy1 impdecl (token ";")
 impdecl = do
     token "import"
     name <- modid
-    spec <- optional impspec
+    imps <- optional impspec
     asAlias <- optional (token "as" *> modid)
-    return (ImportDeclaration name spec asAlias)
+    return (ImportDeclaration name imps asAlias)
 
 impspec = parenthesized (sepBy spec (token ","))
 
@@ -290,47 +289,49 @@ A qvarid can be a qualified variable like List.map
 or a normal variable identifier like map
 -}
 
-isVarsym (Varsym _) = True
-isVarsym _ = False
+fromVarsym (Varsym v) = return v
+fromVarsym _ = mzero
 
-isVarid (Varid _) = True
-isVarid _ = False
+fromVarid (Varid v) = return v
+fromVarid _ = mzero
 
-isConid (Conid _) = True
-isConid _ = False
+fromConid (Conid v) = return v
+fromConid _ = mzero
+
+fromDouble (Double v) = return v
+fromDouble _ = mzero
+
+fromInt (Integer v) = return v
+fromInt _ = mzero
+
+fromStr (String v) = return v
+fromStr _ = mzero
 
 parseId p = do
     n <- parseName p
     case n of
-        Name [] id -> return id
-        _ -> lift (throwString "Id")
-parseName p = do
+        Name [] ident -> return ident
+        _ -> mzero
+parseName f = do
     n <- next
-    let l = extractLexeme n
-    guard (p l)
-    return (fromText (extractLocation n) (extractText l))
+    r <- f (extractLexeme n)
+    return (fromText (extractLocation n) r)
+parseLiteral f = do
+    n <- next
+    f (extractLexeme n)
 
-varsym = parseId isVarsym
-qvarsym = parseName isVarsym
-varid = parseId isVarid
-qvarid = parseName isVarid
-conid = parseId isConid
-qconid = parseName isConid
+varsym = parseId fromVarsym
+qvarsym = parseName fromVarsym
+
+varid = parseId fromVarid
+qvarid = parseName fromVarid
+
+conid = parseId fromConid
+qconid = parseName fromConid
 modid = qconid
 
-float = do
-    l <- fmap extractLexeme next
-    case l of
-        Double d -> return d
-        _ -> lift (throwString "")
-integer = do
-    l <- fmap extractLexeme next
-    case l of
-        Integer d -> return d
-        _ -> lift (throwString "")
-string = do
-    l <- fmap extractLexeme next
-    case l of
-        String d -> return d
-        _ -> lift (throwString "")
+float = parseLiteral fromDouble
+integer = parseLiteral fromInt
+string = parseLiteral fromStr
+
 literal = fmap (Numeral . fromIntegral) integer <|> fmap Numeral float <|> fmap Text string

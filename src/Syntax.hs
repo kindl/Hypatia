@@ -5,6 +5,7 @@ import Prelude hiding (lookup)
 import Data.Data
 import Data.Text(Text, unpack, pack, split)
 import Data.Char(isUpper, isSymbol)
+import Data.Functor.Identity(runIdentity)
 import Control.Monad(MonadPlus, mzero, mplus)
 import Control.Applicative(Alternative, empty, (<|>))
 import Data.Hashable(Hashable, hashWithSalt)
@@ -250,7 +251,7 @@ throwString s = Left [s]
 fromEitherM (Left s) = fail (pretty s)
 fromEitherM (Right r) = return r
 
-find o m = mfind o m ()
+find o m = runIdentity (mfind o m)
 
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)

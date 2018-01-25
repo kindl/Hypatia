@@ -8,6 +8,7 @@ import Parser
 import TypeChecker
 import Operators
 import Qualification
+import Data.Functor.Identity(runIdentity)
 import Data.List(nub)
 import Data.HashMap.Strict(insert)
 import System.FilePath(takeDirectory, takeBaseName, (</>))
@@ -101,7 +102,7 @@ feedbackM envFilter action capture envs mods =
 ret f a b = return (f a b)
 
 feedback envFilter action capture envs mods =
-    feedbackM (ret envFilter) (ret action) (ret capture) envs mods ()
+    runIdentity (feedbackM (ret envFilter) (ret action) (ret capture) envs mods)
 
 step envFilter action capture envs (mod, imports) =
     do

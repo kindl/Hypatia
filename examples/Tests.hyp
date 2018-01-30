@@ -75,8 +75,8 @@ testEq =
             (Vec4 41 43 47 53)
     } in test "eq" (boolToString (m1 == m))
 
-testRight = test "should be true" (matches m1 m1)
-testWrong = test "should be false" (matches m1 m2)
+testRight = test "should be true" (m1 == m1)
+testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
 testWords = test "words should be 3" (size (words "Hello Little World!"))

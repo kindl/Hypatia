@@ -1,7 +1,5 @@
 ﻿const Native = {};
 
-Native.wildcard = function(){};
-
 Native.eq = function(v1)
 {
     return function(v2)

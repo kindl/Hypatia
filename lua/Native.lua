@@ -1,7 +1,5 @@
 local Native = {}
 
-function Native.wildcard() end
-
 function Native.eq(v1)
     return function(v2)
         return v1 == v2

@@ -80,14 +80,6 @@ eq : e -> e -> Bool
 
 lt : e -> e -> Bool
 
-# Matching
-wildcard : z
-
-matches = genComp matchAux
-
-matchAux l r = primLazyOr (eq wildcard l) (fun _ -> eq l r)
-
-
 # Generic comparison
 genComp comp l r =
     primLazyOr (comp l r)

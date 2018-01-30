@@ -2,8 +2,7 @@ module Aliases where
 
 import Syntax
 import Data.Generics.Uniplate.Data(transformBi)
-import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, fromList)
+import Data.HashMap.Strict(fromList)
 import Data.Maybe(fromMaybe)
 import Control.Arrow(first)
 
@@ -12,15 +11,15 @@ import Control.Arrow(first)
 aliasTypes aliasTable = transformBi f . transformBi g . transformBi j
   where
     f e@(ConstructorExpression c) =
-        maybe e toConstructor (lookup c aliasTable)
+        maybe e toConstructor (mfind c aliasTable)
     f e = e
 
     g p@(ConstructorPattern c ps) =
-        maybe p (toConstructorPattern ps) (lookup c aliasTable)
+        maybe p (toConstructorPattern ps) (mfind c aliasTable)
     g p = p
 
     j t@(TypeConstructor c) =
-        fromMaybe t (lookup c aliasTable)
+        fromMaybe t (mfind c aliasTable)
     j t = t
 
 aliasOperators aliases = transformBi f . transformBi g . transformBi j . transformBi h
@@ -55,9 +54,9 @@ aliasDecls decls =
         aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
         h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
-            ExpressionDeclaration (VariablePattern (find op aliases)) e
+            ExpressionDeclaration (VariablePattern (findId op aliases)) e
         h (TypeSignature op t) | isOperator op =
-            TypeSignature (find op aliases) t
+            TypeSignature (findId op aliases) t
         h (AliasDeclaration op a) =
             AliasDeclaration (findConstructor aliases op) a
         h (EnumDeclaration op vars constructors) =
@@ -67,7 +66,7 @@ aliasDecls decls =
     in fmap h decls
 
 findConstructor aliases op | isOperator op =
-    let alias = find op aliases in
+    let alias = findId op aliases in
         if isConstructor alias then alias else
             error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
 findConstructor _ op = op

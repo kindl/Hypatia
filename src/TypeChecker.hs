@@ -1,7 +1,8 @@
 module TypeChecker where
 
+import Prelude hiding (lookup)
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
@@ -220,7 +221,7 @@ occurs x ty = elem x (freeVars ty)
 apply subst (ForAll vs ty) =
     let filteredSubst = excludingKeys vs subst
     in ForAll vs (apply filteredSubst ty)
-apply subst ty@(TypeVariable x) = maybe ty (apply subst) (mfind x subst)
+apply subst ty@(TypeVariable x) = maybe ty (apply subst) (lookup x subst)
 apply subst ty = descend (apply subst) ty
 
 -- Environment

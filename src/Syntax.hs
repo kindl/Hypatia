@@ -3,6 +3,7 @@ module Syntax where
 
 import Prelude hiding (lookup)
 import Data.Data
+import Data.Maybe(fromMaybe)
 import Data.Text(Text, unpack, pack, split)
 import Data.Char(isUpper, isSymbol)
 import Data.Functor.Identity(runIdentity)
@@ -254,9 +255,12 @@ fromEitherM (Right r) = return r
 find o m = runIdentity (mfind o m)
 
 mfind o m =
-    maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
+    maybe (fail ("Unknown " ++ prettyWithInfo o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
-prettyWithInfo i = pretty i ++ " " ++ locationInfo (getId i)
+findId i m =
+    fromMaybe (error ("Unknown " ++ pretty i ++ " " ++ locationInfo i ++ " in " ++ pretty (keys m))) (lookup i m)
+
+prettyWithInfo n = pretty n ++ " " ++ locationInfo (getId n)
 
 locationInfo (Id _ l) = pretty l
 

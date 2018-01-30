@@ -9,7 +9,7 @@ qualifyNames quals (ModuleDeclaration name decls) =
     ModuleDeclaration name (fmap (qualifyD quals) decls)
 
 qualifyD quals (EnumDeclaration id vars constructors) =
-    EnumDeclaration id vars (fmap (qualifyC quals) constructors)
+    EnumDeclaration id vars (fmap (fmap (fmap (qualifyT quals))) constructors)
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
 qualifyD quals (AliasDeclaration id t) =
@@ -20,9 +20,6 @@ qualifyD quals (FunctionDeclaration id ps e) =
     FunctionDeclaration id (fmap (qualifyP quals) ps) (qualifyE quals e)
 qualifyD _ decl@(ImportDeclaration _ _ _) = decl
 qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
-
-qualifyC quals (c, ts) =
-    (c, fmap (qualifyT quals) ts)
 
 qualifyT quals ty =
     let
@@ -80,7 +77,7 @@ captureNameD (FixityDeclaration _ _ id _) =
 captureNameD _ = []
 
 findName (Name [] id) quals =
-    Name (getQualifiers (find id quals)) id
+    Name (getQualifiers (findId id quals)) id
 findName n _ = n
 
 toLocals ids = fmap fromId (toMap ids)

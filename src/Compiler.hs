@@ -25,6 +25,7 @@ data Expr
     | Access Id [Int]
     | Call Expr [Expr]
     | Arr [Expr]
+    | And Expr Expr
         deriving (Show)
 
         
@@ -69,6 +70,7 @@ toLuaE (Access v indices) =
     pPrint v <> foldMap (brackets . int . (+ 1)) indices
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
+toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
 
 {- JavaScript -}
 renderJavaScript sts = render (toJavaScriptM sts)
@@ -109,6 +111,7 @@ toJavaScriptE (Access v indices) =
 toJavaScriptE (Call e es) =
     toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
+toJavaScriptE (And e1 e2) = toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
 
 vcatMap f x = vcat (fmap f x)
 commas x = mintercalate (text ", ") x
@@ -174,35 +177,52 @@ compileEnum modName (c, vs) =
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])
 
+
 compileAlt (p, e) =
-    If (Call (Call (makeVar "Prelude.matches") [compileP p]) [makeVar "_v"])
+    If (getMatchings p)
         (getAssignments [] p ++ [Ret (compileE e)]) []
+
+
+getMatchings p = foldl1 And (case getMatching [] p of
+        [] -> [makeVar "true"]
+        xs -> xs)
+
+getMatching _ Wildcard = []
+getMatching _ (VariablePattern _) = []
+getMatching i (AliasPattern _ p) =
+    getMatching i p
+getMatching i (ConstructorPattern c []) =
+    [Call (Call (makeVar "Native.eq")
+        [Access (makeId "_v") i]) [Var c]]
+getMatching i (ConstructorPattern c ps) =
+    [Call (makeVar "Native.isArray") [Access (makeId "_v") i],
+        Call (Call (makeVar "Native.eq")
+            [Access (makeId "_v") (i ++ [0])]) [Var c]]
+                ++ descendAccess getMatching i 1 ps
+getMatching i (ArrayPattern ps) =
+    descendAccess getMatching i 0 ps
+getMatching i (LiteralPattern l) =
+    [Call (Call (makeVar "Native.eq")
+        [Access (makeId "_v") i]) [compileL l]]
+getMatching _ p = error ("getMatching on " ++ pretty p)
+
 
 getAssignments i (VariablePattern x) =
     [Assign x (Access (makeId "_v") i)]
 getAssignments i (AliasPattern x p) =
     Assign x (Access (makeId "_v") i):getAssignments i p
 getAssignments i (ConstructorPattern _ ps) =
-    descendAssignments i 1 ps
+    descendAccess getAssignments i 1 ps
 getAssignments i (ArrayPattern ps) =
-    descendAssignments i 0 ps
+    descendAccess getAssignments i 0 ps
 getAssignments _ (LiteralPattern _) = []
 getAssignments _ Wildcard = []
 getAssignments _ p = error ("getAssignments on " ++ pretty p)
 
-descendAssignments _ _ [] = []
-descendAssignments i j (p:ps) =
-    getAssignments (i ++ [j]) p ++ descendAssignments i (j + 1) ps
+descendAccess _ _ _ [] = []
+descendAccess f i j (p:ps) =
+    f (i ++ [j]) p ++ descendAccess f i (j + 1) ps
 
-
-compileP (ConstructorPattern c []) = Var c
-compileP (ConstructorPattern c ps) = Arr (Var c : fmap compileP ps)
-compileP (VariablePattern _) = makeVar "Native.wildcard"
-compileP (AliasPattern _ p) = compileP p
-compileP (LiteralPattern l) = compileL l
-compileP Wildcard = makeVar "Native.wildcard"
-compileP (ArrayPattern ps) = Arr (fmap compileP ps)
-compileP p = error ("compileP does not work on " ++ pretty p)
 
 immediate sts = Call (Func [] sts) []
 

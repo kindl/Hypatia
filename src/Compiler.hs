@@ -125,9 +125,9 @@ compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c
 compileE (FunctionApplication f e) = Call (compileE f) [compileE e]
 compileE (LambdaExpression [VariablePattern v] e) =
-    Func [v] [Ret (compileE e)]
+    Func [v] (compileEtoS e)
 compileE (LambdaExpression [Wildcard] e) =
-    Func [makeId "_w"] [Ret (compileE e)]
+    Func [makeId "_w"] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     Func [makeId "_v"] (compileAlt (p, e) :
         [Ret (Call (makeVar "Native.error")
@@ -139,15 +139,23 @@ compileE (CaseLambdaExpression alts) =
                 ++ mintercalate " " (fmap (locationInfoP . fst) alts)))])])
 compileE (LiteralExpression l) = compileL l
 compileE (LetExpression decls e) =
-    immediate (foldMap compileD decls ++ [Ret (compileE e)])
+    immediate (compileLetE decls e)
 compileE (IfExpression c th el) =
-    immediate [If (eqTrue (compileE c)) [Ret (compileE th)] [Ret (compileE el)]]
+    immediate (compileIfE c th el)
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
 compileE e = error ("compileE does not work on " ++ show e)
 
-eqTrue e =
-    Call (Call (makeVar "Native.eq") [makeVar "Prelude.True"]) [e]
+compileLetE decls e = foldMap compileD decls ++ compileEtoS e
+compileIfE c th el =
+    [If (mkEq (makeVar "Prelude.True") (compileE c)) (compileEtoS th) (compileEtoS el)]
+
+-- Compiles an expression in a statement context
+compileEtoS (LetExpression decls e) =
+    compileLetE decls e
+compileEtoS (IfExpression c th el) =
+    compileIfE c th el
+compileEtoS e = [Ret (compileE e)]
 
 compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
@@ -180,7 +188,7 @@ curryFunc = foldr (\v r -> Func [v] [Ret r])
 
 compileAlt (p, e) =
     If (getMatchings p)
-        (getAssignments [] p ++ [Ret (compileE e)]) []
+        (getAssignments [] p ++ compileEtoS e) []
 
 
 getMatchings p = foldl1 And (case getMatching [] p of
@@ -192,20 +200,24 @@ getMatching _ (VariablePattern _) = []
 getMatching i (AliasPattern _ p) =
     getMatching i p
 getMatching i (ConstructorPattern c []) =
-    [Call (Call (makeVar "Native.eq")
-        [Access (makeId "_v") i]) [Var c]]
+    [mkEq (Access (makeId "_v") i) (Var c)]
 getMatching i (ConstructorPattern c ps) =
-    [Call (makeVar "Native.isArray") [Access (makeId "_v") i],
-        Call (Call (makeVar "Native.eq")
-            [Access (makeId "_v") (i ++ [0])]) [Var c]]
-                ++ descendAccess getMatching i 1 ps
+    [mkIsArray (Access (makeId "_v") i),
+    mkEq (mkLength (Access (makeId "_v") i)) (LitD (fromIntegral (length ps + 1))),
+    mkEq (Access (makeId "_v") (i ++ [0])) (Var c)]
+    ++ descendAccess getMatching i 1 ps
 getMatching i (ArrayPattern ps) =
-    descendAccess getMatching i 0 ps
+    [mkIsArray (Access (makeId "_v") i),
+    mkEq (mkLength (Access (makeId "_v") i)) (LitD (fromIntegral (length ps)))
+    ]
+    ++ descendAccess getMatching i 0 ps
 getMatching i (LiteralPattern l) =
-    [Call (Call (makeVar "Native.eq")
-        [Access (makeId "_v") i]) [compileL l]]
+    [mkEq (Access (makeId "_v") i) (compileL l)]
 getMatching _ p = error ("getMatching on " ++ pretty p)
 
+mkIsArray a = Call (makeVar "Native.isArray") [a]
+mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
+mkLength a = Call (makeVar "Native.size") [a]
 
 getAssignments i (VariablePattern x) =
     [Assign x (Access (makeId "_v") i)]

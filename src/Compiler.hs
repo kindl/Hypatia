@@ -4,7 +4,7 @@ module Compiler where
 import Syntax
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
-    equals, text, int, braces, parens, brackets, double, render)
+    equals, text, int, braces, parens, brackets, double, render, semi)
 import Text.PrettyPrint.HughesPJClass(pPrint)
 
 
@@ -28,7 +28,7 @@ data Expr
     | And Expr Expr
         deriving (Show)
 
-        
+
 -- Simplified language to Lua
 renderLua sts = render (toLuaM sts)
 
@@ -76,22 +76,22 @@ toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
 renderJavaScript sts = render (toJavaScriptM sts)
 
 toJavaScriptM (Mod modName sts) =
-    text "const" <+> flatModName modName <+> equals <+> text "{}" <> text ";"
+    text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi
         $$ vcatMap (toJavaScriptT modName) sts
-        $$ text "module.exports" <+> equals <+> flatModName modName <> text ";"
+        $$ text "module.exports" <+> equals <+> flatModName modName <> semi
 
 toJavaScriptT modName (Assign x e) =
-    flatVar (qualifyId modName x) <+> equals <+> toJavaScriptE e <> text ";"
+    flatVar (qualifyId modName x) <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptT _ s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
-    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> text ";"
+    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         -- js needs the leading dot for local modules
-        text "require" <> parens (pPrint ("./" ++ toPath modName)) <> text ";"
+        text "require" <> parens (pPrint ("./" ++ toPath modName)) <> semi
 toJavaScriptS (Ret e) =
-    text "return" <+> toJavaScriptE e <> text ";"
+    text "return" <+> toJavaScriptE e <> semi
 toJavaScriptS (If e th []) =
     text "if" <> parens (toJavaScriptE e)
         $$ block (vcatMap toJavaScriptS th)
@@ -126,17 +126,13 @@ compileE (ConstructorExpression c) = Var c
 compileE (FunctionApplication f e) = Call (compileE f) [compileE e]
 compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
-compileE (LambdaExpression [Wildcard] e) =
-    Func [makeId "_w"] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
-    Func [makeId "_v"] (compileAlt (p, e) :
-        [Ret (Call (makeVar "Native.error")
-            [LitT (pack ("failed pattern match lambda at " ++ locationInfoP p))])])
+    Func [makeId "_v"]
+        (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfoP p))] [(p, e)])
 compileE (CaseLambdaExpression alts) =
-    Func [makeId "_v"] (fmap compileAlt alts ++
-        [Ret (Call (makeVar "Native.error")
-            [LitT (pack ("failed pattern match case lambda at "
-                ++ mintercalate " " (fmap (locationInfoP . fst) alts)))])])
+    Func [makeId "_v"]
+        (compileAlts [Ret (mkError ("failed pattern match case lambda at "
+        ++ mintercalate " " (fmap (locationInfoP . fst) alts)))] alts)
 compileE (LiteralExpression l) = compileL l
 compileE (LetExpression decls e) =
     immediate (compileLetE decls e)
@@ -185,15 +181,11 @@ compileEnum modName (c, vs) =
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])
 
-
-compileAlt (p, e) =
-    If (getMatchings p)
-        (getAssignments [] p ++ compileEtoS e) []
-
-
-getMatchings p = foldl1 And (case getMatching [] p of
-        [] -> [makeVar "true"]
-        xs -> xs)
+compileAlts = foldr (\(p, e) rest ->
+    let s = getAssignments [] p ++ compileEtoS e
+    in case getMatching [] p of
+        [] -> s
+        ms -> If (foldl1 And ms) s []:rest)
 
 getMatching _ Wildcard = []
 getMatching _ (VariablePattern _) = []
@@ -203,21 +195,16 @@ getMatching i (ConstructorPattern c []) =
     [mkEq (Access (makeId "_v") i) (Var c)]
 getMatching i (ConstructorPattern c ps) =
     [mkIsArray (Access (makeId "_v") i),
-    mkEq (mkLength (Access (makeId "_v") i)) (LitD (fromIntegral (length ps + 1))),
+    mkEq (mkSize (Access (makeId "_v") i)) (LitD (fromIntegral (length ps + 1))),
     mkEq (Access (makeId "_v") (i ++ [0])) (Var c)]
     ++ descendAccess getMatching i 1 ps
 getMatching i (ArrayPattern ps) =
     [mkIsArray (Access (makeId "_v") i),
-    mkEq (mkLength (Access (makeId "_v") i)) (LitD (fromIntegral (length ps)))
-    ]
+    mkEq (mkSize (Access (makeId "_v") i)) (LitD (fromIntegral (length ps)))]
     ++ descendAccess getMatching i 0 ps
 getMatching i (LiteralPattern l) =
     [mkEq (Access (makeId "_v") i) (compileL l)]
 getMatching _ p = error ("getMatching on " ++ pretty p)
-
-mkIsArray a = Call (makeVar "Native.isArray") [a]
-mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
-mkLength a = Call (makeVar "Native.size") [a]
 
 getAssignments i (VariablePattern x) =
     [Assign x (Access (makeId "_v") i)]
@@ -238,6 +225,7 @@ descendAccess f i j (p:ps) =
 
 immediate sts = Call (Func [] sts) []
 
+-- Type annotations without implementation are assumed to be native
 makeForeigns decls =
   let
     defs = foldMap getDefsD decls
@@ -251,6 +239,11 @@ getSignatures decls =
 makeNat = Var . qualifyId (fromString "Native")
 
 makeVar = Var . fromString
+
+mkError s = Call (makeVar "Native.error") [LitT (pack s)]
+mkIsArray a = Call (makeVar "Native.isArray") [a]
+mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
+mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A.B.lua
 -- local A_B = require("A.B")

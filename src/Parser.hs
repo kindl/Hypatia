@@ -82,7 +82,7 @@ enumDeclaration = do
     return (EnumDeclaration name variables (concat constructors))
 aliasDeclaration = do
     token "alias"
-    alias <- con
+    alias <- conid
     token "="
     val <- otype
     return (AliasDeclaration alias val)

@@ -57,8 +57,6 @@ aliasDecls decls =
             ExpressionDeclaration (VariablePattern (findId op aliases)) e
         h (TypeSignature op t) | isOperator op =
             TypeSignature (findId op aliases) t
-        h (AliasDeclaration op a) =
-            AliasDeclaration (findConstructor aliases op) a
         h (EnumDeclaration op vars constructors) =
             EnumDeclaration (findConstructor aliases op) vars
                 (fmap (first (findConstructor aliases)) constructors)

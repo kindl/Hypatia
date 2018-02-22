@@ -153,8 +153,8 @@ compileEtoS e = [Ret (compileE e)]
 compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
 
-compileT modName (EnumDeclaration _ _ cs) =
-    fmap (compileEnum modName) cs
+compileT modName (TypeDeclaration _ _ cs) =
+    fmap (compileConstructor modName) cs
 compileT _ (ImportDeclaration modName _ _) = [Imp modName]
 compileT _ (FixityDeclaration _ _ _ _) = []
 compileT _ other = compileD other
@@ -167,9 +167,9 @@ compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
-compileEnum _ (c, []) =
+compileConstructor _ (c, []) =
     Assign c (Func [] [])
-compileEnum modName (c, vs) =
+compileConstructor modName (c, vs) =
     let
         name = qualifyId modName c
         vars = nNewVars (length vs)

@@ -8,8 +8,8 @@ import Data.Generics.Uniplate.Data(transform, descend)
 qualifyNames quals (ModuleDeclaration name decls) =
     ModuleDeclaration name (fmap (qualifyD quals) decls)
 
-qualifyD quals (EnumDeclaration id vars constructors) =
-    EnumDeclaration id vars (fmap (fmap (fmap (qualifyT quals))) constructors)
+qualifyD quals (TypeDeclaration id vars constructors) =
+    TypeDeclaration id vars (fmap (fmap (fmap (qualifyT quals))) constructors)
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
 qualifyD quals (AliasDeclaration id t) =
@@ -64,7 +64,7 @@ qualifyA quals (p, e) =
 captureNames (ModuleDeclaration modName decls) =
     toQualifieds modName (foldMap captureNameD decls)
 
-captureNameD (EnumDeclaration t _ cs) =
+captureNameD (TypeDeclaration t _ cs) =
     t : fmap fst cs
 captureNameD (ExpressionDeclaration p _) =
     getDefsP p

@@ -64,7 +64,7 @@ type Alias = Id
 
 data Declaration
     = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
-    | EnumDeclaration Id [Id] [(Id, [Type])]
+    | TypeDeclaration Id [Id] [(Id, [Type])]
     | ExpressionDeclaration Pattern Expression
     | AliasDeclaration Id Type
     -- simplified to an expression declaration
@@ -229,7 +229,7 @@ excludingKeys xs = filterWithKey (const . flip notElem xs)
 includingKeys xs = filterWithKey (const . flip elem xs)
 
 getDefsD (ExpressionDeclaration p _) = getDefsP p
-getDefsD (EnumDeclaration _ _ cs) = fmap fst cs
+getDefsD (TypeDeclaration _ _ cs) = fmap fst cs
 getDefsD _ = []
 
 getDefsP p =

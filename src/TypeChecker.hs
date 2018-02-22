@@ -32,12 +32,17 @@ inferModule (ModuleDeclaration modName decls) =
   do
     info "---------------------------------"
     info ("Typechecking Module " ++ pretty modName)
-    let enums = foldMap (gatherEnum (qualifyId modName)) decls
-    let enums' = mapKeys (qualifyId modName) enums
+    
+    let constructors = foldMap (gatherConstructor (qualifyId modName)) decls
     let signatures = foldMap gatherTypeSig decls
-    let signatures' = mapKeys (qualifyId modName) signatures
-    binds <- with enums' (inferDecls (qualifyId modName) generalize signatures' decls)
-    return (enums' `mappend` binds)
+    
+    -- Qualify means rename Ty to AnyModuleName.Ty
+    let qualifiedConstructors = mapKeys (qualifyId modName) constructors
+    let qualifiedSignatures = mapKeys (qualifyId modName) signatures
+    
+    binds <- with qualifiedConstructors (inferDecls (qualifyId modName) generalize qualifiedSignatures decls)
+    return (qualifiedConstructors `mappend` binds)
+
 
 -- Typecheck Expressions
 typecheck :: Expression -> Type -> Typechecker ()
@@ -99,11 +104,11 @@ typecheckAlt pty ety (pat, expr)  =
 
 -- Typecheck Constructors
 
--- capture enums from declarations for the type environment
-gatherEnum qual (EnumDeclaration id vars constructors) =
-    let enumName = TypeConstructor (qual id)
-    in foldMap (constructorToType enumName vars) constructors
-gatherEnum _ _ = mempty
+-- capture the signature of all constructors from a type declaration
+gatherConstructor qual (TypeDeclaration id vars constructors) =
+    let typeConstructor = TypeConstructor (qual id)
+    in foldMap (constructorToType typeConstructor vars) constructors
+gatherConstructor _ _ = mempty
 
 -- convert a constructor declaration to a type
 constructorToType ty vars (name, tys) =

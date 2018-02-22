@@ -14,7 +14,7 @@ alias Numeral = Native.Numeral
 circle : Vector Numeral -> Numeral -> Native.Unit
 setColor : Vector Numeral -> Native.Unit
 
-enum Vector a = Vec2 a a | Vec3 a a a
+type Vector a = Vec2 a a | Vec3 a a a
 
 draw _ = let { _ = setColor (Vec3 40 30 240) } in circle (Vec2 400 300) 200
 ```
@@ -25,7 +25,7 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 * No operator sections. In Haskell `(-2)` could be a section or a prefix minus. Just use anonymous functions for partial application.
 * No do-expressions, list comprehensions and arithmetic sequences. When I grow up I want to use plain functions like `liftM2` or `enumFrom`.
 * No records. My father's Achilles heel... I am dreaming of a unified solution for first class modules, records and ad-hoc polymorphism when I am older.
-* Different keywords. `enum` instead of `data`, so that people do not have to learn about algebraic datatypes. `alias` instead of `type`, because it can be used for pattern- and type aliases and `fun` instead of `\` to be a little less cryptic.
+* Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` instead of `type`, because it can be used for pattern- and type aliases and `fun` instead of `\` to be a little less cryptic.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
 
 ### My Stages
@@ -49,7 +49,7 @@ Hypatia
 
 ## How to get started
 Hypatia is a prototype of a functional language of the ML-family that compiles to lua.
-People are writing game engines in functional languages, however functional scripting languages are rarely seen in game engines.
+People are writing game engines in functional languages, however functional scripting languages are rarely seen.
 Hypatia could fill this gap and it could reuse parts of the existing lua ecosystem.
 
 Install the game engine [love](https://love2d.org) then run

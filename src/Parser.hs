@@ -73,13 +73,13 @@ impdecl = do
 impspec = parenthesized (sepBy spec (token ","))
 
 topdecls = sepBy topdecl (token ";")
-topdecl = enumDeclaration <|> aliasDeclaration <|> decl
-enumDeclaration = do
-    token "enum"
+topdecl = typeDeclaration <|> aliasDeclaration <|> decl
+typeDeclaration = do
+    token "type"
     name <- con
     variables <- many var
     constructors <- optional (token "=" *> constrs)
-    return (EnumDeclaration name variables (concat constructors))
+    return (TypeDeclaration name variables (concat constructors))
 aliasDeclaration = do
     token "alias"
     alias <- conid

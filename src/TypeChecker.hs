@@ -104,7 +104,17 @@ typecheckAlt pty ety (pat, expr)  =
 
 -- Typecheck Constructors
 
--- capture the signature of all constructors from a type declaration
+{-
+capture the signature of all constructors from a type declaration
+
+for example
+type Vector a = Vec2 a a | Vec3 a a a
+becomes
+Vec2 : forall a. a -> a -> Vector a
+Vec3 : forall a. a -> a -> a -> Vector a
+
+Vec2 is a constructor and Vector a type constructor
+-}
 gatherConstructor qual (TypeDeclaration id vars constructors) =
     let typeConstructor = TypeConstructor (qual id)
     in foldMap (constructorToType typeConstructor vars) constructors

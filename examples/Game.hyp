@@ -47,9 +47,9 @@ transformPoint vector = let
 
 trFaces = map (compose tuplesToArray transformFace) faces
 
-transformFace face = map (compose transformPoint getPoint) face
+transformFace = map (compose transformPoint getPoint)
 
 drawFaces _ = map polygon trFaces
 
-tuplesToArray a = foldMap tupleToArray a
+tuplesToArray = foldMap tupleToArray
 tupleToArray (Tuple a b) = [a, b]

@@ -133,9 +133,9 @@ toNumber : Text -> Numeral
 
 
 # Basic Types
-enum Option a = None | A a
+type Option a = None | A a
 
-enum Boolean = True | False
+type Boolean = True | False
 
 lazyAnd x f = if x then f Unit else x
 
@@ -153,9 +153,9 @@ strictOr _ b = b
 boolToString False = "False"
 boolToString True = "True"
 
-enum Unit = Unit
+type Unit = Unit
 
-enum Tuple a b = Tuple a b
+type Tuple a b = Tuple a b
 
 
 # Functions

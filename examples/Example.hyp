@@ -6,6 +6,6 @@ alias Numeral = Native.Numeral
 circle : Vector Numeral -> Numeral -> Native.Unit
 setColor : Vector Numeral -> Native.Unit
 
-enum Vector a = Vec2 a a | Vec3 a a a
+type Vector a = Vec2 a a | Vec3 a a a
 
 draw _ = let { _ = setColor (Vec3 40 30 240) } in circle (Vec2 400 300) 200

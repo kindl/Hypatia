@@ -5,7 +5,7 @@ import Prelude((+), (*), (/), (-),
 
 
 # Vectors
-enum Vector a = Vec4 a a a a
+type Vector a = Vec4 a a a a
 
 to2d (Vec4 x y _ w) = Tuple (x / w) (y / w)
 
@@ -23,7 +23,7 @@ transform (Mat4 a b c d) v =
     Vec4 (dot a v) (dot b v) (dot c v) (dot d v)
 
 # Matrices
-enum Matrix a = Mat4 (Vector a) (Vector a) (Vector a) (Vector a)
+type Matrix a = Mat4 (Vector a) (Vector a) (Vector a) (Vector a)
 
 transpose (Mat4 (Vec4 x1 x2 x3 x4) (Vec4 y1 y2 y3 y4)
     (Vec4 z1 z2 z3 z4) (Vec4 w1 w2 w3 w4)) =

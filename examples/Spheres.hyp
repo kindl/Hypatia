@@ -33,14 +33,14 @@ drawSphere sphere = let {
     _ = setColor (color sphere)
         } in circle (position sphere) (radius sphere)
 
-enum Vector a = Vec2 a a | Vec3 a a a
+type Vector a = Vec2 a a | Vec3 a a a
 
 alias Position = Vector Native.Numeral
 alias Velocity = Vector Native.Numeral
 alias Color = Vector Native.Numeral
 alias Radius = Native.Numeral
 
-enum Sphere = Sphere Position Velocity Color Radius
+type Sphere = Sphere Position Velocity Color Radius
 
 color (Sphere _ _ c _) = c
 

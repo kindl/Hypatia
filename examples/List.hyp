@@ -4,7 +4,7 @@ import Prelude((&), (-), (+), Tuple, Unit, getn, size, empty, compose)
 import Array(insert)
 
 
-enum List a = Empty | Element a (List a)
+type List a = Empty | Element a (List a)
 
 map f Empty = Empty
 map f (Element e es) = Element (f e) (map f es)

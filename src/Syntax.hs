@@ -7,8 +7,6 @@ import Data.Maybe(fromMaybe)
 import Data.Text(Text, unpack, pack, split)
 import Data.Char(isUpper, isSymbol)
 import Data.Functor.Identity(runIdentity)
-import Control.Monad(MonadPlus, mzero, mplus)
-import Control.Applicative(Alternative, empty, (<|>))
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
@@ -251,9 +249,9 @@ makeOpPat op a b =
 makeOpTyp op a b =
     TypeApplication (TypeApplication (TypeConstructor op) a) b
 
-throwString s = Left [s]
+throwString = Left
 
-fromEitherM (Left s) = fail (pretty s)
+fromEitherM (Left s) = fail s
 fromEitherM (Right r) = return r
 
 find o m = runIdentity (mfind o m)
@@ -276,13 +274,3 @@ locationInfoP (ConstructorPattern c ps) =
 locationInfoP (ArrayPattern ps) =
     mintercalate " " (fmap locationInfoP ps)
 locationInfoP other = pretty other
-
-instance Monoid e => MonadPlus (Either e) where
-    mzero = Left mempty
-    mplus (Left sa) (Left sb) = Left (mappend sa sb)
-    mplus (Left _) a = a
-    mplus a _ = a
-
-instance Monoid e => Alternative (Either e) where
-    empty = mzero
-    (<|>) = mplus

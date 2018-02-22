@@ -5,7 +5,7 @@ import Data.Text(pack)
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional)
-import Control.Monad(unless, mfilter, mzero)
+import Control.Monad(mfilter, mzero)
 import Control.Monad.Trans.State(StateT(..), runStateT)
 import Lexer hiding (varsym, qvarsym, qconid,
     conid, varid, qvarid, literal, modid, satisfy, float)
@@ -16,9 +16,10 @@ This module turns a list of lexemes into a syntax tree
 -}
 parse path s = do
     lexemes <- lexlex path s
-    (m, rest) <- runStateT modul lexemes
-    unless (null rest) (throwString ("Could not parse until end. Next lexeme is: " ++ prettyLocated (head rest)))
-    return m
+    case runStateT modul lexemes of
+        Nothing -> throwString "Parse error at the beginning"
+        Just (result, []) -> return result
+        Just (_, rest:_) -> (throwString ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest))
 
 parseFile path = do
     str <- readFile path
@@ -28,7 +29,7 @@ parseString s = parse "" s
 
 -- get the next lexeme
 next = StateT muncons
-muncons [] = throwString "Unexpected end"
+muncons [] = mzero
 muncons (x:xs) = return (x, xs)
 
 satisfy predicate = mfilter predicate next

@@ -46,8 +46,8 @@ qualifyE quals (ConstructorExpression c) =
 qualifyE quals (LetExpression decls e) =
     let newQuals = toLocals (foldMap captureNameD decls) `mappend` quals
     in LetExpression (fmap (qualifyD newQuals) decls) (qualifyE newQuals e)
-qualifyE quals (CaseLambdaExpression alts) =
-    CaseLambdaExpression (fmap (qualifyA quals) alts)
+qualifyE quals (CaseExpression e alts) =
+    CaseExpression (qualifyE quals e) (fmap (qualifyA quals) alts)
 qualifyE quals (LambdaExpression [p] e) =
     let (qp, qe) = qualifyA quals (p, e)
     in LambdaExpression [qp] qe

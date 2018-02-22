@@ -46,13 +46,15 @@ sortModules = resolve (return . getName . fst) (fmap fst . snd)
 
 {-
 Gather variables used in an expression
+The second argument of f contains the dependencies of the child expressions
 -}
 getDepsE e =
     let
         f (Variable v) _ = [v]
         f (ConstructorExpression c) _ = [c]
-        f (CaseLambdaExpression alts) cs =
-            concat (zipWith (\(p, _) c -> excluding (fmap fromId (getDefsP p)) c) alts cs)
+        f (CaseExpression _ alts) (deps:cs) =
+            concat (deps : zipWith (\(p, _) c ->
+                excluding (fmap fromId (getDefsP p)) c) alts cs)
         f (LambdaExpression ps _) cs =
             excluding (foldMap (fmap fromId . getDefsP) ps) (concat cs)
         f (LetExpression decls _) cs =

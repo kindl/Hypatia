@@ -52,12 +52,15 @@ typecheck (FunctionApplication e1 e2) ty =
     alpha <- newTyVar
     typecheck e1 (TypeArrow alpha ty)
     typecheck e2 alpha
-typecheck (CaseLambdaExpression alts) ty =
+typecheck (CaseExpression expr alts) ty =
   do
-    alpha <- newTyVar
-    beta <- newTyVar
-    traverse_ (typecheckAlt alpha beta) alts
-    subsume (TypeArrow alpha beta) ty
+    matchTy <- newTyVar
+    resultTy <- newTyVar
+
+    typecheck expr matchTy
+    traverse_ (typecheckAlt matchTy resultTy) alts
+
+    subsume resultTy ty
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
@@ -221,6 +224,9 @@ occurs x ty = elem x (freeVars ty)
 apply subst (ForAll vs ty) =
     let filteredSubst = excludingKeys vs subst
     in ForAll vs (apply filteredSubst ty)
+-- TODO solve infintie loop
+-- sometimes the typechecker loops infinitely
+-- Presumably here when the substitue gets substituted again and again
 apply subst ty@(TypeVariable x) = maybe ty (apply subst) (lookup x subst)
 apply subst ty = descend (apply subst) ty
 

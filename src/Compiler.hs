@@ -129,28 +129,25 @@ compileE (LambdaExpression [VariablePattern v] e) =
 compileE (LambdaExpression [p] e) =
     Func [makeId "_v"]
         (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfoP p))] [(p, e)])
-compileE (CaseLambdaExpression alts) =
-    Func [makeId "_v"]
-        (compileAlts [Ret (mkError ("failed pattern match case lambda at "
-        ++ mintercalate " " (fmap (locationInfoP . fst) alts)))] alts)
-compileE (LiteralExpression l) = compileL l
-compileE (LetExpression decls e) =
-    immediate (compileLetE decls e)
-compileE (IfExpression c th el) =
-    immediate (compileIfE c th el)
 compileE (ArrayExpression es) =
-    Arr (fmap compileE es)
+            Arr (fmap compileE es)
+compileE (LiteralExpression l) = compileL l
+compileE e@(CaseExpression _ _) = immediate (compileEtoS e)
+compileE e@(LetExpression _ _) =
+    immediate (compileEtoS e)
+compileE e@(IfExpression _ _ _) =
+        immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
-compileLetE decls e = foldMap compileD decls ++ compileEtoS e
-compileIfE c th el =
-    [If (mkEq (makeVar "Prelude.True") (compileE c)) (compileEtoS th) (compileEtoS el)]
-
 -- Compiles an expression in a statement context
+compileEtoS (CaseExpression e alts) =
+    Assign (makeId "_v") (compileE e) :
+        compileAlts [Ret (mkError ("failed pattern match case lambda at "
+            ++ mintercalate " " (fmap (locationInfoP . fst) alts)))] alts
 compileEtoS (LetExpression decls e) =
-    compileLetE decls e
+    foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
-    compileIfE c th el
+    [If (mkEq (makeVar "Prelude.True") (compileE c)) (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]
 
 compileL (Numeral n) = LitD n

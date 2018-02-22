@@ -104,7 +104,11 @@ data Expression
     | ConstructorExpression Name
     | FunctionApplication Expression Expression
     | LetExpression [Declaration] Expression
-    | CaseLambdaExpression [(Pattern, Expression)]
+-- TODO think about a nicer way to add case lambdas
+-- It should have a way to match on more than just a single value
+-- The functions could be easily turned into case lambdas as well
+-- Without the use of tuples
+--    | CaseLambdaExpression [(Pattern, Expression)]
     | ParenthesizedExpression Expression
     | ArrayExpression [Expression]
     | InfixOperator Expression Name Expression

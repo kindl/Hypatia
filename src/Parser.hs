@@ -170,7 +170,7 @@ typeAnnotation = do
     _ <- infixexpr
     token ":"
     _ <- qtype
-    fail "Parsed type annotation"
+    fail "Parsed type annotation which is not supported yet"
 --  return (TypeAnnotation e t)
 infixexpr = infixOperator <|> prefixNegation <|> lexpr
 infixOperator = do
@@ -180,13 +180,8 @@ infixOperator = do
     return (InfixOperator l o r)
 prefixNegation = fmap PrefixNegation (token "-" *> infixexpr)
  
-lexpr = caseLambdaExpression <|> lambdaExpression <|> letExpression
+lexpr = lambdaExpression <|> letExpression
     <|> ifExpression <|> caseExpression <|> fexpr
-caseLambdaExpression = do
-    token "fun"
-    token "case"
-    als <- alts
-    return (CaseLambdaExpression als)
 lambdaExpression = do
     token "fun"
     ps <- some apat

@@ -10,18 +10,12 @@ This module translates complicated expressions
 to simpler equivalent expressions
 -}
 simplifications m =
-    (rewriteCaseExpression . splitLambdas . removeFunctionDeclaration) m
+    (splitLambdas . removeFunctionDeclaration) m
 
 splitLambdas m = transformBi f m
   where
     f (LambdaExpression ps e) =
         foldr (\p -> LambdaExpression [p]) e ps
-    f e = e
-
-rewriteCaseExpression m = transformBi f m
-  where
-    f (CaseExpression e alts) =
-        FunctionApplication (CaseLambdaExpression alts) e
     f e = e
 
 {-

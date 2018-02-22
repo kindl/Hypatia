@@ -47,10 +47,10 @@ sepBy1 parser seperator =
 lexlex path s =
     fmap pipeline (eitherResult (runStateT (program path) (startState s)))
 
-eitherResult Nothing = throwString "Incomplete lex"
+eitherResult Nothing = Left "Incomplete lex"
 eitherResult (Just (r, LexerState t pos)) =
     if Text.null t then return r
-        else throwString ("Incomplete lex at " ++ pretty pos)
+        else Left ("Incomplete lex at " ++ pretty pos)
 
 lexFileDebug2 path = do
     str <- readFile path

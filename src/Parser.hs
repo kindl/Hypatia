@@ -17,9 +17,9 @@ This module turns a list of lexemes into a syntax tree
 parse path s = do
     lexemes <- lexlex path s
     case runStateT modul lexemes of
-        Nothing -> throwString "Parse error at the beginning"
+        Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
-        Just (_, rest:_) -> (throwString ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest))
+        Just (_, rest:_) -> Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
 
 parseFile path = do
     str <- readFile path

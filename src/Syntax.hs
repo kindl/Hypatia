@@ -249,8 +249,6 @@ makeOpPat op a b =
 makeOpTyp op a b =
     TypeApplication (TypeApplication (TypeConstructor op) a) b
 
-throwString = Left
-
 fromEitherM (Left s) = fail s
 fromEitherM (Right r) = return r
 

@@ -3,6 +3,7 @@ module Lexer where
 import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import Data.Text(Text)
+import qualified Data.Text.IO as Text
 import Control.Applicative((<|>), many, some, optional, liftA2)
 import Control.Monad(guard)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum, isDigit, isHexDigit)
@@ -23,7 +24,7 @@ advance (Position l _) '\n' =
 advance (Position l c) _ =
     Position l (c + 1)
 
-startState s = LexerState (Text.pack s) (Position 1 0)
+startState s = LexerState s (Position 1 0)
 
 -- get the next token from the stream and advance the position
 satisfyState p (LexerState t position) = do
@@ -53,11 +54,11 @@ eitherResult (Just (r, LexerState t pos)) =
         else Left ("Incomplete lex at " ++ pretty pos)
 
 lexFileDebug2 path = do
-    str <- readFile path
+    str <- Text.readFile path
     return (fmap (fmap extractLexeme) (lexlex path str))
 
 lexFileDebug path = do
-    str <- readFile path
+    str <- Text.readFile path
     return (runStateT (program path) (startState str))
 
 lexDebug str = runStateT (program "") (startState str)

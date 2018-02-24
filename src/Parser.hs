@@ -2,6 +2,7 @@ module Parser where
 
 import Syntax
 import Data.Text(pack)
+import qualified Data.Text.IO as Text
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional)
@@ -22,7 +23,7 @@ parse path s = do
         Just (_, rest:_) -> Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
 
 parseFile path = do
-    str <- readFile path
+    str <- Text.readFile path
     fromEitherM (parse path str)
 
 parseString s = parse "" s

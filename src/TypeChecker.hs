@@ -60,12 +60,8 @@ typecheck (FunctionApplication e1 e2) ty =
 typecheck (CaseExpression expr alts) ty =
   do
     matchTy <- newTyVar
-    resultTy <- newTyVar
-
+    traverse_ (typecheckAlt matchTy ty) alts
     typecheck expr matchTy
-    traverse_ (typecheckAlt matchTy resultTy) alts
-
-    subsume resultTy ty
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar

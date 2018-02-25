@@ -8,7 +8,7 @@ import Control.Monad.Trans.Class(lift)
 import Control.Arrow(first)
 import Data.List(nub)
 import Control.Monad(when, unless, zipWithM)
-import Data.IORef(readIORef, writeIORef, newIORef, modifyIORef, IORef)
+import Data.IORef(readIORef, newIORef, modifyIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_)
 
@@ -66,7 +66,6 @@ typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
     beta <- newTyVar
-    info ("Typechecking lambda " ++ pretty p)
     typecheckAlt alpha beta (p, e)
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
@@ -262,7 +261,7 @@ newUnique =
   do
     r <- asks (\(TypecheckerState _ u _) -> u)
     i <- readRef r
-    writeRef r (i + 1)
+    modifyRef r succ
     return i
 
 newTyVar = fmap TypeVariable newUniqueName
@@ -332,11 +331,7 @@ skolemise ty = return ([], ty)
 
 info s = lift (putStrLn s)
 
-writeRef s v = lift (writeIORef s v)
-
 readRef s = lift (readIORef s)
-
-newRef v = lift (newIORef v)
 
 modifyRef s f = lift (modifyIORef s f)
 

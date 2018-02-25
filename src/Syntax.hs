@@ -183,6 +183,8 @@ flatVar = flatName (text "_") (text ".")
 
 flatModName = flatName (text "_") (text "_")
 
+toPath name = render (flatName (text "/") (text "/") name <> text ".hyp")
+
 flatName _ _ (Name [] s) = pPrint s
 flatName qualSep idSep (Name qs s) =
     mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> pPrint s

@@ -50,7 +50,7 @@ toLuaS (Assign x e) =
     pPrint x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
-        <+> text "require" <+> pPrint (toPath modName)
+        <+> text "require" <+> pPrint (toLuaPath modName)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
@@ -88,8 +88,7 @@ toJavaScriptS (Assign x e) =
     text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
-        -- js needs the leading dot for local modules
-        text "require" <> parens (pPrint ("./" ++ toPath modName)) <> semi
+        text "require" <> parens (pPrint (toJsPath modName)) <> semi
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> semi
 toJavaScriptS (If e th []) =
@@ -244,4 +243,7 @@ mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A.B.lua
 -- local A_B = require("A.B")
-toPath = pretty
+toLuaPath = pretty
+
+-- js needs the leading dot for local modules
+toJsPath modName = "./" ++ pretty modName

@@ -11,7 +11,7 @@ import Qualification
 import Data.Functor.Identity(runIdentity)
 import Data.List(nub)
 import Data.HashMap.Strict(insert)
-import System.FilePath(takeDirectory, takeBaseName, (</>))
+import System.FilePath(takeDirectory, takeBaseName)
 import Control.Monad.Trans.State(StateT(StateT), runStateT)
 
 
@@ -35,13 +35,8 @@ pipeline = sortDeclsMod . aliasProgram
     . fixAssocProgram . qualifyProgram
     . simplifications . sortModules
 
--- TODO search path
--- Allow qualified modules
--- Search A.B in A.B.hyp and A/B.hyp
-toPath dir name = dir </> name ++ ".hyp"
-
 loadModule dir modName =
-    let path = toPath dir (pretty modName)
+    let path = dir ++ "/" ++ toPath modName
     in do
         putStrLn ("Loading module " ++ pretty modName ++ " from " ++ path)
         parseFile path

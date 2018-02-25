@@ -2,16 +2,18 @@ module Lexer where
 
 import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
-import Data.Text(Text)
 import qualified Data.Text.IO as Text
+import Data.Text(Text)
 import Control.Applicative((<|>), many, optional, liftA2)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum, isDigit, isHexDigit)
+import Data.Traversable(mapAccumL)
 import Syntax
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1, sepBy1,
     match, parse, endOfInput, parseOnly)
 
 {-
 This module converts text to a list of lexemes
+Inspired by the Haskell2010 report
 -}
 lexlex path s =
     fmap pipeline (parseOnly (program path) s)
@@ -26,10 +28,7 @@ lexFileDebug path = do
 
 lexDebug str = parseOnly (program "") str
 
-{-
-Layout
-A simplified version of the function presented in the Haskell 2010 report
--}
+{- Layout -}
 layout ls@(LocatedLexeme (Indent n) pos:ts) (m:ms)
     | n == m = semi pos : layout ts (m:ms)
     | n < m = close pos : layout ls ms
@@ -153,23 +152,15 @@ Attoparsec does not have location information,
 but match returns the input that was consumed by a parser
 the position is calculated from the input and passed to the next parser
 -}
-manyLocated path startPosition p =
-    someLocated path startPosition p <|> return []
-
-someLocated path startPosition p = do
-    (endPosition, locatedLexeme) <- located path startPosition p
-    fmap (locatedLexeme:) (manyLocated path endPosition p)
-
-located path startPosition p = fmap (\(parsed, result) ->
+located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
     let
         endPosition = Text.foldl' advance startPosition parsed
         location = Location startPosition endPosition path
         locatedLexeme = LocatedLexeme result location
-    in (endPosition, locatedLexeme)) (match p)
-
+    in (endPosition, locatedLexeme)) initialPosition lexemes)
 
 program path =
-    manyLocated path initialPosition (lexeme <|> whitespace) <* endOfInput
+    fmap (located path) (many (match (lexeme <|> whitespace)) <* endOfInput)
 
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 special = do

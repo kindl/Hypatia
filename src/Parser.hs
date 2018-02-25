@@ -5,11 +5,11 @@ import Data.Text(pack)
 import qualified Data.Text.IO as Text
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
-import Control.Applicative((<|>), some, many, optional)
+import Control.Applicative((<|>), some, many, optional, liftA2)
 import Control.Monad(mfilter, mzero)
 import Control.Monad.Trans.State(StateT(..), runStateT)
 import Lexer hiding (varsym, qvarsym, qconid,
-    conid, varid, qvarid, literal, modid, satisfy, float)
+    conid, varid, qvarid, literal, modid, float)
 
 
 {-
@@ -27,6 +27,11 @@ parseFile path = do
     fromEitherM (parse path str)
 
 parseString s = parse "" s
+
+sepBy parser seperator =
+    fmap concat (optional (sepBy1 parser seperator))
+sepBy1 parser seperator =
+    liftA2 (:) parser (many (seperator *> parser))
 
 -- get the next lexeme
 next = StateT muncons

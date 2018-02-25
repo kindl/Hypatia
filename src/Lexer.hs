@@ -4,54 +4,17 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import Data.Text(Text)
 import qualified Data.Text.IO as Text
-import Control.Applicative((<|>), many, some, optional, liftA2)
-import Control.Monad(guard)
+import Control.Applicative((<|>), many, optional, liftA2)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum, isDigit, isHexDigit)
 import Syntax
-import Control.Monad.Trans.State(StateT(..), runStateT, get)
+import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1, sepBy1,
+    match, parse, endOfInput, parseOnly)
 
 {-
-This module converts a string to a list of lexemes
-It was built with parsers like attoparsec in mind
-but for now it only uses StateT to have position information
-The state contains the rest of the stream and the current position
+This module converts text to a list of lexemes
 -}
-data LexerState = LexerState Text Position
-    deriving (Show)
-
-advance (Position l _) '\n' =
-    Position (l + 1) 0
-advance (Position l c) _ =
-    Position l (c + 1)
-
-startState s = LexerState s (Position 1 0)
-
--- get the next token from the stream and advance the position
-satisfyState p (LexerState t position) = do
-    (c, cs) <- Text.uncons t
-    guard (p c)
-    return (c, LexerState cs (advance position c))
-satisfy p = StateT (satisfyState p)
-
-char a = satisfy (== a)
-
-oneOf xs = satisfy (`elem` xs)
-
-takeWhile p = fmap Text.pack (many (satisfy p))
-takeWhile1 p = fmap Text.pack (some (satisfy p))
-
-sepBy parser seperator =
-    fmap concat (optional (sepBy1 parser seperator))
-sepBy1 parser seperator =
-    liftA2 (:) parser (many (seperator *> parser))
-
 lexlex path s =
-    fmap pipeline (eitherResult (runStateT (program path) (startState s)))
-
-eitherResult Nothing = Left "Incomplete lex"
-eitherResult (Just (r, LexerState t pos)) =
-    if Text.null t then return r
-        else Left ("Incomplete lex at " ++ pretty pos)
+    fmap pipeline (parseOnly (program path) s)
 
 lexFileDebug2 path = do
     str <- Text.readFile path
@@ -59,10 +22,9 @@ lexFileDebug2 path = do
 
 lexFileDebug path = do
     str <- Text.readFile path
-    return (runStateT (program path) (startState str))
+    return (parse (program path) str)
 
-lexDebug str = runStateT (program "") (startState str)
-
+lexDebug str = parseOnly (program "") str
 
 {-
 Layout
@@ -139,6 +101,15 @@ isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
     Text.any (=='\n') ws
 isSignificantWhite _ = False
 
+{- Locations -}
+advance (Position l _) '\n' =
+    Position (l + 1) 1
+advance (Position l c) _ =
+    Position l (c + 1)
+
+initialPosition = Position 1 1
+
+oneOf xs = satisfy (`elem` xs)
 
 data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
@@ -177,14 +148,29 @@ mergeQualified (Conid c1) (Varsym c2) =
     Varsym (c1 `dot` c2)
 mergeQualified _ _ = error "mergeQualified"
 
-{- Lexer -}
-located path l = do
-    LexerState _ startPosition <- get
-    result <- l
-    LexerState _ endPosition <- get
-    return (LocatedLexeme result (Location startPosition endPosition path))
+{-
+Attoparsec does not have location information,
+but match returns the input that was consumed by a parser
+the position is calculated from the input and passed to the next parser
+-}
+manyLocated path startPosition p =
+    someLocated path startPosition p <|> return []
 
-program path = many (located path (lexeme <|> whitespace))
+someLocated path startPosition p = do
+    (endPosition, locatedLexeme) <- located path startPosition p
+    fmap (locatedLexeme:) (manyLocated path endPosition p)
+
+located path startPosition p = fmap (\(parsed, result) ->
+    let
+        endPosition = Text.foldl' advance startPosition parsed
+        location = Location startPosition endPosition path
+        locatedLexeme = LocatedLexeme result location
+    in (endPosition, locatedLexeme)) (match p)
+
+
+program path =
+    manyLocated path initialPosition (lexeme <|> whitespace) <* endOfInput
+
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 special = do
     c <- oneOf "(),;[]`{}."

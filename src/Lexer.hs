@@ -165,11 +165,8 @@ special = do
 -- TODO: multi-line comments
 whitespace = whitechars <|> comment
 whitechars = fmap Whitespace (takeWhile1 isSpace)
-comment = do
-    char '#'
-    cs <- takeWhile (/='\n')
-    char '\n'
-    return (Comment cs)
+-- NOTE: in contrast to the report this does not consume a newline
+comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p
 optionalQualified parser =

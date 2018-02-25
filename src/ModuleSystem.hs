@@ -12,7 +12,7 @@ import Data.Functor.Identity(runIdentity)
 import Data.List(nub)
 import Data.HashMap.Strict(insert)
 import System.FilePath(takeDirectory, takeBaseName)
-import Control.Monad.Trans.State(StateT(StateT), runStateT)
+import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
 
 loadProgram path =

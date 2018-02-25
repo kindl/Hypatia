@@ -7,7 +7,7 @@ import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional, liftA2)
 import Control.Monad(mfilter, mzero)
-import Control.Monad.Trans.State(StateT(..), runStateT)
+import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer hiding (varsym, qvarsym, qconid,
     conid, varid, qvarid, literal, modid, float)
 

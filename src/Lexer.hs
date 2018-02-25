@@ -118,11 +118,6 @@ extractLexeme (LocatedLexeme l _) = l
 
 prettyLocated (LocatedLexeme l p) = show l ++ " " ++ pretty p
 
-extractText (Conid s) = s
-extractText (Varid s) = s
-extractText (Varsym s) = s
-extractText _ = error "extractText"
-
 data Lexeme
     = Reserved Text
     | Whitespace Text
@@ -177,22 +172,16 @@ comment = do
     return (Comment cs)
 
 -- parse a qualified p
-qualif parser = point parser <|> parser
-
-point parser =
-  do
-    q <- modid
-    char '.'
-    res <- parser
-    return (mergeQualified q res)
+optionalQualified parser =
+    liftA2 mergeQualified (modid <* char '.') parser <|> parser
 
 modid = do
     ms <- sepBy1 conid (char '.')
-    return (Conid (mintercalate (Text.pack ".") (fmap extractText ms)))
+    return (foldr1 mergeQualified ms)
 
 qconid = modid
-qvarid = qualif varid
-qvarsym = qualif varsym
+qvarid = optionalQualified varid
+qvarsym = optionalQualified varsym
 
 small = satisfy isLower <|> char '_'
 large = satisfy isUpper

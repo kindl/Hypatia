@@ -4,7 +4,7 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
-import Control.Applicative((<|>), many, liftA2)
+import Control.Applicative((<|>), many, liftA2, optional)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
@@ -136,16 +136,6 @@ data Lexeme
     | Indent Int
         deriving (Show)
 
-dot c1 c2 = c1 `mappend` Text.pack "." `mappend` c2
-
-mergeQualified (Conid c1) (Conid c2) =
-    Conid (c1 `dot` c2)
-mergeQualified (Conid c1) (Varid c2) =
-    Varid (c1 `dot` c2)
-mergeQualified (Conid c1) (Varsym c2) =
-    Varsym (c1 `dot` c2)
-mergeQualified _ _ = error "mergeQualified"
-
 {-
 Attoparsec does not have location information,
 but match returns the input that was consumed by a parser
@@ -173,41 +163,42 @@ whitechars = fmap Whitespace (takeWhile1 isSpace)
 comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p
-optionalQualified parser =
-    liftA2 mergeQualified (modid <* char '.') parser <|> parser
+optionalQualified f parser = do
+    ms <- optional (modids <* char '.')
+    result <- parser
+    return (case concat ms of
+        [] -> if isReserved result
+            then Reserved result
+            else f [result]
+        qs -> f (qs ++ [result]))
 
-modid = do
-    ms <- sepBy1 conid (char '.')
-    return (foldr1 mergeQualified ms)
+modids = sepBy1 conid (char '.')
 
-qconid = modid
-qvarid = optionalQualified varid
-qvarsym = optionalQualified varsym
+dotted xs = mintercalate (Text.pack (".")) xs
+
+qconid = fmap (Conid . dotted) modids
+qvarid = optionalQualified (Varid . dotted) varid
+qvarsym = optionalQualified (Varsym . dotted) varsym
+
+{- Identifiers -}
+isReserved x =
+    elem x (fmap Text.pack ["alias", "enum", "type", "forall",
+        "import", "module", "fun", "let", "in", "where", "case", "of",
+        "if", "then", "else", "infix", "infixl", "infixr", "as",
+        ":", "=", "->", "|"])
+varid = do
+    x <- small
+    xs <- takeWhile isAlphaNum
+    return (Text.cons x xs)
+conid = do
+    x <- large
+    xs <- takeWhile isAlphaNum
+    return (Text.cons x xs)
+varsym = takeWhile1 isSym
 
 small = satisfy isLower <|> char '_'
 large = satisfy isUpper
 
-{- Identifier -}
-isReserved x =
-    elem x (fmap Text.pack ["alias", "enum", "type", "forall",
-        "import", "module", "fun", "let", "in", "where", "case", "of",
-            "if", "then", "else", "infix", "infixl", "infixr", "as"])
-varid = do
-    x <- small
-    xs <- takeWhile isAlphaNum
-    let id = Text.cons x xs
-    return (if isReserved id then Reserved id else Varid id)
-conid = do
-    x <- large
-    xs <- takeWhile isAlphaNum
-    let id = Text.cons x xs
-    return (Conid id)
-
-{- Symbols -}
-isReservedOp x = elem x (fmap Text.pack [":", "=", "->", "|"])
-varsym = do
-    s <- takeWhile1 isSym
-    return (if isReservedOp s then Reserved s else Varsym s)
 
 {- Literal -}
 literal = number <|> hexdecimal <|> verbatim

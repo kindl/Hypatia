@@ -8,8 +8,8 @@ import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional, liftA2)
 import Control.Monad(mfilter, mzero)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
-import Lexer hiding (varsym, qvarsym, qconid,
-    conid, varid, qvarid, literal, modid, float)
+import Lexer(Lexeme(..), lexlex, prettyLocated,
+    extractLexeme, extractLocation)
 
 
 {-
@@ -243,18 +243,16 @@ patternInfixOperator = do
     r <- pat
     return (PatternInfixOperator l o r)
  
-lpat = negativePattern <|> constructorPattern <|> apat
-negativePattern = do
-    token "-"
-    l <- fmap fromIntegral integer <|> float
-    return (LiteralPattern (Numeral (-l)))
-constructorPattern = do
+-- NOTE negative patterns were removed from lpat
+-- because the minus is part of the literal
+lpat = appliedConstructorPattern <|> apat
+appliedConstructorPattern = do
     c <- qcon
     ps <- some apat
     return (ConstructorPattern c ps)
 
 apat = wildcard <|> variablePattern
-    <|> constructor <|> literalPattern
+    <|> constructorPattern <|> literalPattern
     <|> parenthesizedPattern <|> arrayPattern
 {-
 TODO this should be apat and then var but it is left recursive
@@ -265,7 +263,7 @@ asPattern = do
     return (AliasPattern v p)
 -}
 variablePattern = fmap VariablePattern var
-constructor = do
+constructorPattern = do
     c <- qcon
     return (ConstructorPattern c [])
 literalPattern = fmap LiteralPattern literal

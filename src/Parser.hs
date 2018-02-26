@@ -44,9 +44,9 @@ satisfy predicate = mfilter predicate next
 token str = void (satisfy (\x -> case extractLexeme x of
     Reserved s -> pack str == s
     -- for token "-"
-    Varsym s -> pack str == s
+    Varsym [] s -> pack str == s
     -- for token "_"
-    Varid s -> pack str == s
+    Varid [] s -> pack str == s
     _ -> False))
 
 -- some combinators for parens for readability
@@ -289,14 +289,14 @@ A qvarid can be a qualified variable like List.map
 or a normal variable identifier like map
 -}
 
-fromVarsym (Varsym v) = return v
-fromVarsym _ = mzero
+fromVarsym (Varsym qs v) l = return (Name qs (Id v l))
+fromVarsym _ _ = mzero
 
-fromVarid (Varid v) = return v
-fromVarid _ = mzero
+fromVarid (Varid qs v) l = return (Name qs (Id v l))
+fromVarid _ _ = mzero
 
-fromConid (Conid v) = return v
-fromConid _ = mzero
+fromConid (Conid qs v) l = return (Name qs (Id v l))
+fromConid _ _ = mzero
 
 fromDouble (Double v) = return v
 fromDouble _ = mzero
@@ -307,15 +307,14 @@ fromInt _ = mzero
 fromStr (String v) = return v
 fromStr _ = mzero
 
-parseId p = do
-    n <- parseName p
+parseId f = do
+    n <- parseName f
     case n of
         Name [] ident -> return ident
         _ -> mzero
 parseName f = do
     n <- next
-    r <- f (extractLexeme n)
-    return (fromText (extractLocation n) r)
+    f (extractLexeme n) (extractLocation n)
 parseLiteral f = do
     n <- next
     f (extractLexeme n)

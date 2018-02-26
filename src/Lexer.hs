@@ -128,9 +128,9 @@ data Lexeme
     | Double Double
     | Integer Integer
     | String Text
-    | Varid Text
-    | Varsym Text
-    | Conid Text
+    | Varid [Text] Text
+    | Varsym [Text] Text
+    | Conid [Text] Text
     | Comment Text
     | Block Int
     | Indent Int
@@ -164,21 +164,16 @@ comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p
 optionalQualified f parser = do
-    ms <- optional (modids <* char '.')
+    ms <- fmap concat (optional (modids <* char '.'))
     result <- parser
-    return (case concat ms of
-        [] -> if isReserved result
-            then Reserved result
-            else f [result]
-        qs -> f (qs ++ [result]))
+    return (if null ms && isReserved result
+        then Reserved result else f ms result)
 
 modids = sepBy1 conid (char '.')
 
-dotted xs = mintercalate (Text.pack (".")) xs
-
-qconid = fmap (Conid . dotted) modids
-qvarid = optionalQualified (Varid . dotted) varid
-qvarsym = optionalQualified (Varsym . dotted) varsym
+qconid = fmap (liftA2 Conid init last) modids
+qvarid = optionalQualified Varid varid
+qvarsym = optionalQualified Varsym varsym
 
 {- Identifiers -}
 isReserved x =

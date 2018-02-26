@@ -6,7 +6,7 @@ import qualified Data.Text.IO as Text
 import Data.Text(Text)
 import Control.Applicative((<|>), many, optional, liftA2)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum,
-    isDigit,isHexDigit)
+    isDigit, isHexDigit)
 import Data.Traversable(mapAccumL)
 import Syntax
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
@@ -38,9 +38,10 @@ layout (LocatedLexeme (Block n) pos:ts) (m:ms)
     | n > m = open pos : layout ts (n : m : ms)
 layout (LocatedLexeme (Block n) pos:ts) []
     | n > 0 = open pos : layout ts [n]
-layout (LocatedLexeme (Block n) pos:ts) ms =
-    open pos : close pos :
-        layout (LocatedLexeme (Indent n) pos:ts) ms
+-- NOTE Removed. Allows only explicit empty blocks
+--layout (LocatedLexeme (Block n) pos:ts) ms =
+--    open pos : close pos :
+--        layout (LocatedLexeme (Indent n) pos:ts) ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
     | l == Text.pack "}" = t : layout ts ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
@@ -48,7 +49,7 @@ layout (t@(LocatedLexeme (Reserved l) _):ts) ms
         ++ prettyLocated t ++ " without open brace.")
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
     | l == Text.pack "{" = t : layout ts (0:ms)
--- rule left out: no info from parser
+-- NOTE Parser rule left out.
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
 layout [] (m:ms) = close builtinLocation : layout [] ms
@@ -166,10 +167,10 @@ special = do
     c <- oneOf "(),;[]`{}."
     return (Reserved (Text.pack [c]))
 
--- TODO: multi-line comments
+-- TODO multi-line comments
 whitespace = whitechars <|> comment
 whitechars = fmap Whitespace (takeWhile1 isSpace)
--- NOTE: in contrast to the report this does not consume a newline
+-- NOTE in contrast to the report this does not consume a newline
 comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p

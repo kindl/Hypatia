@@ -5,11 +5,12 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
 import Control.Applicative((<|>), many, optional, liftA2)
-import Data.Char(isSpace, isLower, isUpper, isAlphaNum, isDigit, isHexDigit)
+import Data.Char(isSpace, isLower, isUpper, isAlphaNum,
+    isDigit,isHexDigit)
 import Data.Traversable(mapAccumL)
 import Syntax
-import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1, sepBy1,
-    match, parse, endOfInput, parseOnly)
+import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
+    sepBy1, match, parse, endOfInput, parseOnly)
 
 {-
 This module converts text to a list of lexemes
@@ -38,12 +39,13 @@ layout (LocatedLexeme (Block n) pos:ts) (m:ms)
 layout (LocatedLexeme (Block n) pos:ts) []
     | n > 0 = open pos : layout ts [n]
 layout (LocatedLexeme (Block n) pos:ts) ms =
-    open pos : close pos : layout (LocatedLexeme (Indent n) pos:ts) ms
+    open pos : close pos :
+        layout (LocatedLexeme (Indent n) pos:ts) ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
     | l == Text.pack "}" = t : layout ts ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
-    | l == Text.pack "}" =
-        error ("Parse Error: Explicit " ++ prettyLocated t ++ " without open brace.")
+    | l == Text.pack "}" = error ("Layout: Explicit "
+        ++ prettyLocated t ++ " without open brace.")
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
     | l == Text.pack "{" = t : layout ts (0:ms)
 -- rule left out: no info from parser
@@ -74,11 +76,13 @@ followedByOpen rest = case dropWhile isWhite rest of
 
 -- TODO find the logic error in here
 --insertIndentTokens (l:rest)
---    | isWhite l && not (isSignificantWhite l)= insertIndentTokens rest
+--    | isWhite l && not (isSignificantWhite l) =
+--        insertIndentTokens rest
 insertIndentTokens (l:rest@(r:rs))
     | isLayout l && followedByOpen rest = l:insertIndentTokens rest
     | isLayout l = l:getBlock r:insertIndentTokens rs
-    | isSignificantWhite l && isSignificantWhite r = insertIndentTokens rest
+    | isSignificantWhite l && isSignificantWhite r =
+        insertIndentTokens rest
     | isSignificantWhite l && isWhite r = insertIndentTokens (l:rs)
 insertIndentTokens (l:rest)
     | isSignificantWhite l = getIndent l:insertIndentTokens rest
@@ -154,8 +158,8 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
         locatedLexeme = LocatedLexeme result location
     in (endPosition, locatedLexeme)) initialPosition lexemes)
 
-program path =
-    fmap (located path) (many (match (lexeme <|> whitespace)) <* endOfInput)
+program path = fmap (located path)
+    (many (match (lexeme <|> whitespace)) <* endOfInput)
 
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 special = do

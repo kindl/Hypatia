@@ -4,13 +4,12 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
-import Control.Applicative((<|>), many, optional, liftA2)
-import Data.Char(isSpace, isLower, isUpper, isAlphaNum,
-    isDigit, isHexDigit)
+import Control.Applicative((<|>), many, liftA2)
+import Data.Char(isSpace, isLower, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
-    sepBy1, match, parse, endOfInput, parseOnly)
+    sepBy1, match, parse, endOfInput, parseOnly, hexadecimal, double)
 
 {-
 This module converts text to a list of lexemes
@@ -164,7 +163,7 @@ program path = fmap (located path)
 
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 special = do
-    c <- oneOf "(),;[]`{}."
+    c <- oneOf "(),;[]`{}"
     return (Reserved (Text.pack [c]))
 
 -- TODO multi-line comments
@@ -211,36 +210,22 @@ varsym = do
     return (if isReservedOp s then Reserved s else Varsym s)
 
 {- Literal -}
-literal = fmap makeDouble float <|> fmap makeInteger decimal
-    <|> fmap makeInteger hexadecimal <|> fmap String verbatim
+literal = number <|> hexdecimal <|> verbatim
 
-makeDouble = Double . read . Text.unpack
-makeInteger = Integer . read . Text.unpack
+hexdecimal =
+    char '0' *> (char 'x' <|> char 'X') *> fmap Integer hexadecimal
 
-decimal = takeWhile1 isDigit
-hexadecimal = do
-    z <- char '0'
-    x <- char 'x' <|> char 'X'
-    s <- takeWhile1 isHexDigit
-    return (Text.pack [z,x] `mappend` s)
+-- NOTE attoparsec parses a decimal as a double
+-- for example 3 is parsed as 3.0
+-- this solution here unfortunately parses 3.0 as 3
+number = do
+    d <- double
+    return (case properFraction d of
+        (i, 0.0) -> Integer i
+        _ -> Double d)
 
-float = decDotDecExpo <|> decDotDec <|> decExpo
-decDotDec = liftA2 dot (decimal <* char '.') decimal
-decDotDecExpo = liftA2 mappend decDotDec expo
-decExpo = liftA2 mappend decimal expo
-expo = do
-    e <- char 'e' <|> char 'E'
-    sign <- optional (char '+' <|> char '-')
-    ds <- decimal
-    return (Text.cons e (toText sign) `mappend` ds)
-
-toText = foldr Text.cons mempty
-
-verbatim = do
-    char '"'
-    cs <- many (stringChar <|> escapeSeq)
-    char '"'
-    return (Text.pack cs)
+verbatim = fmap (String . Text.pack)
+    (char '"' *> many (stringChar <|> escapeSeq) <* char '"')
 
 stringChar = satisfy (\x -> x /='"' && x /= '\\')
 escapeSeq = char '\\' *> (char '\\' <|> char '"')

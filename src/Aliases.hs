@@ -69,18 +69,6 @@ findConstructor aliases op | isOperator op =
             error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
 findConstructor _ op = op
 
-removeParens m = (transformBi f . transformBi g . transformBi h) m
-  where
-    f (ParenthesizedExpression e) = e
-    f e = e
-    
-    g (ParenthesizedPattern p) = p
-    g p = p
-    
-    h (ParenthesizedType t) = t
-    h t = t
-
-
 captureAliases (ModuleDeclaration modName decls) =
     fromList [(qualifyId modName v, alias) | AliasDeclaration v alias <- decls]
 

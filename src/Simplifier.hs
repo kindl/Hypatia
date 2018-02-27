@@ -18,6 +18,19 @@ splitLambdas m = transformBi f m
         foldr (\p -> LambdaExpression [p]) e ps
     f e = e
 
+
+removeParens m = (transformBi f . transformBi g . transformBi h) m
+  where
+    f (ParenthesizedExpression e) = e
+    f e = e
+    
+    g (ParenthesizedPattern p) = p
+    g p = p
+    
+    h (ParenthesizedType t) = t
+    h t = t
+
+
 {-
 transform function declaration to expression declaration
 bla a b True = a

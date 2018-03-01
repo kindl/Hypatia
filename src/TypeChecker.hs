@@ -132,12 +132,10 @@ gatherTypeSig qual (TypeSignature name ty) =
 gatherTypeSig _ _ = mempty
 
 -- Assumes that the let bindings are already sorted
--- Should we solve it without sorting?
--- We have to sort the let bindings for the translation anyway
+-- Let bindings have to be sorted for the translation anyway
 inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
   do
     info ("Typechecking declaration " ++ pretty p)
-
     ty <- newTyVar
     binds <- typecheckPattern qual p ty
 
@@ -145,16 +143,21 @@ inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
     -- using the signatures, the binds would be to general
     withOverwrite (mappend signatures binds) (typecheck e ty)
 
+    -- Check the type signatures against the inferred types
+    -- for example
+    -- identityNum : Native.Numeral -> Native.Numeral
+    -- identityNum x = x
+    -- the generalized inferred type will be forall t. t -> t
+    -- the type is narrowed down to be only applicable to Numerals
     generalized <- traverse gen binds
     checkAgainst signatures generalized
-    
+
     next <- with generalized (inferDecls qual gen signatures decls)
     return (union next generalized)
 inferDecls qual gen signatures (_:decls) =
     inferDecls qual gen signatures decls
 inferDecls _ _ _ [] = return mempty
 
--- Check the type signatures against the inferred types
 checkAgainst signatures = traverseWithKey_ (\k v ->
     maybe (return ()) (subsume v) (mfind k signatures))
 

@@ -43,7 +43,7 @@ layout (LocatedLexeme (Block n) pos:ts) []
 --        layout (LocatedLexeme (Indent n) pos:ts) ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
     | l == Text.pack "}" = t : layout ts ms
-layout (t@(LocatedLexeme (Reserved l) _):ts) ms
+layout (t@(LocatedLexeme (Reserved l) _):_) _
     | l == Text.pack "}" = error ("Layout: Explicit "
         ++ prettyLocated t ++ " without open brace.")
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
@@ -51,7 +51,7 @@ layout (t@(LocatedLexeme (Reserved l) _):ts) ms
 -- NOTE Parser rule left out.
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
-layout [] (m:ms) = close builtinLocation : layout [] ms
+layout [] (_:ms) = close builtinLocation : layout [] ms
 
 semi pos = LocatedLexeme (Reserved (Text.pack ";")) pos
 open pos = LocatedLexeme (Reserved (Text.pack "{")) pos

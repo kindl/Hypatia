@@ -151,14 +151,15 @@ instance Pretty Type where
     pPrint (TypeApplication a b) = parens (pPrint a <+> pPrint b)
     pPrint (ParenthesizedType t) = parens (pPrint t)
     pPrint (ForAll qual t) =
-        text "forall" <+> mintercalate (text " ") (fmap pPrint qual) <+> text "." <+> pPrint t
+        text "forall" <+> mintercalate (text " ") (fmap pPrint qual)
+            <+> text "." <+> pPrint t
 
 instance Pretty Literal where
     pPrint (Numeral n) = pPrint n
     pPrint (Text t) = text (show t)
 
 instance Pretty Pattern where
-    pPrint (VariablePattern id) = pPrint id
+    pPrint (VariablePattern identifier) = pPrint identifier
     pPrint (LiteralPattern l) = pPrint l
     pPrint Wildcard = text "_"
     pPrint (ConstructorPattern name ps) =

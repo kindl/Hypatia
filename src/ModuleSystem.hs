@@ -4,7 +4,7 @@ import Syntax
 import Aliases
 import Simplifier
 import Sorting
-import Parser
+import Parser hiding (spec, modDecl, decls)
 import TypeChecker
 import Operators
 import Qualification
@@ -20,8 +20,8 @@ loadProgram path =
     let dir = takeDirectory path
     let modName = fromString (takeBaseName path)
 
-    mod <- loadModuleWithSpec dir modName
-    mods <- growModuleEnv dir [mod]
+    modDecl <- loadModuleWithSpec dir modName
+    mods <- growModuleEnv dir [modDecl]
     let simplified = pipeline mods
     typechecking simplified
 
@@ -62,11 +62,11 @@ growModuleEnv dir env =
 typechecking =
     feedbackM (ret filterNames) logEnv typecheckModule mempty
 
-logEnv env mod =
+logEnv env modDecl =
     do
-        let modName = getName mod
+        let modName = getName modDecl
         writeFile ("logs/" ++ pretty modName ++ ".log") (prettyEnv env)
-        return mod
+        return modDecl
 
 {- Operators and Aliasing -}
 qualifyProgram =
@@ -82,8 +82,8 @@ aliasProgram = performSimple aliasTypes captureAliases
 performSimple action capture =
     feedback filterNames action (captureSimple capture) mempty
 
-captureSimple capture importedTable mod =
-    capture mod `mappend` importedTable
+captureSimple capture importedTable modDecl =
+    capture modDecl `mappend` importedTable
 
 {-
 Incrementally grow an environment and perform an action on all modules
@@ -99,12 +99,12 @@ ret f a b = return (f a b)
 feedback envFilter action capture envs mods =
     runIdentity (feedbackM (ret envFilter) (ret action) (ret capture) envs mods)
 
-step envFilter action capture envs (mod, imports) =
+step envFilter action capture envs (modDecl, imports) =
     do
         filtered <- envFilter imports envs
-        captured <- capture filtered mod
-        result <- action captured mod
-        return ((result, imports), insert (getName mod) captured envs)
+        captured <- capture filtered modDecl
+        result <- action captured modDecl
+        return ((result, imports), insert (getName modDecl) captured envs)
 
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 

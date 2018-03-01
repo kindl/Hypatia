@@ -17,7 +17,7 @@ This module turns a list of lexemes into a syntax tree
 -}
 parse path s = do
     lexemes <- lexlex path s
-    case runStateT modul lexemes of
+    case runStateT modDecl lexemes of
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
         Just (_, rest:_) -> Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
@@ -55,7 +55,7 @@ curlyBraces p = token "{" *> p <* token "}"
 bracketed p = token "[" *> p <* token "]"
 
 {- Module -}
-modul = do
+modDecl = do
     name <- optional (token "module" *> modid <* token ";")
     b <- body
     optional (token ";")

@@ -9,9 +9,6 @@ import Data.Generics.Uniplate.Data(transformBi)
 This module translates complicated expressions
 to simpler equivalent expressions
 -}
-simplifications m =
-    (splitLambdas . removeFunctionDeclaration) m
-
 splitLambdas m = transformBi f m
   where
     f (LambdaExpression ps e) =

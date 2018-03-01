@@ -42,7 +42,12 @@ resolve getDefs getDeps vs =
                 done = concatMap getDefs as
             in as ++ resolve getDefs (excluding done . getDeps) bs
 
-sortModules = resolve (return . getName . fst) (fmap fst . snd)
+sortModules = resolve (return . getName) gatherImports
+
+gatherImports modDecl = fmap fst (gatherSpecs modDecl)
+
+gatherSpecs modDecl = 
+    [(name, spec) | ImportDeclaration name spec _ <- (getDecls modDecl)]
 
 {-
 Gather variables used in an expression

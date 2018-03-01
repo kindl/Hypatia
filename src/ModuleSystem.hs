@@ -14,26 +14,30 @@ import Data.HashMap.Strict(insert)
 import System.FilePath(takeDirectory, takeBaseName)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
-
 loadProgram path =
   do
     let dir = takeDirectory path
     let modName = fromString (takeBaseName path)
 
-    modDecl <- loadModuleWithSpec dir modName
+    modDecl <- loadModule dir modName
     mods <- growModuleEnv dir [modDecl]
     let simplified = pipeline mods
-    typechecking simplified
+    typecheckProgram simplified
 
-    return (fmap fst simplified)
+    return simplified
 
 pipeline ::
-    [(ModuleDeclaration, [(Name, Maybe [Id])])] ->
-    [(ModuleDeclaration, [(Name, Maybe [Id])])]
-pipeline = sortDeclsMod . aliasProgram
-    . aliasOperatorsProgram . removeParens
-    . fixAssocProgram . qualifyProgram
-    . simplifications . sortModules
+    [ModuleDeclaration] ->
+    [ModuleDeclaration]
+pipeline = sortDeclsMod
+    . aliasProgram
+    . aliasOperatorsProgram
+    . removeParens
+    . fixAssocProgram
+    . qualifyProgram
+    . splitLambdas
+    . removeFunctionDeclaration
+    . sortModules
 
 loadModule dir modName =
     let path = dir ++ "/" ++ toPath modName
@@ -41,32 +45,25 @@ loadModule dir modName =
         putStrLn ("Loading module " ++ pretty modName ++ " from " ++ path)
         parseFile path
 
-modulePair m =
-    (m, gatherImports (getDecls m))
-
-loadModuleWithSpec dir modName =
-    fmap modulePair (loadModule dir modName)
-
 {- Load all imported modules -}
 growModuleEnv dir env =
   let
-    imported = fmap (getName . fst) env
-    imports = fmap fst (foldMap snd env)
+    imported = fmap getName env
+    imports = foldMap gatherImports env
   in case nub (excluding imported imports) of
         [] -> return env
         needed -> do
-            mods <- traverse (loadModuleWithSpec dir) needed
+            mods <- traverse (loadModule dir) needed
             growModuleEnv dir (mods ++ env)
 
 {- Typechecking -}
-typechecking =
+typecheckProgram =
     feedbackM (ret filterNames) logEnv typecheckModule mempty
 
 logEnv env modDecl =
     do
         let modName = getName modDecl
         writeFile ("logs/" ++ pretty modName ++ ".log") (prettyEnv env)
-        return modDecl
 
 {- Operators and Aliasing -}
 qualifyProgram =
@@ -88,7 +85,7 @@ captureSimple capture importedTable modDecl =
 {-
 Incrementally grow an environment and perform an action on all modules
 capture : captures the environment e.g. the operators and their aliases
-envs : an association list of the module name and its captured environment
+envs : a map of the module name and its captured environment
 -}
 feedbackM envFilter action capture envs mods =
     fmap fst (mapAccumM (step envFilter action capture) envs mods)
@@ -99,12 +96,13 @@ ret f a b = return (f a b)
 feedback envFilter action capture envs mods =
     runIdentity (feedbackM (ret envFilter) (ret action) (ret capture) envs mods)
 
-step envFilter action capture envs (modDecl, imports) =
+step envFilter action capture envs modDecl =
     do
-        filtered <- envFilter imports envs
+        let specs = gatherSpecs modDecl
+        filtered <- envFilter specs envs
         captured <- capture filtered modDecl
         result <- action captured modDecl
-        return ((result, imports), insert (getName modDecl) captured envs)
+        return (result, insert (getName modDecl) captured envs)
 
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
@@ -116,6 +114,3 @@ filterIds imports envs =
 
 filterNames imports envs =
     foldMap (\(modName, _) -> find modName envs) imports
-
-gatherImports decls = 
-    [(name, spec) | ImportDeclaration name spec _ <- decls]

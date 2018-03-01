@@ -18,7 +18,7 @@ lines a = split newline a
 newline = "
 "
 
-filter p a = foldMap (fun a -> if p a then [a] else []) a
+filter p a = foldMap (fun e -> if p e then [e] else []) a
 
 copy a = foldl insert [] a
 

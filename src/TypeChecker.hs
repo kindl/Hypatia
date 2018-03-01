@@ -38,8 +38,8 @@ inferModule (ModuleDeclaration modName decls) =
     let constructors = unionMap (gatherConstructor q) decls
     let signatures = unionMap (gatherTypeSig q) decls
     
-    binds <- with' constructors (inferDecls q generalize signatures decls)
-    return (constructors `mappend` binds)
+    binds <- with constructors (inferDecls q generalize signatures decls)
+    return (union constructors (mappend signatures binds))
 
 
 -- Typecheck Expressions
@@ -70,7 +70,7 @@ typecheck (LetExpression decls e) ty =
   do
     let types = unionMap (gatherTypeSig fromId) decls
     binds <- inferDecls fromId return types decls
-    with' binds (typecheck e ty)
+    with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
     typecheck c (TypeConstructor (fromString "Prelude.Boolean"))
@@ -92,7 +92,7 @@ typecheckVar x ty =
 typecheckAlt pty ety (pat, expr)  =
   do
     binds <- typecheckPattern fromId pat pty
-    with' binds (typecheck expr ety)
+    with binds (typecheck expr ety)
 
 -- Typecheck Constructors
 
@@ -140,14 +140,19 @@ inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
 
     ty <- newTyVar
     binds <- typecheckPattern qual p ty
-    with (signatures `mappend` binds) (typecheck e ty)
+
+    -- Here we have to use mappend because the type has to be checked
+    -- using the signatures, the binds would be to general
+    withOverwrite (mappend signatures binds) (typecheck e ty)
 
     generalized <- traverse gen binds
     checkAgainst signatures generalized
-    next <- with (signatures `mappend` generalized) (inferDecls qual gen signatures decls)
-    return (next `mappend` generalized)
-inferDecls qual gen signatures (_:decls) = inferDecls qual gen signatures decls
-inferDecls _ _ signatures [] = return signatures
+    
+    next <- with generalized (inferDecls qual gen signatures decls)
+    return (union next generalized)
+inferDecls qual gen signatures (_:decls) =
+    inferDecls qual gen signatures decls
+inferDecls _ _ _ [] = return mempty
 
 -- Check the type signatures against the inferred types
 checkAgainst signatures = traverseWithKey_ (\k v ->
@@ -250,12 +255,12 @@ getSubst =
     r <- asks (\(TypecheckerState _ _ s) -> s)
     readRef r
 
-with' binds =
-    local (\(TypecheckerState env r s) ->
-        TypecheckerState (union binds env) r s)
-with binds =
-    local (\(TypecheckerState env r s) ->
-        TypecheckerState (mappend binds env) r s)
+with binds = localEnv (union binds)
+
+withOverwrite binds = localEnv (mappend binds)
+
+localEnv f = local (\(TypecheckerState env r s) ->
+    TypecheckerState (f env) r s)
 
 -- Type Variables
 newUnique =
@@ -337,8 +342,8 @@ readRef s = lift (readIORef s)
 modifyRef s f = lift (modifyIORef s f)
 
 -- Variants of union that error on overwriting a key
-union a b = unionWithKey (\k _ _ ->
-    error (prettyWithInfo k ++ " was defined twice")) a b
+union a b = unionWithKey (\k v1 v2 ->
+    error (prettyWithInfo k ++ " was defined twice " ++ pretty v1 ++ " " ++ pretty v2)) a b
 
 uconcat m = unionMap id m
 

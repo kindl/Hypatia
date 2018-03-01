@@ -58,7 +58,8 @@ growModuleEnv dir env =
 
 {- Typechecking -}
 typecheckProgram =
-    feedbackM (ret filterNames) logEnv typecheckModule mempty
+    feedbackM logEnv (\envs modDecl ->
+        typecheckModule (filterNames (gatherSpecs modDecl) envs) modDecl)
 
 logEnv env modDecl =
     do
@@ -67,7 +68,7 @@ logEnv env modDecl =
 
 {- Operators and Aliasing -}
 qualifyProgram =
-    feedback filterIds qualifyNames (captureSimple captureNames) mempty
+    feedback qualifyNames (captureSimple filterIds captureNames)
 
 fixAssocProgram = performSimple fixAssoc captureAssocs
 
@@ -77,30 +78,28 @@ aliasOperatorsProgram =
 aliasProgram = performSimple aliasTypes captureAliases
 
 performSimple action capture =
-    feedback filterNames action (captureSimple capture) mempty
+    feedback action (captureSimple filterNames capture)
 
-captureSimple capture importedTable modDecl =
-    capture modDecl `mappend` importedTable
+captureSimple filterEnvs capture envs modDecl =
+    capture modDecl `mappend` filterEnvs (gatherSpecs modDecl) envs
 
 {-
 Incrementally grow an environment and perform an action on all modules
 capture : captures the environment e.g. the operators and their aliases
 envs : a map of the module name and its captured environment
 -}
-feedbackM envFilter action capture envs mods =
-    fmap fst (mapAccumM (step envFilter action capture) envs mods)
+feedbackM action capture mods =
+    fmap fst (mapAccumM (step action capture) mempty mods)
 
 -- Convenience function to make a regular function monadic
 ret f a b = return (f a b)
 
-feedback envFilter action capture envs mods =
-    runIdentity (feedbackM (ret envFilter) (ret action) (ret capture) envs mods)
+feedback action capture mods =
+    runIdentity (feedbackM (ret action) (ret capture) mods)
 
-step envFilter action capture envs modDecl =
+step action capture envs modDecl =
     do
-        let specs = gatherSpecs modDecl
-        filtered <- envFilter specs envs
-        captured <- capture filtered modDecl
+        captured <- capture envs modDecl
         result <- action captured modDecl
         return (result, insert (getName modDecl) captured envs)
 

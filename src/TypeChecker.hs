@@ -2,10 +2,10 @@ module TypeChecker where
 
 import Prelude hiding (lookup)
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
+    lookup, singleton, unionWithKey)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
-import Control.Arrow(first)
 import Data.List(nub)
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef, IORef)
@@ -33,15 +33,13 @@ inferModule (ModuleDeclaration modName decls) =
     info "---------------------------------"
     info ("Typechecking Module " ++ pretty modName)
     
-    let constructors = foldMap (gatherConstructor (qualifyId modName)) decls
-    let signatures = foldMap gatherTypeSig decls
-    
     -- Qualify means rename Ty to AnyModuleName.Ty
-    let qualifiedConstructors = mapKeys (qualifyId modName) constructors
-    let qualifiedSignatures = mapKeys (qualifyId modName) signatures
+    let q = qualifyId modName
+    let constructors = unionMap (gatherConstructor q) decls
+    let signatures = unionMap (gatherTypeSig q) decls
     
-    binds <- with qualifiedConstructors (inferDecls (qualifyId modName) generalize qualifiedSignatures decls)
-    return (qualifiedConstructors `mappend` binds)
+    binds <- with' constructors (inferDecls q generalize signatures decls)
+    return (constructors `mappend` binds)
 
 
 -- Typecheck Expressions
@@ -70,9 +68,9 @@ typecheck (LambdaExpression [p] e) ty =
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
-    let types = mapKeys fromId (foldMap gatherTypeSig decls)
+    let types = unionMap (gatherTypeSig fromId) decls
     binds <- inferDecls fromId return types decls
-    with binds (typecheck e ty)
+    with' binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
     typecheck c (TypeConstructor (fromString "Prelude.Boolean"))
@@ -93,9 +91,8 @@ typecheckVar x ty =
 
 typecheckAlt pty ety (pat, expr)  =
   do
-    binds <- typecheckPattern pat pty
-    let env = mapKeys fromId binds
-    with env (typecheck expr ety)
+    binds <- typecheckPattern fromId pat pty
+    with' binds (typecheck expr ety)
 
 -- Typecheck Constructors
 
@@ -110,19 +107,19 @@ Vec3 : forall a. a -> a -> a -> Vector a
 
 Vec2 is a constructor and Vector a type constructor
 -}
-gatherConstructor qual (TypeDeclaration id vars constructors) =
-    let typeConstructor = TypeConstructor (qual id)
-    in foldMap (constructorToType typeConstructor vars) constructors
+gatherConstructor qual (TypeDeclaration ident vars constructors) =
+    let ty = TypeConstructor (qual ident)
+    in unionMap (constructorToType qual ty vars) constructors
 gatherConstructor _ _ = mempty
 
 -- convert a constructor declaration to a type
-constructorToType ty vars (name, tys) =
+constructorToType qual ty vars (name, tys) =
     let
         res = foldl TypeApplication ty (fmap TypeVariable vars)
         resTy = foldr TypeArrow res tys
         frees = excluding vars (freeVars resTy)
     in case frees of
-        [] -> singleton name (makeForAll vars resTy)
+        [] -> singleton (qual name) (makeForAll vars resTy)
         _  -> error ("Type variables " ++ pretty frees
                ++ " appear free in " ++ pretty name )
 
@@ -130,9 +127,9 @@ arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]
 
 -- Typecheck Bindings
-gatherTypeSig (TypeSignature name ty) =
-    singleton name (makeForAll (freeVars ty) ty)
-gatherTypeSig _ = mempty
+gatherTypeSig qual (TypeSignature name ty) =
+    singleton (qual name) (makeForAll (freeVars ty) ty)
+gatherTypeSig _ _ = mempty
 
 -- Assumes that the let bindings are already sorted
 -- Should we solve it without sorting?
@@ -142,7 +139,7 @@ inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
     info ("Typechecking declaration " ++ pretty p)
 
     ty <- newTyVar
-    binds <- fmap (mapKeys qual) (typecheckPattern p ty)
+    binds <- typecheckPattern qual p ty
     with (signatures `mappend` binds) (typecheck e ty)
 
     generalized <- traverse gen binds
@@ -159,19 +156,19 @@ checkAgainst signatures = traverseWithKey_ (\k v ->
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
 -- Typecheck Patterns
-typecheckPattern (VariablePattern x) ty =
-    return (singleton x ty)
-typecheckPattern (AliasPattern x p) ty =
+typecheckPattern qual (VariablePattern x) ty =
+    return (singleton (qual x) ty)
+typecheckPattern qual (AliasPattern x p) ty =
   do
-    binds <- typecheckPattern p ty
-    return (singleton x ty `mappend` binds)
-typecheckPattern Wildcard _ =
+    binds <- typecheckPattern qual p ty
+    return (insert (qual x) ty binds)
+typecheckPattern _ Wildcard _ =
     return mempty
-typecheckPattern (LiteralPattern l) ty =
+typecheckPattern _ (LiteralPattern l) ty =
   do
     typecheckLiteral l ty
     return mempty
-typecheckPattern (ConstructorPattern c ps) ty =
+typecheckPattern qual (ConstructorPattern c ps) ty =
   do
     env <- getEnv
     scheme <- mfind c env
@@ -183,16 +180,16 @@ typecheckPattern (ConstructorPattern c ps) ty =
 
     when (length ps /= length consTys)
         (fail ("Constructor " ++ pretty c ++ " was given wrong number of arguments"))
-    binds <- zipWithM typecheckPattern ps consTys
+    binds <- zipWithM (typecheckPattern qual) ps consTys
     unify resultTy ty
-    return (mconcat binds)
-typecheckPattern (ArrayPattern ps) ty =
+    return (uconcat binds)
+typecheckPattern qual (ArrayPattern ps) ty =
   do
     alpha <- newTyVar
-    binds <- traverse (flip typecheckPattern alpha) ps
+    binds <- traverse (\p -> typecheckPattern qual p alpha) ps
     unify (TypeApplication (TypeConstructor (fromString "Native.Array")) alpha) ty
-    return (mconcat binds)
-typecheckPattern other _ = fail ("Cannot typecheck pattern " ++ pretty other)
+    return (uconcat binds)
+typecheckPattern _ other _ = fail ("Cannot typecheck pattern " ++ pretty other)
 
 -- Typecheck Literals
 typecheckLiteral (Numeral _) ty =
@@ -236,7 +233,7 @@ apply subst (ForAll vs ty) =
     in ForAll vs (apply filteredSubst ty)
 -- TODO solve infintie loop
 -- sometimes the typechecker loops infinitely
--- Presumably here when the substitue gets substituted again and again
+-- Presumably here when a variable gets substituted again and again
 apply subst ty@(TypeVariable x) = maybe ty (apply subst) (lookup x subst)
 apply subst ty = descend (apply subst) ty
 
@@ -253,8 +250,12 @@ getSubst =
     r <- asks (\(TypecheckerState _ _ s) -> s)
     readRef r
 
+with' binds =
+    local (\(TypecheckerState env r s) ->
+        TypecheckerState (union binds env) r s)
 with binds =
-    local (\(TypecheckerState env r s) -> TypecheckerState (mappend binds env) r s)
+    local (\(TypecheckerState env r s) ->
+        TypecheckerState (mappend binds env) r s)
 
 -- Type Variables
 newUnique =
@@ -283,7 +284,7 @@ generalize ty = do
     subst <- getSubst
     let ty' = apply subst ty
     env <- getEnv
-    let envVars = foldMap freeVars env
+    let envVars = concatMap freeVars env
     let qualVars = excluding envVars (freeVars ty')
     return (makeForAll qualVars ty')
 
@@ -335,6 +336,10 @@ readRef s = lift (readIORef s)
 
 modifyRef s f = lift (modifyIORef s f)
 
-mapKeys f m = fromList (fmap (first f) m)
+-- Variants of union that error on overwriting a key
+union a b = unionWithKey (\k _ _ ->
+    error (prettyWithInfo k ++ " was defined twice")) a b
 
-singleton x y = pure (x, y)
+uconcat m = unionMap id m
+
+unionMap f m = foldr (\e r -> union (f e) r) mempty m

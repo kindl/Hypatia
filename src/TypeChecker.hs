@@ -269,9 +269,8 @@ localEnv f = local (\(TypecheckerState env r s) ->
 newUnique =
   do
     r <- asks (\(TypecheckerState _ u _) -> u)
-    i <- readRef r
     modifyRef r succ
-    return i
+    readRef r
 
 newTyVar = fmap TypeVariable newUniqueName
 

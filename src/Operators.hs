@@ -40,13 +40,13 @@ fixAssocO operatorTable constr f1 o1 fe1 o2 fe2 =
     let
         (assoc1, prec1) = find o1 operatorTable
         (assoc2, prec2) = find o2 operatorTable
-    in (case compare prec1 prec2 of
+    in case compare prec1 prec2 of
         LT -> constr f1 o1 (constr fe1 o2 fe2)
         GT -> constr (constr f1 o1 fe1) o2 fe2
-        EQ -> (case (assoc1, assoc2) of
+        EQ -> case (assoc1, assoc2) of
             (LeftAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
             -- TODO this is probably an ambiguous parse?
             (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
             (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
             (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
-            _ -> error ("Operator " ++ prettyWithInfo o1 ++ " has no associativity")))
+            _ -> error ("Operator " ++ prettyWithInfo o1 ++ " has no associativity")

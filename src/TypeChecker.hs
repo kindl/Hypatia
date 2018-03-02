@@ -344,8 +344,9 @@ readRef s = lift (readIORef s)
 modifyRef s f = lift (modifyIORef s f)
 
 -- Variants of union that error on overwriting a key
-union a b = unionWithKey (\k v1 v2 ->
-    error (prettyWithInfo k ++ " was defined twice " ++ pretty v1 ++ " " ++ pretty v2)) a b
+union = unionWithKey (\k v1 v2 ->
+    error (prettyWithInfo k
+        ++ " was defined twice " ++ pretty v1 ++ " " ++ pretty v2))
 
 uconcat m = unionMap id m
 

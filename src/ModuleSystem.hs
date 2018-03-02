@@ -4,7 +4,7 @@ import Syntax
 import Aliases
 import Simplifier
 import Sorting
-import Parser hiding (spec, modDecl, decls)
+import Parser hiding (spec, modDecl)
 import TypeChecker
 import Operators
 import Qualification
@@ -42,7 +42,8 @@ pipeline = sortDeclsMod
 loadModule dir modName =
     let path = dir ++ "/" ++ toPath modName
     in do
-        putStrLn ("Loading module " ++ pretty modName ++ " from " ++ path)
+        putStrLn ("Loading module "
+            ++ pretty modName ++ " from " ++ path)
         parseFile path
 
 {- Load all imported modules -}
@@ -57,51 +58,53 @@ growModuleEnv dir env =
             growModuleEnv dir (mods ++ env)
 
 {- Typechecking -}
-typecheckProgram =
-    feedbackM logEnv (\envs modDecl ->
-        typecheckModule (filterNames (gatherSpecs modDecl) envs) modDecl)
+typecheckProgram = feedbackM logEnv (\envs modDecl ->
+    typecheckModule (filterNames (gatherSpecs modDecl) envs) modDecl)
 
 logEnv env modDecl =
-    do
-        let modName = getName modDecl
-        writeFile ("logs/" ++ pretty modName ++ ".log") (prettyEnv env)
+    let
+        modName = getName modDecl
+        path = "logs/" ++ pretty modName ++ ".log"
+    in writeFile path (prettyEnv env)
 
 {- Operators and Aliasing -}
 qualifyProgram =
     feedback qualifyNames (captureSimple filterIds captureNames)
 
-fixAssocProgram = performSimple fixAssoc captureAssocs
+fixAssocProgram = feedbackSimple fixAssoc captureAssocs
 
 aliasOperatorsProgram =
-    performSimple aliasOperators captureOperatorAliases
+    feedbackSimple aliasOperators captureOperatorAliases
 
-aliasProgram = performSimple aliasTypes captureAliases
+aliasProgram = feedbackSimple aliasTypes captureAliases
 
-performSimple action capture =
+feedbackSimple action capture =
     feedback action (captureSimple filterNames capture)
 
 captureSimple filterEnvs capture envs modDecl =
     capture modDecl `mappend` filterEnvs (gatherSpecs modDecl) envs
 
 {-
-Incrementally grow an environment and perform an action on all modules
-capture : captures the environment e.g. the operators and their aliases
-envs : a map of the module name and its captured environment
+Incrementally grow an environment
+and perform an action on all modules
+
+capture: captures the environment e.g. operators and their aliases
+envs: a map of the module name and its captured environment
 -}
 feedbackM action capture mods =
     fmap fst (mapAccumM (step action capture) mempty mods)
-
--- Convenience function to make a regular function monadic
-ret f a b = return (f a b)
-
-feedback action capture mods =
-    runIdentity (feedbackM (ret action) (ret capture) mods)
 
 step action capture envs modDecl =
     do
         captured <- capture envs modDecl
         result <- action captured modDecl
         return (result, insert (getName modDecl) captured envs)
+
+feedback action capture mods =
+    runIdentity (feedbackM (ret action) (ret capture) mods)
+
+-- Convenience function to make a regular function monadic
+ret f a b = return (f a b)
 
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 

@@ -201,13 +201,13 @@ letExpression = do
     token "in"
     e <- expr
     return (LetExpression ds e)
+-- NOTE optional semicolons were removed
+-- because they were part of parsing if- in do-expressions
 ifExpression = do
     token "if"
     c <- expr
-    optional (token ";")
     token "then"
     t <- expr
-    optional (token ";")
     token "else"
     e <- expr
     return (IfExpression c t e)

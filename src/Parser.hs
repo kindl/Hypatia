@@ -1,8 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Parser where
 
 import Syntax
 import Data.Text(pack)
 import qualified Data.Text.IO as Text
+import Data.List(foldl1', uncons)
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional, liftA2)
@@ -34,9 +36,7 @@ sepBy1 parser seperator =
     liftA2 (:) parser (many (seperator *> parser))
 
 -- get the next lexeme
-next = StateT muncons
-muncons [] = mzero
-muncons (x:xs) = return (x, xs)
+next = StateT uncons
 
 satisfy predicate = mfilter predicate next
 
@@ -158,7 +158,7 @@ typeOperator = do
     t <- otype
     return (TypeInfixOperator b o t)
 
-btype = fmap (foldl1 TypeApplication) (some atype)
+btype = fmap (foldl1' TypeApplication) (some atype)
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
 typeConstructor = fmap TypeConstructor qcon
@@ -218,7 +218,7 @@ caseExpression = do
     als <- alts
     return (CaseExpression e als)
 
-fexpr = fmap (foldl1 FunctionApplication) (some aexpr)
+fexpr = fmap (foldl1' FunctionApplication) (some aexpr)
  
 aexpr = variable <|> constructorExpression <|> literalExpression
     <|> parenthesizedExpression <|> listExpression

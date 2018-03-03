@@ -6,7 +6,7 @@ import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
     lookup, singleton, unionWithKey)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
-import Data.List(nub)
+import Data.List(nub, foldl')
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef, IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
@@ -115,7 +115,7 @@ gatherConstructor _ _ = mempty
 -- convert a constructor declaration to a type
 constructorToType qual ty vars (name, tys) =
     let
-        res = foldl TypeApplication ty (fmap TypeVariable vars)
+        res = foldl' TypeApplication ty (fmap TypeVariable vars)
         resTy = foldr TypeArrow res tys
         frees = excluding vars (freeVars resTy)
     in case frees of

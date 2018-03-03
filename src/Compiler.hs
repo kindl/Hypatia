@@ -2,6 +2,7 @@ module Compiler where
 
 
 import Syntax
+import Data.List(foldl1')
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
     equals, text, int, braces, parens, brackets, double, render, semi)
@@ -181,7 +182,7 @@ compileAlts = foldr (\(p, e) rest ->
     let s = getAssignments [] p ++ compileEtoS e
     in case getMatching [] p of
         [] -> s
-        ms -> If (foldl1 And ms) s []:rest)
+        ms -> If (foldl1' And ms) s []:rest)
 
 getMatching _ Wildcard = []
 getMatching _ (VariablePattern _) = []

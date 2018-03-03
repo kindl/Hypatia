@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Lexer where
 
 import Prelude hiding (takeWhile)
@@ -42,23 +43,23 @@ layout (LocatedLexeme (Block n) pos:ts) []
 --    open pos : close pos :
 --        layout (LocatedLexeme (Indent n) pos:ts) ms
 layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
-    | l == Text.pack "}" = t : layout ts ms
+    | l == "}" = t : layout ts ms
 layout (t@(LocatedLexeme (Reserved l) _):_) _
-    | l == Text.pack "}" = error ("Layout: Explicit "
+    | l == "}" = error ("Layout: Explicit "
         ++ prettyLocated t ++ " without open brace.")
 layout (t@(LocatedLexeme (Reserved l) _):ts) ms
-    | l == Text.pack "{" = t : layout ts (0:ms)
+    | l == "{" = t : layout ts (0:ms)
 -- NOTE Parser rule left out.
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
 layout [] (_:ms) = close builtinLocation : layout [] ms
 
-semi pos = LocatedLexeme (Reserved (Text.pack ";")) pos
-open pos = LocatedLexeme (Reserved (Text.pack "{")) pos
-close pos = LocatedLexeme (Reserved (Text.pack "}")) pos
+semi pos = LocatedLexeme (Reserved ";") pos
+open pos = LocatedLexeme (Reserved "{") pos
+close pos = LocatedLexeme (Reserved "}") pos
 
 isLayout (LocatedLexeme (Reserved t) _)
-    | elem t (fmap Text.pack ["let", "where", "of"]) = True
+    | elem t ["let", "where", "of"] = True
 isLayout _ = False
 
 -- + 1 because it is the column
@@ -71,7 +72,7 @@ getIndent (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Indent (indLength ws)) pos
 
 followedByOpen rest = case dropWhile isWhite rest of
-    (LocatedLexeme (Reserved t) _:_) | t == Text.pack "{" -> True
+    (LocatedLexeme (Reserved t) _:_) | t == "{" -> True
     _ -> False
 
 -- TODO find the logic error in here
@@ -112,7 +113,7 @@ advance (Position l c) _ =
 
 initialPosition = Position 1 1
 
-oneOf xs = satisfy (`elem` xs)
+oneOf xs = satisfy (\x -> Text.any (==x) xs)
 
 data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
@@ -154,7 +155,7 @@ program path = fmap (located path)
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 special = do
     c <- oneOf "(),;[]`{}"
-    return (Reserved (Text.pack [c]))
+    return (Reserved (Text.singleton c))
 
 -- TODO multi-line comments
 whitespace = whitechars <|> comment
@@ -177,10 +178,10 @@ qvarsym = optionalQualified Varsym varsym
 
 {- Identifiers -}
 isReserved x =
-    elem x (fmap Text.pack ["alias", "enum", "type", "forall",
+    elem x ["alias", "enum", "type", "forall",
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as",
-        ":", "=", "->", "|"])
+        ":", "=", "->", "|"]
 varid = do
     x <- small
     xs <- takeWhile isAlphaNum

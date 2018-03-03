@@ -18,7 +18,9 @@ cabal-version:       >=1.10
 executable hypatia
   main-is:             Main.hs
   -- other-modules:       
-  other-extensions:    DeriveDataTypeable
+  other-extensions:
+    DeriveDataTypeable,
+    OverloadedStrings
   build-depends:
     base < 4.11,
     text < 1.3,

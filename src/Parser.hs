@@ -2,7 +2,6 @@
 module Parser where
 
 import Syntax
-import Data.Text(pack)
 import qualified Data.Text.IO as Text
 import Data.List(foldl1', uncons)
 import Data.Maybe(fromMaybe)
@@ -41,10 +40,10 @@ next = StateT uncons
 satisfy predicate = mfilter predicate next
 
 -- get a lexeme that equals this string
-token str = void (satisfy (\x -> case extractLexeme x of
-    Reserved s -> pack str == s
+token text = void (satisfy (\x -> case extractLexeme x of
+    Reserved s -> text == s
     -- for token "-"
-    Varsym [] s -> pack str == s
+    Varsym [] s -> text == s
     _ -> False))
 
 -- some combinators for parens for readability

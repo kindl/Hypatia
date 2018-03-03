@@ -45,8 +45,6 @@ token str = void (satisfy (\x -> case extractLexeme x of
     Reserved s -> pack str == s
     -- for token "-"
     Varsym [] s -> pack str == s
-    -- for token "_"
-    Varid [] s -> pack str == s
     _ -> False))
 
 -- some combinators for parens for readability

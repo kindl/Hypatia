@@ -181,7 +181,7 @@ isReserved x =
     elem x ["alias", "enum", "type", "forall",
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as",
-        ":", "=", "->", "|"]
+        ":", "=", "->", "|", "_"]
 varid = do
     x <- small
     xs <- takeWhile isAlphaNum

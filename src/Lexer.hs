@@ -153,8 +153,10 @@ program path = fmap (located path)
     (many (match (lexeme <|> whitespace)) <* endOfInput)
 
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
+-- NOTE . was addded
+-- it is part of for example forall a. a
 special = do
-    c <- oneOf "(),;[]`{}"
+    c <- oneOf "(),;[]`{}."
     return (Reserved (Text.singleton c))
 
 -- TODO multi-line comments

@@ -3,7 +3,7 @@ module Parser where
 
 import Syntax
 import qualified Data.Text.IO as Text
-import Data.List(foldl1', uncons)
+import Data.List(uncons)
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>), void)
 import Control.Applicative((<|>), some, many, optional, liftA2)
@@ -33,6 +33,16 @@ sepBy parser seperator =
     fmap concat (optional (sepBy1 parser seperator))
 sepBy1 parser seperator =
     liftA2 (:) parser (many (seperator *> parser))
+
+-- Handles left recursion
+-- for example in application fexpr
+-- Previously used fmap (foldl1' f) (some p)
+-- but this created garbage in form of an intermediate list
+chainl1 p op = p >>= rest
+    where rest x = do f <- op
+                      y <- p
+                      rest (f x y)
+                   <|> return x
 
 -- get the next lexeme
 next = StateT uncons
@@ -155,7 +165,7 @@ typeOperator = do
     t <- otype
     return (TypeInfixOperator b o t)
 
-btype = fmap (foldl1' TypeApplication) (some atype)
+btype = chainl1 atype (return TypeApplication)
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
 typeConstructor = fmap TypeConstructor qcon
@@ -215,7 +225,7 @@ caseExpression = do
     als <- alts
     return (CaseExpression e als)
 
-fexpr = fmap (foldl1' FunctionApplication) (some aexpr)
+fexpr = chainl1 aexpr (return FunctionApplication)
  
 aexpr = variable <|> constructorExpression <|> literalExpression
     <|> parenthesizedExpression <|> listExpression

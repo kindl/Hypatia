@@ -5,9 +5,9 @@ import Syntax
 import qualified Data.Text.IO as Text
 import Data.List(uncons)
 import Data.Maybe(fromMaybe)
-import Data.Functor(($>), void)
+import Data.Functor(($>))
 import Control.Applicative((<|>), some, many, optional, liftA2)
-import Control.Monad(mfilter, mzero)
+import Control.Monad(mzero, guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), lexlex, prettyLocated,
     extractLexeme, extractLocation)
@@ -47,14 +47,13 @@ chainl1 p op = p >>= rest
 -- get the next lexeme
 next = StateT uncons
 
-satisfy predicate = mfilter predicate next
+token text = do
+    Reserved s <- fmap extractLexeme next
+    guard (text == s)
 
--- get a lexeme that equals this string
-token text = void (satisfy (\x -> case extractLexeme x of
-    Reserved s -> text == s
-    -- for token "-"
-    Varsym [] s -> text == s
-    _ -> False))
+minus = do
+    Varsym [] "-" <- fmap extractLexeme next
+    return ()
 
 -- some combinators for parens for readability
 parenthesized p = token "(" *> p <* token ")"
@@ -192,7 +191,7 @@ infixOperator = do
     o <- qvarsym
     r <- infixexpr
     return (InfixOperator l o r)
-prefixNegation = fmap PrefixNegation (token "-" *> infixexpr)
+prefixNegation = fmap PrefixNegation (minus *> infixexpr)
  
 lexpr = lambdaExpression <|> letExpression
     <|> ifExpression <|> caseExpression <|> fexpr

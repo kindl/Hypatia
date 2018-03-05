@@ -313,11 +313,9 @@ fromInt _ = mzero
 fromStr (String v) = return v
 fromStr _ = mzero
 
-parseId f = do
-    n <- parseName f
-    case n of
-        Name [] ident -> return ident
-        _ -> mzero
+parseIdent f = do
+    Name [] ident <- parseName f
+    return ident
 parseName f = do
     n <- next
     f (extractLexeme n) (extractLocation n)
@@ -325,13 +323,13 @@ parseLiteral f = do
     n <- next
     f (extractLexeme n)
 
-varsym = parseId fromVarsym
+varsym = parseIdent fromVarsym
 qvarsym = parseName fromVarsym
 
-varid = parseId fromVarid
+varid = parseIdent fromVarid
 qvarid = parseName fromVarid
 
-conid = parseId fromConid
+conid = parseIdent fromConid
 qconid = parseName fromConid
 modid = qconid
 

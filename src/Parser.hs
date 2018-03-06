@@ -30,7 +30,7 @@ parseFile path = do
 parseString s = parse "" s
 
 sepBy parser seperator =
-    fmap concat (optional (sepBy1 parser seperator))
+    sepBy1 parser seperator <|> pure []
 sepBy1 parser seperator =
     liftA2 (:) parser (many (seperator *> parser))
 

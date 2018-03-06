@@ -35,4 +35,6 @@ foldlAux i maxN f z a =
     primIf (eq i maxN) (fun _ -> z) (fun _ -> foldlAux (i + 1) maxN f (f z (geti i a)) a) Unit
 
 inspect x =
-    primIf (isArray x) (fun _ -> "{" & foldl (fun z i -> z & " " & inspect i) "" (coerce x) & "}") (fun _ -> toString x) Unit 
+    primIf (isArray x) (fun _ -> "{"
+        & foldl (fun z i -> z & " " & inspect i) "" (coerce x)
+        & "}") (fun _ -> toString x) Unit 

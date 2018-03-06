@@ -5,12 +5,20 @@ import Prelude((/), Tuple, Unit, getn,
 import Obj(getFaces, getVertices, getNormals,
     VTNI, VNI, VTI, VI)
 import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
-    rotationZ, rotationY, normalize, to2d, multiply, transform)
+    rotationZ, rotationY, rotationX,
+    normalize, to2d, multiply, transform)
 import Array(map, foldMap)
 
 
 # Primitives
 polygon : Array Numeral -> Unit
+
+uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
+
+getState : Unit -> Array (Array Numeral)
+
+setState : Array (Array Numeral) -> Unit
+
 
 pi = 3.141592653589793
 
@@ -25,8 +33,7 @@ r = rotationZ pi
 
 modelview = multiply t (multiply r s)
 projection = simpleProjectionMatrix 5000
-rotation = rotationY 30
-
+ 
 lightDirection = normalize (Vec4 0 0 1 0)
 
 faces = getFaces model
@@ -38,18 +45,26 @@ getPoint (VNI v _) = getn v vertices
 getPoint (VTI v _) = getn v vertices
 getPoint (VI v) = getn v vertices
 
-transformPoint vector = let
+transformPoint rotation vector =
+    let
         rotated = transform rotation vector
         transformed = transform modelview rotated
         projected = transform projection transformed
         divided = to2d projected
     in divided
 
-trFaces = map (compose tuplesToArray transformFace) faces
+mousemoved = uncurry5 mousemovedC
 
-transformFace = map (compose transformPoint getPoint)
+mousemovedC x y dx dy isTouch =
+    let
+        rotY = rotationY (x / screenWidth)
+        rotX = rotationX (y / screenHeight)
+        rotation = multiply rotY rotX
+    in setState (map (compose tuplesToArray (transformFace rotation)) faces)
 
-drawFaces _ = map polygon trFaces
+transformFace rotation face = map (compose (transformPoint rotation) getPoint) face
+
+draw _ = map polygon (getState Unit)
 
 tuplesToArray = foldMap tupleToArray
 tupleToArray (Tuple a b) = [a, b]

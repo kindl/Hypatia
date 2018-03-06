@@ -130,16 +130,22 @@ compileE (LambdaExpression [p] e) =
     Func [makeId "_v"]
         (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfoP p))] [(p, e)])
 compileE (ArrayExpression es) =
-            Arr (fmap compileE es)
-compileE (LiteralExpression l) = compileL l
-compileE e@(CaseExpression _ _) = immediate (compileEtoS e)
+    Arr (fmap compileE es)
+compileE (LiteralExpression l) =
+    compileL l
+compileE e@(CaseExpression _ _) =
+    immediate (compileEtoS e)
 compileE e@(LetExpression _ _) =
     immediate (compileEtoS e)
 compileE e@(IfExpression _ _ _) =
-        immediate (compileEtoS e)
+    immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
 -- Compiles an expression in a statement context
+-- TODO investigate
+-- This seemed to be a good way of saving immediate functions
+-- however nested case expressions lead to problems
+-- e.g. multiple defined local _v
 compileEtoS (CaseExpression e alts) =
     Assign (makeId "_v") (compileE e) :
         compileAlts [Ret (mkError ("failed pattern match case lambda at "

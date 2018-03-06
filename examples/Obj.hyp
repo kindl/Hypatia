@@ -1,7 +1,7 @@
 module Obj
 
 import Prelude((&), notEq, toNumber, file, getn, error,
-    Numeral, compose, arrayFoldMap, arrayMap)
+    Numeral, Text, compose, arrayFoldMap, arrayMap)
 import Geometry(Vector, Vec4)
 import Array(filter, inspect, split, map, foldMap, lines, words, Array)
 
@@ -17,7 +17,7 @@ type ObjElement
     | TextureCoordinate (Vector Numeral)
     | Normal (Vector Numeral)
     | Face (Array VertexIndex)
-    | Comment
+    | Comment (Array Text)
 
 toFace (Face f) = [f]
 toFace _ = []
@@ -32,18 +32,22 @@ getFaces = foldMap toFace
 getVertices = foldMap toVertex
 getNormals = foldMap toNormal
 
-filteredWords s = filter (notEq "") (words s)
+# words splits a line at every space
+# However "v -1.0 -1.0 -1.0"
+# splits into ["v", "-1.0", "-1.0", "-1.0", ""]
+# because of an invisible \r at the end. Ouch!
+# Therefore the "" is filtered out
+parseLine s = matchLine (filter (notEq "") (words s))
 
-load filePath = map (compose matchLine filteredWords) (lines (file filePath))
+load filePath = map parseLine (lines (file filePath))
 
-matchLine [] = Comment
 matchLine es =
     case getn 1 es of
         "v" -> Vertex (readVector es)
         "vn" -> Normal (readVector es)
         "vt" -> TextureCoordinate (readVector es)
         "f" -> Face (map readVI (filter (notEq "f") es))
-        _ -> Comment
+        v -> Comment [v]
 
 readVector [_, v1, v2, v3, v4] =
     Vec4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)

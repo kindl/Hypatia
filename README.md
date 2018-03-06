@@ -58,4 +58,4 @@ cabal run compile "examples/Spheres.hyp"
 love lua
 ```
 
-Head over to the folder dreams in order to see how applications would look like in lua and compare it with the files in the examples folder.
+Head over to the examples folder to see how applications look like.

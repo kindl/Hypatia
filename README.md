@@ -8,13 +8,19 @@ How did you end up here? Let me introduce myself, I am Hypatia, youngest child o
 ```
 module Example
 
+# Define a vector with two constructors
+# A vector can have either two or three elements
+type Vector a = Vec2 a a | Vec3 a a a
+
+# There can also be types without constructors
+type Void
+
+# A shorthand for the native number type
 alias Numeral = Native.Numeral
 
-# Functions without implementation are taken from Native.lua
-circle : Vector Numeral -> Numeral -> Native.Unit
-setColor : Vector Numeral -> Native.Unit
-
-type Vector a = Vec2 a a | Vec3 a a a
+# Functions without implementation are imported from Native.lua
+circle : Vector Numeral -> Numeral -> Void
+setColor : Vector Numeral -> Void
 
 draw _ = let { _ = setColor (Vec3 40 30 240) } in circle (Vec2 400 300) 200
 ```

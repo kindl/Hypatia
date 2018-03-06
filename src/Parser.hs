@@ -46,13 +46,17 @@ chainl1 p op = p >>= rest
 
 -- get the next lexeme
 next = StateT uncons
+{-# INLINE next #-}
+
+nextLexeme = fmap extractLexeme next
+{-# INLINE nextLexeme #-}
 
 token text = do
-    Reserved s <- fmap extractLexeme next
+    Reserved s <- nextLexeme
     guard (text == s)
 
 minus = do
-    Varsym [] "-" <- fmap extractLexeme next
+    Varsym [] "-" <- nextLexeme
     return ()
 
 -- some combinators for parens for readability
@@ -304,24 +308,12 @@ fromVarid _ _ = mzero
 fromConid (Conid qs v) l = return (Name qs (Id v l))
 fromConid _ _ = mzero
 
-fromDouble (Double v) = return v
-fromDouble _ = mzero
-
-fromInt (Integer v) = return v
-fromInt _ = mzero
-
-fromStr (String v) = return v
-fromStr _ = mzero
-
 parseIdent f = do
     Name [] ident <- parseName f
     return ident
 parseName f = do
     n <- next
     f (extractLexeme n) (extractLocation n)
-parseLiteral f = do
-    n <- next
-    f (extractLexeme n)
 
 varsym = parseIdent fromVarsym
 qvarsym = parseName fromVarsym
@@ -333,8 +325,14 @@ conid = parseIdent fromConid
 qconid = parseName fromConid
 modid = qconid
 
-float = parseLiteral fromDouble
-integer = parseLiteral fromInt
-string = parseLiteral fromStr
+float = do
+    Double d <- nextLexeme
+    return d
+integer = do
+    Integer i <- nextLexeme
+    return i
+string = do
+    String s <- nextLexeme
+    return s
 
 literal = fmap (Numeral . fromIntegral) integer <|> fmap Numeral float <|> fmap Text string

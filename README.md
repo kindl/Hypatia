@@ -9,10 +9,10 @@ How did you end up here? Let me introduce myself, I am Hypatia, youngest child o
 module Example
 
 # Define a vector with two constructors
-# A vector can have either two or three elements
+# A vector has either two or three elements
 type Vector a = Vec2 a a | Vec3 a a a
 
-# There can also be types without constructors
+# A type without a constructor
 type Void
 
 # A shorthand for the native number type
@@ -64,4 +64,4 @@ cabal run compile "examples/Spheres.hyp"
 love lua
 ```
 
-Head over to the examples folder to see how applications look like.
+Head over to the folder "examples" to see how applications look like.

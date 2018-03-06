@@ -1,10 +1,10 @@
 module Example
 
 # Define a vector with two constructors
-# A vector can have either two or three elements
+# A vector has either two or three elements
 type Vector a = Vec2 a a | Vec3 a a a
 
-# There can also be types without constructors
+# A type without a constructor
 type Void
 
 # A shorthand for the native number type

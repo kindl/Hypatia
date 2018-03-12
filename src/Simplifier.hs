@@ -1,7 +1,7 @@
 module Simplifier where
 
 import Syntax
-import Data.List(groupBy, partition)
+import Data.Either(partitionEithers)
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
 
@@ -49,24 +49,22 @@ removeFunctionDeclaration m = (transformBi f . transformBi k) m
 
 transBinds decls =
   let
-    (funDecls, rest) = partition isFunctionDeclaration decls
-    merged = fmap mergeBinds (groupBy sameFunDeclName funDecls)
+    splitted = fmap fromFunctionDeclaration decls
+    (funDecls, rest) = partitionEithers splitted
+    merged = mergeBinds funDecls
     transformed = fmap transAlt merged
   in rest ++ transformed
 
-isFunctionDeclaration (FunctionDeclaration _ _ _) = True
-isFunctionDeclaration _ = False
+fromFunctionDeclaration (FunctionDeclaration n ps e) = Left (n, ps, e)
+fromFunctionDeclaration e = Right e
 
-sameFunDeclName x y = funDeclName x == funDeclName y
+mergeBinds = foldr mergeBindsAcc []
 
-funDeclName (FunctionDeclaration x _ _) = x
-funDeclName _ = error "funDeclName impossible case"
-
-mergeBinds l =
-    (funDeclName (head l), fmap toAlt l)
-
-toAlt (FunctionDeclaration _ ps e) = (ps, e)
-toAlt _ = error "toAlt impossible case"
+mergeBindsAcc (ident, ps, e) acc =
+    case acc of
+        ((ident2, xs):rest) | ident == ident2 ->
+            (ident, ((ps, e):xs)):rest
+        _ -> (ident, [(ps, e)]):acc
 
 transAlt (name, [(ps, e)]) =
     ExpressionDeclaration (VariablePattern name) (LambdaExpression ps e)

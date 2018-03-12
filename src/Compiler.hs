@@ -6,7 +6,6 @@ import Data.List(foldl1')
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
     equals, text, int, braces, parens, brackets, double, render, semi)
-import Text.PrettyPrint.HughesPJClass(pPrint)
 
 
 data Mod = Mod Name [Statement]
@@ -51,7 +50,7 @@ toLuaS (Assign x e) =
     prettyId x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
-        <+> text "require" <+> pPrint (toLuaPath modName)
+        <+> text "require" <+> toLuaPath modName
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
@@ -89,7 +88,7 @@ toJavaScriptS (Assign x e) =
     text "const" <+> prettyId x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
-        text "require" <> parens (pPrint (toJsPath modName)) <> semi
+        text "require" <> parens (toJsPath modName) <> semi
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> semi
 toJavaScriptS (If e th []) =
@@ -251,7 +250,7 @@ mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A.B.lua
 -- local A_B = require("A.B")
-toLuaPath = renderName
+toLuaPath modName = text (show (renderName modName))
 
 -- js needs the leading dot for local modules
-toJsPath modName = "./" ++ renderName modName
+toJsPath modName = text (show ("./" ++ renderName modName))

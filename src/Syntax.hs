@@ -176,7 +176,7 @@ instance Pretty Pattern where
         brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint = flatName (text ".") (text ".")
+    pPrint = dotModName
 
 instance Pretty Id where
     pPrint (Id s _) = text (unpack s)
@@ -186,11 +186,17 @@ flatVar = flatName (text "_") (text ".")
 
 flatModName = flatName (text "_") (text "_")
 
+dotModName = flatName (text ".") (text ".")
+
+renderModName modName = render (dotModName modName)
+
 toPath name = render (flatName (text "/") (text "/") name <> text ".hyp")
 
 flatName _ _ (Name [] s) = pPrint s
 flatName qualSep idSep (Name qs s) =
     mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> pPrint s
+
+prettyId i = text (unpack (getText i))
 
 prettyEnv m = render (foldrWithKey (\k v r -> pPrint k <+> text ":" <+> pPrint v $$ r) mempty m)
 

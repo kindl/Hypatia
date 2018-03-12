@@ -45,10 +45,10 @@ toLuaT _ s = toLuaS s
 toLua sts = forwardLocals sts $$ vcatMap toLuaS sts
 
 forwardLocals sts =
-    vcat [text "local" <+> pPrint x | Assign x _ <- sts]
+    vcat [text "local" <+> prettyId x | Assign x _ <- sts]
 
 toLuaS (Assign x e) =
-    pPrint x <+> equals <+> toLuaE e
+    prettyId x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> pPrint (toLuaPath modName)
@@ -65,10 +65,10 @@ toLuaE (Var x) = flatVar x
 toLuaE (LitD d) = double d
 toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
-    parens (text "function" <> parens (commas (fmap pPrint vs))
+    parens (text "function" <> parens (commas (fmap prettyId vs))
         $$ toLua sts $$ text "end")
 toLuaE (Access v indices) =
-    pPrint v <> foldMap (brackets . int . (+ 1)) indices
+    prettyId v <> foldMap (brackets . int . (+ 1)) indices
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
@@ -86,7 +86,7 @@ toJavaScriptT modName (Assign x e) =
 toJavaScriptT _ s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
-    text "const" <+> pPrint x <+> equals <+> toJavaScriptE e <> semi
+    text "const" <+> prettyId x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (pPrint (toJsPath modName)) <> semi
@@ -104,10 +104,10 @@ toJavaScriptE (Var x) = flatVar x
 toJavaScriptE (LitD d) = double d
 toJavaScriptE (LitT t) = text (show t)
 toJavaScriptE (Func vs sts) =
-    parens (text "function" <> parens (commas (fmap pPrint vs))
+    parens (text "function" <> parens (commas (fmap prettyId vs))
         $$ block (vcatMap toJavaScriptS sts))
 toJavaScriptE (Access v indices) =
-    pPrint v <> foldMap (brackets . int) indices
+    prettyId v <> foldMap (brackets . int) indices
 toJavaScriptE (Call e es) =
     toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
@@ -165,6 +165,7 @@ compileT _ (ImportDeclaration modName _ _) = [Imp modName]
 compileT _ (FixityDeclaration _ _ _ _) = []
 compileT _ other = compileD other
 
+-- TODO should patterns in expression declarations be allowed?
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
@@ -250,7 +251,7 @@ mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A.B.lua
 -- local A_B = require("A.B")
-toLuaPath = pretty
+toLuaPath = renderModName
 
 -- js needs the leading dot for local modules
-toJsPath modName = "./" ++ pretty modName
+toJsPath modName = "./" ++ renderModName modName

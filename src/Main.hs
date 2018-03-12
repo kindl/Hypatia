@@ -12,8 +12,8 @@ compileFile path =
     traverse_ writeResult program
 
 writeResult modDecl =
-    writeFile ("lua/" ++ pretty (getName modDecl) ++ ".lua") (renderLua (compile modDecl))
---    *> writeFile ("javascript/" ++ pretty (getName modDecl) ++ ".js") (renderJavaScript (compile modDecl))
+    writeFile ("lua/" ++ renderModName (getName modDecl) ++ ".lua") (renderLua (compile modDecl))
+--    *> writeFile ("javascript/" ++ renderModName (getName modDecl) ++ ".js") (renderJavaScript (compile modDecl))
 
 main =
   do

@@ -65,7 +65,7 @@ typecheckProgram = feedbackM logEnv (\envs modDecl ->
 logEnv env modDecl =
     let
         modName = getName modDecl
-        path = "logs/" ++ pretty modName ++ ".log"
+        path = "logs/" ++ renderModName modName ++ ".log"
     in writeFile path (prettyEnv env)
 
 {- Operators and Aliasing -}

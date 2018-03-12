@@ -5,6 +5,7 @@ import Prelude hiding (lookup)
 import Data.Data
 import Data.Maybe(fromMaybe)
 import Data.Text(Text, unpack, pack, split)
+import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Functor.Identity(runIdentity)
 import Data.Hashable(Hashable, hashWithSalt)
@@ -61,6 +62,7 @@ type Precedence = Integer
 type Alias = Id
 
 data Declaration
+    -- TODO qualified imports
     = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
     | TypeDeclaration Id [Id] [(Id, [Type])]
     | ExpressionDeclaration Pattern Expression
@@ -200,9 +202,11 @@ fromText l s =
 
 fromId = Name []
 
-isConstructor i = isUpper (head (pretty i))
+isConstructor i = firstIs isUpper (getText i)
 
-isOperator i = any isSym (pretty i)
+isOperator i = Text.any isSym (getText i)
+
+firstIs f = Text.foldr (const . f) False
 
 -- these are not symbols in unicode, but in the language
 -- otherwise e.g 2 - 2 would not be lexed as minus

@@ -81,7 +81,7 @@ captureNameD (FixityDeclaration _ _ identifier _) =
 captureNameD _ = []
 
 findName (Name [] identifier) quals =
-    Name (getQualifiers (findId identifier quals)) identifier
+    Name (getQualifiers (find identifier quals)) identifier
 findName n _ = n
 
 toLocals ids = fmap fromId (toMap ids)

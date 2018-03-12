@@ -44,7 +44,7 @@ loadModule dir modName =
     let path = dir ++ "/" ++ toPath modName
     in do
         putStrLn ("Loading module "
-            ++ pretty modName ++ " from " ++ path)
+            ++ renderName modName ++ " from " ++ path)
         parseFile path
 
 {- Load all imported modules -}
@@ -65,8 +65,8 @@ typecheckProgram = feedbackM logEnv (\envs modDecl ->
 logEnv env modDecl =
     let
         modName = getName modDecl
-        path = "logs/" ++ renderModName modName ++ ".log"
-    in writeFile path (prettyEnv env)
+        path = "logs/" ++ renderName modName ++ ".log"
+    in writeFile path (renderEnv env)
 
 {- Operators and Aliasing -}
 qualifyProgram =

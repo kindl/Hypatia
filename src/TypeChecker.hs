@@ -31,7 +31,7 @@ typecheckModule env m =
 inferModule (ModuleDeclaration modName decls) =
   do
     info "---------------------------------"
-    info ("Typechecking Module " ++ pretty modName)
+    info ("Typechecking Module " ++ renderName modName)
     
     -- Qualify means rename Ty to AnyModuleName.Ty
     let q = qualifyId modName
@@ -345,8 +345,8 @@ modifyRef s f = lift (modifyIORef s f)
 
 -- Variants of union that error on overwriting a key
 union = unionWithKey (\k v1 v2 ->
-    error (prettyWithInfo k
-        ++ " was defined twice " ++ pretty v1 ++ " " ++ pretty v2))
+    error (pretty k ++ " was defined twice "
+        ++ pretty v1 ++ " " ++ pretty v2))
 
 uconcat m = unionMap id m
 

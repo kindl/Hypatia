@@ -3,7 +3,6 @@ module Syntax where
 
 import Prelude hiding (lookup)
 import Data.Data
-import Data.Maybe(fromMaybe)
 import Data.Text(Text, unpack, pack, split)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
@@ -139,21 +138,20 @@ instance Pretty Position where
 
 instance Pretty Location where
     pPrint (Location s e f) =
-        text "start" <+> parens (pPrint s)
-            <+> text "end" <+> parens (pPrint e)
-            <+> text "in" <+> pPrint f    
+        text "Location" <+> parens (pPrint s) <+> parens (pPrint e)
+        <+> text "in" <+> pPrint f    
 
 instance Pretty Type where
     pPrint (TypeArrow a b) = parens (pPrint a <+> text "->" <+> pPrint b)
     pPrint (TypeInfixOperator a op b) =
-        parens (pPrint a <+> pPrint op <+> pPrint b)
-    pPrint (TypeConstructor n) = pPrint n
-    pPrint (TypeVariable n) = pPrint n
+        parens (pPrint a <+> prettyName op <+> pPrint b)
+    pPrint (TypeConstructor n) = prettyName n
+    pPrint (TypeVariable n) = prettyId n
     pPrint (SkolemConstant s) = text "skolem." <+> pPrint s
     pPrint (TypeApplication a b) = parens (pPrint a <+> pPrint b)
     pPrint (ParenthesizedType t) = parens (pPrint t)
     pPrint (ForAll qual t) =
-        text "forall" <+> mintercalate (text " ") (fmap pPrint qual)
+        text "forall" <+> mintercalate (text " ") (fmap prettyId qual)
             <+> text "." <+> pPrint t
 
 instance Pretty Literal where
@@ -161,44 +159,45 @@ instance Pretty Literal where
     pPrint (Text t) = text (show t)
 
 instance Pretty Pattern where
-    pPrint (VariablePattern identifier) = pPrint identifier
+    pPrint (VariablePattern identifier) = prettyId identifier
     pPrint (LiteralPattern l) = pPrint l
     pPrint Wildcard = text "_"
     pPrint (ConstructorPattern name ps) =
-        parens (pPrint name <+> mintercalate (text " ") (fmap pPrint ps))
+        parens (prettyName name <+> mintercalate (text " ") (fmap pPrint ps))
     pPrint (PatternInfixOperator a op b) =
-        parens (pPrint a <+> pPrint op <+> pPrint b)
+        parens (pPrint a <+> prettyName op <+> pPrint b)
     pPrint (ParenthesizedPattern p) =
         parens (pPrint p)
     pPrint (AliasPattern i p) =
-        pPrint i <+> text "as" <+> pPrint p
+        prettyId i <+> text "as" <+> pPrint p
     pPrint (ArrayPattern ps) =
         brackets (mintercalate (text ", ") (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint = dotModName
+    pPrint modName = prettyName modName
+        <+> pPrint (getLocation (getId modName))
 
 instance Pretty Id where
-    pPrint (Id s _) = text (unpack s)
+    pPrint (Id s l) = text (unpack s) <+> text "at" <+> pPrint l
 
 -- displays the module name joined with underscore
 flatVar = flatName (text "_") (text ".")
 
 flatModName = flatName (text "_") (text "_")
 
-dotModName = flatName (text ".") (text ".")
+prettyName = flatName (text ".") (text ".")
 
-renderModName modName = render (dotModName modName)
+renderName modName = render (prettyName modName)
 
 toPath name = render (flatName (text "/") (text "/") name <> text ".hyp")
 
-flatName _ _ (Name [] s) = pPrint s
-flatName qualSep idSep (Name qs s) =
-    mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> pPrint s
+flatName _ _ (Name [] i) = prettyId i
+flatName qualSep idSep (Name qs i) =
+    mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> prettyId i
 
 prettyId i = text (unpack (getText i))
 
-prettyEnv m = render (foldrWithKey (\k v r -> pPrint k <+> text ":" <+> pPrint v $$ r) mempty m)
+renderEnv m = render (foldrWithKey (\k v r -> prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
 
 fromString = fromText builtinLocation . pack
 
@@ -230,6 +229,8 @@ getQualifiers (Name q _) = q
 getId (Name _ i) = i
 
 getText (Id t _) = t
+
+getLocation (Id _ l) = l
 
 excluding xs = filter (flip notElem xs)
 
@@ -268,20 +269,11 @@ fromEitherM (Right r) = return r
 find o m = runIdentity (mfind o m)
 
 mfind o m =
-    maybe (fail ("Unknown " ++ prettyWithInfo o ++ " in " ++ pretty (keys m))) return (lookup o m)
+    maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
-findId i m =
-    fromMaybe (error ("Unknown " ++ pretty i ++ " " ++ locationInfo i ++ " in " ++ pretty (keys m))) (lookup i m)
-
-prettyWithInfo n = pretty n ++ " " ++ locationInfo (getId n)
-
-locationInfo (Id _ l) = pretty l
-
-locationInfoName (Name _ i) = locationInfo i
-
-locationInfoP (VariablePattern v) = locationInfo v
+locationInfoP (VariablePattern v) = pretty v
 locationInfoP (ConstructorPattern c ps) =
-    "(" ++ locationInfoName c ++ mintercalate " " (fmap locationInfoP ps) ++ ")"
+    "(" ++ pretty c ++ " " ++ mintercalate " " (fmap locationInfoP ps) ++ ")"
 locationInfoP (ArrayPattern ps) =
     mintercalate " " (fmap locationInfoP ps)
 locationInfoP other = pretty other

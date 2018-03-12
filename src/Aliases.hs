@@ -49,9 +49,9 @@ aliasDecls (ModuleDeclaration modName decls) =
         aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
         h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
-            ExpressionDeclaration (VariablePattern (findId op aliases)) e
+            ExpressionDeclaration (VariablePattern (find op aliases)) e
         h (TypeSignature op t) | isOperator op =
-            TypeSignature (findId op aliases) t
+            TypeSignature (find op aliases) t
         h (TypeDeclaration op vars constructors) =
             TypeDeclaration (findConstructor aliases op) vars
                 (fmap (first (findConstructor aliases)) constructors)
@@ -59,7 +59,7 @@ aliasDecls (ModuleDeclaration modName decls) =
     in ModuleDeclaration modName (fmap h decls)
 
 findConstructor aliases op | isOperator op =
-    let alias = findId op aliases in
+    let alias = find op aliases in
         if isConstructor alias then alias else
             error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
 findConstructor _ op = op

@@ -49,4 +49,4 @@ fixAssocO operatorTable constr f1 o1 fe1 o2 fe2 =
             (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
             (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
             (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
-            _ -> error ("Operator " ++ prettyWithInfo o1 ++ " has no associativity")
+            _ -> error ("Operator " ++ pretty o1 ++ " has no associativity")

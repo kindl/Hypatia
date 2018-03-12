@@ -251,7 +251,7 @@ mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A.B.lua
 -- local A_B = require("A.B")
-toLuaPath = renderModName
+toLuaPath = renderName
 
 -- js needs the leading dot for local modules
-toJsPath modName = "./" ++ renderModName modName
+toJsPath modName = "./" ++ renderName modName

@@ -11,7 +11,7 @@ import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), (<>), parens, brackets, render)
-import Data.Generics.Uniplate.Data(universe)
+import Data.Generics.Uniplate.Data(universe, universeBi)
 
 
 type Line = Integer
@@ -134,12 +134,15 @@ pretty p = render (pPrint p)
 
 instance Pretty Position where
     pPrint (Position l c) =
-        text "line:" <+> pPrint l <+> text "column:" <+> pPrint c
+        text "line" <+> pPrint l <> text "," <+> text "column" <+> pPrint c
 
 instance Pretty Location where
     pPrint (Location s e f) =
-        text "Location" <+> parens (pPrint s) <+> parens (pPrint e)
-        <+> text "in" <+> pPrint f    
+        pPrint s <> text "," <+> indication s e
+        <+> text "in" <+> pPrint f
+
+indication (Position sl sc) (Position el ec) =
+    if sl == el then text "len" <+> pPrint (ec - sc) else text "..."
 
 instance Pretty Type where
     pPrint (TypeArrow a b) = parens (pPrint a <+> text "->" <+> pPrint b)
@@ -220,7 +223,7 @@ isSym x = isSymbol x || elem x "!%&*/?@-:"
 isUnqualified (Name [] _) = True
 isUnqualified _ = False
 
-builtinLocation = Location (Position 0 0) (Position 0 0) ""
+builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
 makeId s = Id (pack s) builtinLocation
 
@@ -271,9 +274,4 @@ find o m = runIdentity (mfind o m)
 mfind o m =
     maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
 
-locationInfoP (VariablePattern v) = pretty v
-locationInfoP (ConstructorPattern c ps) =
-    "(" ++ pretty c ++ " " ++ mintercalate " " (fmap locationInfoP ps) ++ ")"
-locationInfoP (ArrayPattern ps) =
-    mintercalate " " (fmap locationInfoP ps)
-locationInfoP other = pretty other
+locationInfo other = pretty [l | Id _ l <- universeBi other]

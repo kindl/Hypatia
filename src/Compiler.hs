@@ -128,7 +128,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     Func [makeId "_v"]
-        (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfoP p))] [(p, e)])
+        (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))] [(p, e)])
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
 compileE (LiteralExpression l) =
@@ -149,7 +149,7 @@ compileE e = error ("compileE does not work on " ++ show e)
 compileEtoS (CaseExpression e alts) =
     Assign (makeId "_v") (compileE e) :
         compileAlts [Ret (mkError ("failed pattern match case lambda at "
-            ++ mintercalate " " (fmap (locationInfoP . fst) alts)))] alts
+            ++ locationInfo (fmap fst alts)))] alts
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =

@@ -66,5 +66,7 @@ transformFace rotation face = map (compose (transformPoint rotation) getPoint) f
 
 draw _ = map polygon (getState Unit)
 
+load _ = setState []
+
 tuplesToArray = foldMap tupleToArray
 tupleToArray (Tuple a b) = [a, b]

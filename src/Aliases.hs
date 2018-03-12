@@ -1,28 +1,26 @@
 module Aliases where
 
 import Syntax
-import Data.Generics.Uniplate.Data(transformBi)
+import Data.Generics.Uniplate.Data(transformBi, rewriteBi)
 import Data.HashMap.Strict(fromList)
-import Data.Maybe(fromMaybe)
 import Control.Arrow(first)
 
 
--- TODO rename modules with aliases
-aliasTypes aliasTable = transformBi f . transformBi g . transformBi j
+aliasTypes aliasTable = rewriteBi f . rewriteBi g . rewriteBi j
   where
-    f e@(ConstructorExpression c) =
-        maybe e toConstructor (mfind c aliasTable)
-    f e = e
+    f (ConstructorExpression c) =
+        fmap toConstructor (mfind c aliasTable)
+    f _ = Nothing
 
-    g p@(ConstructorPattern c ps) =
-        maybe p (toConstructorPattern ps) (mfind c aliasTable)
-    g p = p
+    g (ConstructorPattern c ps) =
+        fmap (toConstructorPattern ps) (mfind c aliasTable)
+    g _ = Nothing
 
-    j t@(TypeConstructor c) =
-        fromMaybe t (mfind c aliasTable)
-    j t = t
+    j (TypeConstructor c) =
+        mfind c aliasTable
+    j _ = Nothing
 
-aliasOperators aliases = transformBi f . transformBi g . transformBi j . transformBi h
+aliasOperators aliases = transformBi f . transformBi g . transformBi j
   where
     f (PrefixNegation e) =
         FunctionApplication (Variable (fromString "Prelude.negate")) e  
@@ -45,11 +43,8 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j . transfo
     j (TypeConstructor c) | isOperator (getId c) =
         TypeConstructor (find c aliases)
     j t = t
-    
-    h (ModuleDeclaration modName decls) =
-        ModuleDeclaration modName (aliasDecls decls)
 
-aliasDecls decls =
+aliasDecls (ModuleDeclaration modName decls) =
     let
         aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
@@ -61,7 +56,7 @@ aliasDecls decls =
             TypeDeclaration (findConstructor aliases op) vars
                 (fmap (first (findConstructor aliases)) constructors)
         h d = d
-    in fmap h decls
+    in ModuleDeclaration modName (fmap h decls)
 
 findConstructor aliases op | isOperator op =
     let alias = findId op aliases in

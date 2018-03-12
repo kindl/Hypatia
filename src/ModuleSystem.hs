@@ -32,6 +32,7 @@ pipeline ::
 pipeline = sortDeclsMod
     . aliasProgram
     . aliasOperatorsProgram
+    . fmap aliasDecls
     . removeParens
     . fixAssocProgram
     . qualifyProgram

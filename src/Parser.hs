@@ -299,30 +299,36 @@ A qvarid can be a qualified variable like List.map
 or a normal variable identifier like map
 -}
 
-fromVarsym (Varsym qs v) l = return (Name qs (Id v l))
-fromVarsym _ _ = mzero
+fromVarsym (Varsym [] v) l = return (Id v l)
+fromVarsym _ _ = Nothing
 
-fromVarid (Varid qs v) l = return (Name qs (Id v l))
-fromVarid _ _ = mzero
+fromVarid (Varid [] v) l = return (Id v l)
+fromVarid _ _ = Nothing
 
-fromConid (Conid qs v) l = return (Name qs (Id v l))
-fromConid _ _ = mzero
+fromConid (Conid [] v) l = return (Id v l)
+fromConid _ _ = Nothing
 
-parseIdent f = do
-    Name [] ident <- parseName f
-    return ident
-parseName f = do
+fromQVarsym (Varsym qs v) l = return (Name qs (Id v l))
+fromQVarsym _ _ = Nothing
+
+fromQVarid (Varid qs v) l = return (Name qs (Id v l))
+fromQVarid _ _ = Nothing
+
+fromQConid (Conid qs v) l = return (Name qs (Id v l))
+fromQConid _ _ = Nothing
+
+parseLocated f = do
     n <- next
-    f (extractLexeme n) (extractLocation n)
+    maybe mzero return (f (extractLexeme n) (extractLocation n))
 
-varsym = parseIdent fromVarsym
-qvarsym = parseName fromVarsym
+varsym = parseLocated fromVarsym
+qvarsym = parseLocated fromQVarsym
 
-varid = parseIdent fromVarid
-qvarid = parseName fromVarid
+varid = parseLocated fromVarid
+qvarid = parseLocated fromQVarid
 
-conid = parseIdent fromConid
-qconid = parseName fromConid
+conid = parseLocated fromConid
+qconid = parseLocated fromQConid
 modid = qconid
 
 float = do

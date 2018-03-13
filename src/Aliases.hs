@@ -46,10 +46,12 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j
 
 aliasDecls (ModuleDeclaration modName decls) =
     let
-        aliases = fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
+        aliases = fromList [(op, alias) |
+            FixityDeclaration _ _ op alias <- decls]
 
-        h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
-            ExpressionDeclaration (VariablePattern (find op aliases)) e
+        h (ExpressionDeclaration (VariablePattern op) e)
+            | isOperator op = ExpressionDeclaration
+                (VariablePattern (find op aliases)) e
         h (TypeSignature op t) | isOperator op =
             TypeSignature (find op aliases) t
         h (TypeDeclaration op vars constructors) =
@@ -61,14 +63,18 @@ aliasDecls (ModuleDeclaration modName decls) =
 findConstructor aliases op | isOperator op =
     let alias = find op aliases in
         if isConstructor alias then alias else
-            error (pretty op ++ " with alias " ++ pretty alias ++  " is not a constructor")
+            error (pretty op
+                ++ " with alias " ++ pretty alias
+                ++  " is not a constructor")
 findConstructor _ op = op
 
 captureAliases (ModuleDeclaration modName decls) =
-    fromList [(qualifyId modName v, alias) | AliasDeclaration v alias <- decls]
+    fromList [(qualifyId modName v, alias)
+        | AliasDeclaration v alias <- decls]
 
 captureOperatorAliases (ModuleDeclaration modName decls) =
-    fromList [(qualifyId modName op, qualifyId modName alias) | FixityDeclaration _ _ op alias <- decls]
+    fromList [(qualifyId modName op, qualifyId modName alias)
+        | FixityDeclaration _ _ op alias <- decls]
 
 toConstructor (TypeConstructor c) = ConstructorExpression c
 toConstructor other =

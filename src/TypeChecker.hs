@@ -189,7 +189,8 @@ typecheckPattern qual (ConstructorPattern c ps) ty =
     let consTys = init tys
 
     when (length ps /= length consTys)
-        (fail ("Constructor " ++ pretty c ++ " was given wrong number of arguments"))
+        (fail ("Constructor " ++ pretty c
+            ++ " was given wrong number of arguments"))
     binds <- zipWithM (typecheckPattern qual) ps consTys
     unify resultTy ty
     return (uconcat binds)
@@ -199,7 +200,8 @@ typecheckPattern qual (ArrayPattern ps) ty =
     binds <- traverse (\p -> typecheckPattern qual p alpha) ps
     unify (TypeApplication (TypeConstructor (fromString "Native.Array")) alpha) ty
     return (uconcat binds)
-typecheckPattern _ other _ = fail ("Cannot typecheck pattern " ++ pretty other)
+typecheckPattern _ other _ =
+    fail ("Cannot typecheck pattern " ++ pretty other)
 
 -- Typecheck Literals
 typecheckLiteral (Numeral _) ty =
@@ -231,7 +233,8 @@ unify' a b =
 
 unifyVar x ty =
   do
-    when (occurs x ty) (fail ("Occurs check: " ++ pretty x ++ " occurs in " ++ pretty ty))
+    when (occurs x ty) (fail ("Occurs check: " ++ pretty x
+        ++ " occurs in " ++ pretty ty))
     insertSubst x ty
 
 -- Does a type variable occur in a type?
@@ -244,7 +247,8 @@ apply subst (ForAll vs ty) =
 -- TODO solve infintie loop
 -- sometimes the typechecker loops infinitely
 -- Presumably here when a variable gets substituted again and again
-apply subst ty@(TypeVariable x) = maybe ty (apply subst) (lookup x subst)
+apply subst ty@(TypeVariable x) =
+    maybe ty (apply subst) (lookup x subst)
 apply subst ty = descend (apply subst) ty
 
 -- Environment

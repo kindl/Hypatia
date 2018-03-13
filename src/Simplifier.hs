@@ -73,10 +73,11 @@ transAlt (name, alts) =
       n = length (fst (head alts))
       vs = nNewVars n
       nalts = fmap (first toTuplesP1) alts
+      e = toTuplesE1 (fmap (Variable . fromId) vs)
   in
     ExpressionDeclaration (VariablePattern name)
         (LambdaExpression (fmap VariablePattern vs)
-            (CaseExpression (toTuplesE1 (fmap (Variable . fromId) vs)) nalts))
+            (CaseExpression e nalts))
 
 toTuplesP1 = foldr1 (makeOpPat (fromString "Tuple"))
 toTuplesE1 = foldr1 (makeOp (fromString "Tuple"))

@@ -126,7 +126,8 @@ commas = mintercalate (text ", ")
 mintercalate _ [] = mempty
 mintercalate s xs = foldr1 (\x r -> x `mappend` s `mappend` r) xs
 
-qualify (Name modQs modName) (Name [] name) = Name (modQs ++ [getText modName]) name
+qualify (Name modQs modName) (Name [] name) =
+    Name (modQs ++ [getText modName]) name
 qualify _ n = n
 
 qualifyId q n = qualify q (fromId n)
@@ -135,7 +136,7 @@ pretty p = render (pPrint p)
 
 instance Pretty Position where
     pPrint (Position l c) =
-        text "line" <+> pPrint l <> text "," <+> text "column" <+> pPrint c
+        text "line" <+> pPrint l <> text ", column" <+> pPrint c
 
 instance Pretty Location where
     pPrint (Location s e f) =
@@ -146,7 +147,8 @@ indication (Position sl sc) (Position el ec) =
     if sl == el then text "len" <+> pPrint (ec - sc) else text "..."
 
 instance Pretty Type where
-    pPrint (TypeArrow a b) = parens (pPrint a <+> text "->" <+> pPrint b)
+    pPrint (TypeArrow a b) =
+        parens (pPrint a <+> text "->" <+> pPrint b)
     pPrint (TypeInfixOperator a op b) =
         parens (pPrint a <+> prettyName op <+> pPrint b)
     pPrint (TypeConstructor n) = prettyName n
@@ -169,7 +171,8 @@ instance Pretty Pattern where
     pPrint (ConstructorPattern name []) =
         pPrint name
     pPrint (ConstructorPattern name ps) =
-        parens (prettyName name <+> mintercalate (text " ") (fmap pPrint ps))
+        parens (prettyName name
+            <+> mintercalate (text " ") (fmap pPrint ps))
     pPrint (PatternInfixOperator a op b) =
         parens (pPrint a <+> prettyName op <+> pPrint b)
     pPrint (ParenthesizedPattern p) =
@@ -195,15 +198,18 @@ prettyName = flatName (text ".") (text ".")
 
 renderName modName = render (prettyName modName)
 
-toPath name = render (flatName (text "/") (text "/") name <> text ".hyp")
+toPath name =
+    render (flatName (text "/") (text "/") name <> text ".hyp")
 
 flatName _ _ (Name [] i) = prettyId i
 flatName qualSep idSep (Name qs i) =
-    mintercalate qualSep (fmap (text . unpack) qs) <> idSep <> prettyId i
+    mintercalate qualSep (fmap (text . unpack) qs)
+        <> idSep <> prettyId i
 
 prettyId i = text (unpack (getText i))
 
-renderEnv m = render (foldrWithKey (\k v r -> prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
+renderEnv m = render (foldrWithKey (\k v r ->
+    prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
 
 fromString = fromText . pack
 
@@ -261,7 +267,8 @@ nNewVars n = fmap (\x -> makeId ("_v" ++ show x)) [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication
-        (if isConstructor (getId op) then ConstructorExpression op else Variable op) a) b
+        (if isConstructor (getId op) then
+            ConstructorExpression op else Variable op) a) b
 
 makeOpPat op a b =
     ConstructorPattern op [a, b]
@@ -274,7 +281,7 @@ fromEitherM (Right r) = return r
 
 find o m = runIdentity (mfind o m)
 
-mfind o m =
-    maybe (fail ("Unknown " ++ pretty o ++ " in " ++ pretty (keys m))) return (lookup o m)
+mfind o m = maybe (fail ("Unknown " ++ pretty o ++ " in "
+    ++ pretty (keys m))) return (lookup o m)
 
 locationInfo other = pretty [l | Id _ l <- universeBi other]

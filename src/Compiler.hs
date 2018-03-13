@@ -74,13 +74,14 @@ toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
 {- JavaScript -}
 renderJavaScript sts = render (toJavaScriptM sts)
 
-toJavaScriptM (Mod modName sts) =
-    text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi
-        $$ vcatMap (toJavaScriptT modName) sts
-        $$ text "module.exports" <+> equals <+> flatModName modName <> semi
+toJavaScriptM (Mod modName sts) = text "const"
+    <+> flatModName modName <+> equals <+> text "{}" <> semi
+    $$ vcatMap (toJavaScriptT modName) sts
+    $$ text "module.exports" <+> equals
+    <+> flatModName modName <> semi
 
-toJavaScriptT modName (Assign x e) =
-    flatVar (qualifyId modName x) <+> equals <+> toJavaScriptE e <> semi
+toJavaScriptT modName (Assign x e) = flatVar (qualifyId modName x)
+    <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptT _ s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
@@ -109,7 +110,8 @@ toJavaScriptE (Access v indices) =
 toJavaScriptE (Call e es) =
     toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
-toJavaScriptE (And e1 e2) = toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
+toJavaScriptE (And e1 e2) =
+    toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
 
 vcatMap f x = vcat (fmap f x)
 block s = text "{" $$ s $$ text "}"
@@ -125,7 +127,8 @@ compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     Func [makeId "_v"]
-        (compileAlts [Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))] [(p, e)])
+        (compileAlts [Ret (mkError ("failed pattern match lambda at "
+            ++ locationInfo p))] [(p, e)])
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
 compileE (LiteralExpression l) =
@@ -145,12 +148,13 @@ compileE e = error ("compileE does not work on " ++ show e)
 -- e.g. multiple defined local _v
 compileEtoS (CaseExpression e alts) =
     Assign (makeId "_v") (compileE e) :
-        compileAlts [Ret (mkError ("failed pattern match case lambda at "
+        compileAlts [Ret (mkError ("failed pattern match case at "
             ++ locationInfo (fmap fst alts)))] alts
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
-    [If (mkEq (makeVar "Prelude.True") (compileE c)) (compileEtoS th) (compileEtoS el)]
+    [If (mkEq (makeVar "Prelude.True") (compileE c))
+        (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]
 
 compileL (Numeral n) = LitD n

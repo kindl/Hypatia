@@ -26,9 +26,7 @@ loadProgram path =
 
     return simplified
 
-pipeline ::
-    [ModuleDeclaration] ->
-    [ModuleDeclaration]
+pipeline :: [ModuleDeclaration] -> [ModuleDeclaration]
 pipeline = sortDeclsMod
     . aliasProgram
     . aliasOperatorsProgram

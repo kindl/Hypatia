@@ -22,7 +22,8 @@ parse path s = do
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
         Just (_, rest:_) ->
-            Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
+            Left ("Could not parse until end. Next lexeme is: "
+                ++ prettyLocated rest)
 
 parseFile path = do
     str <- Text.readFile path

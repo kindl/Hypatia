@@ -21,7 +21,8 @@ parse path s = do
     case runStateT modDecl lexemes of
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
-        Just (_, rest:_) -> Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
+        Just (_, rest:_) ->
+            Left ("Could not parse until end. Next lexeme is: " ++ prettyLocated rest)
 
 parseFile path = do
     str <- Text.readFile path
@@ -235,8 +236,10 @@ aexpr = variable <|> constructorExpression <|> literalExpression
 variable = fmap Variable qvar
 constructorExpression = fmap ConstructorExpression qcon
 literalExpression = fmap LiteralExpression literal
-parenthesizedExpression = fmap ParenthesizedExpression (parenthesized expr)
-listExpression = fmap ArrayExpression (bracketed (sepBy expr (token ",")))
+parenthesizedExpression =
+    fmap ParenthesizedExpression (parenthesized expr)
+listExpression =
+    fmap ArrayExpression (bracketed (sepBy expr (token ",")))
 
 alts = curlyBraces (sepBy alt (token ";"))
 alt = do
@@ -335,10 +338,13 @@ float = do
     Double d <- nextLexeme
     return d
 integer = do
-        Integer i <- nextLexeme
-        return i
+    Integer i <- nextLexeme
+    return i
 string = do
     String s <- nextLexeme
     return s
 
-literal = fmap (Numeral . fromIntegral) integer <|> fmap Numeral float <|> fmap Text string
+literal =
+    fmap (Numeral . fromIntegral) integer
+    <|> fmap Numeral float
+    <|> fmap Text string

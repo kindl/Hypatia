@@ -3,7 +3,7 @@ module TypeChecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
-    lookup, singleton, unionWithKey)
+    lookup, singleton, unionWithKey, difference)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
@@ -141,13 +141,14 @@ inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
 
     -- Here we have to use mappend because the type has to be checked
     -- using the signatures, the binds would be to general
-    withOverwrite (mappend signatures binds) (typecheck e ty)
+    with (mappend signatures binds) (typecheck e ty)
 
     generalized <- traverse gen binds
     checkAgainst generalized signatures
+    let newTys = difference generalized signatures
 
-    next <- with generalized (inferDecls qual gen signatures decls)
-    return (union next generalized)
+    next <- with newTys (inferDecls qual gen signatures decls)
+    return (union next newTys)
 inferDecls qual gen signatures (_:decls) =
     inferDecls qual gen signatures decls
 inferDecls _ _ _ [] = return mempty
@@ -258,12 +259,8 @@ getSubst =
     r <- asks (\(TypecheckerState _ _ s) -> s)
     readRef r
 
-with binds = localEnv (union binds)
-
-withOverwrite binds = localEnv (mappend binds)
-
-localEnv f = local (\(TypecheckerState env r s) ->
-    TypecheckerState (f env) r s)
+with binds = local (\(TypecheckerState env r s) ->
+    TypecheckerState (union binds env) r s)
 
 -- Type Variables
 newUnique =

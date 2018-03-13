@@ -39,7 +39,7 @@ inferModule (ModuleDeclaration modName decls) =
     let signatures = unionMap (gatherTypeSig q) decls
     
     binds <- with constructors (inferDecls q generalize signatures decls)
-    return (union constructors (mappend signatures binds))
+    return (union constructors (union signatures binds))
 
 
 -- Typecheck Expressions
@@ -133,25 +133,26 @@ gatherTypeSig _ _ = mempty
 
 -- Assumes that the let bindings are already sorted
 -- Let bindings have to be sorted for the translation anyway
-inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
+inferDecls qual gen signatures =
+    foldr (inferDecl qual gen signatures) (return mempty)
+
+inferDecl qual gen signatures (ExpressionDeclaration p e) next =
   do
     info ("Typechecking declaration " ++ pretty p)
     ty <- newTyVar
     binds <- typecheckPattern qual p ty
 
-    -- Here we have to use mappend because the type has to be checked
-    -- using the signatures, the binds would be to general
+    -- Here we have to use mappend because the signatures
+    -- should overwrite the binds
     with (mappend signatures binds) (typecheck e ty)
 
     generalized <- traverse gen binds
     checkAgainst generalized signatures
     let newTys = difference generalized signatures
 
-    next <- with newTys (inferDecls qual gen signatures decls)
-    return (union next newTys)
-inferDecls qual gen signatures (_:decls) =
-    inferDecls qual gen signatures decls
-inferDecls _ _ _ [] = return mempty
+    nextTys <- with newTys next
+    return (union newTys nextTys)
+inferDecl _ _ _ _ ff = ff
 
 -- Check the type signatures against the inferred types
 -- for example
@@ -347,4 +348,4 @@ union = unionWithKey (\k v1 v2 ->
 
 uconcat m = unionMap id m
 
-unionMap f m = foldr (\e r -> union (f e) r) mempty m
+unionMap f m = foldr (union . f) mempty m

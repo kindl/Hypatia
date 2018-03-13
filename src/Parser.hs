@@ -116,7 +116,7 @@ typeSignature = do
     return (TypeSignature v t)
 fixityDeclaration = do
     f <- fixity
-    i <- integer
+    i <- float
     o <- varsym
     a <- al
     return (FixityDeclaration f i o a)
@@ -335,8 +335,8 @@ float = do
     Double d <- nextLexeme
     return d
 integer = do
-    Integer i <- nextLexeme
-    return i
+        Integer i <- nextLexeme
+        return i
 string = do
     String s <- nextLexeme
     return s

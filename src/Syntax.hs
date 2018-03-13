@@ -57,7 +57,7 @@ data Literal
 data Associativity = None | LeftAssociative | RightAssociative
     deriving (Show, Data, Typeable)
 
-type Precedence = Integer
+type Precedence = Double
 type Alias = Id
 
 data Declaration

@@ -204,14 +204,10 @@ literal = number <|> hexdecimal <|> verbatim
 hexdecimal =
     char '0' *> (char 'x' <|> char 'X') *> fmap Integer hexadecimal
 
--- NOTE attoparsec parses a decimal as a double
+-- TODO attoparsec parses a decimal as a double
 -- for example 3 is parsed as 3.0
 -- this solution here unfortunately parses 3.0 as 3
-number = do
-    d <- double
-    return (case properFraction d of
-        (i, 0.0) -> Integer i
-        _ -> Double d)
+number = fmap Double double
 
 verbatim = fmap (String . Text.pack)
     (char '"' *> many (stringChar <|> escapeSeq) <* char '"')

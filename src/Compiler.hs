@@ -112,7 +112,6 @@ toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
 toJavaScriptE (And e1 e2) = toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
 
 vcatMap f x = vcat (fmap f x)
-commas x = mintercalate (text ", ") x
 block s = text "{" $$ s $$ text "}"
 
 -- Compile to simplified language

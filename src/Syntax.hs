@@ -10,7 +10,8 @@ import Data.Functor.Identity(runIdentity)
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
-import Text.PrettyPrint(text, (<+>), ($$), (<>), parens, brackets, render)
+import Text.PrettyPrint(text, (<+>), ($$), (<>),
+    parens, brackets, render)
 import Data.Generics.Uniplate.Data(universe, universeBi)
 
 
@@ -120,10 +121,10 @@ data Expression
 --  | TypeAnnotation Expression Type
         deriving (Show, Data, Typeable)
 
+commas = mintercalate (text ", ")
 
 mintercalate _ [] = mempty
-mintercalate p (x:xs) =
-    x `mappend` foldMap (mappend p) xs
+mintercalate s xs = foldr1 (\x r -> x `mappend` s `mappend` r) xs
 
 qualify (Name modQs modName) (Name [] name) = Name (modQs ++ [getText modName]) name
 qualify _ n = n
@@ -174,7 +175,7 @@ instance Pretty Pattern where
     pPrint (AliasPattern i p) =
         prettyId i <+> text "as" <+> pPrint p
     pPrint (ArrayPattern ps) =
-        brackets (mintercalate (text ", ") (fmap pPrint ps))
+        brackets (commas (fmap pPrint ps))
 
 instance Pretty Name where
     pPrint modName = prettyName modName

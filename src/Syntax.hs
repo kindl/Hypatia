@@ -166,6 +166,8 @@ instance Pretty Pattern where
     pPrint (VariablePattern identifier) = prettyId identifier
     pPrint (LiteralPattern l) = pPrint l
     pPrint Wildcard = text "_"
+    pPrint (ConstructorPattern name []) =
+        pPrint name
     pPrint (ConstructorPattern name ps) =
         parens (prettyName name <+> mintercalate (text " ") (fmap pPrint ps))
     pPrint (PatternInfixOperator a op b) =

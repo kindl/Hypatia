@@ -69,7 +69,7 @@ modDecl = do
     name <- optional (token "module" *> modid <* token ";")
     b <- body
     optional (token ";")
-    return (ModuleDeclaration (fromMaybe (fromString "Scratch") name) b)
+    return (ModuleDeclaration (fromMaybe (fromText "Scratch") name) b)
 body = impAndTopdecls <|> impdecls <|> topdecls
 
 {- Declarations -}

@@ -202,11 +202,11 @@ prettyId i = text (unpack (getText i))
 
 renderEnv m = render (foldrWithKey (\k v r -> prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
 
-fromString = fromText builtinLocation . pack
+fromString = fromText . pack
 
-fromText l s =
+fromText s =
     let is = split (== '.') s
-    in Name (init is) (Id (last is) l)
+    in Name (init is) (Id (last is) builtinLocation)
 
 fromId = Name []
 

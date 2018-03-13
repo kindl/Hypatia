@@ -143,14 +143,8 @@ inferDecls qual gen signatures (ExpressionDeclaration p e:decls) =
     -- using the signatures, the binds would be to general
     withOverwrite (mappend signatures binds) (typecheck e ty)
 
-    -- Check the type signatures against the inferred types
-    -- for example
-    -- identityNum : Native.Numeral -> Native.Numeral
-    -- identityNum x = x
-    -- the generalized inferred type will be forall t. t -> t
-    -- the type is narrowed down to be only applicable to Numerals
     generalized <- traverse gen binds
-    checkAgainst signatures generalized
+    checkAgainst generalized signatures
 
     next <- with generalized (inferDecls qual gen signatures decls)
     return (union next generalized)
@@ -158,8 +152,14 @@ inferDecls qual gen signatures (_:decls) =
     inferDecls qual gen signatures decls
 inferDecls _ _ _ [] = return mempty
 
-checkAgainst signatures = traverseWithKey_ (\k v ->
-    maybe (return ()) (subsume v) (mfind k signatures))
+-- Check the type signatures against the inferred types
+-- for example
+-- identityNum : Native.Numeral -> Native.Numeral
+-- identityNum x = x
+-- the generalized inferred type will be forall t. t -> t
+-- the type is narrowed down to be only applicable to Numerals
+checkAgainst ts = traverseWithKey_ (\k s ->
+    traverse_ (flip subsume s) (lookup k ts))
 
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 

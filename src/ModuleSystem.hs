@@ -9,7 +9,6 @@ import TypeChecker
 import Operators
 import Qualification
 import Data.Functor.Identity(runIdentity)
-import Data.List(nub)
 import Data.HashMap.Strict(insert)
 import System.FilePath(takeDirectory, takeBaseName)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
@@ -50,11 +49,11 @@ growModuleEnv dir env =
   let
     imported = fmap getName env
     imports = foldMap gatherImports env
-  in case nub (excluding imported imports) of
+  in case excluding imported imports of
         [] -> return env
-        needed -> do
-            mods <- traverse (loadModule dir) needed
-            growModuleEnv dir (mods ++ env)
+        needed:_ -> do
+            modDecl <- loadModule dir needed
+            growModuleEnv dir (modDecl:env)
 
 {- Typechecking -}
 typecheckProgram = feedbackM logEnv (\envs modDecl ->

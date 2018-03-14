@@ -35,6 +35,8 @@ sepBy parser seperator =
     sepBy1 parser seperator <|> pure []
 sepBy1 parser seperator =
     liftA2 (:) parser (many (seperator *> parser))
+sepEndBy parser seperator =
+    (sepBy1 parser seperator <* seperator) <|> pure []
 
 -- Handles left recursion
 -- for example in application fexpr
@@ -70,18 +72,14 @@ bracketed p = token "[" *> p <* token "]"
 modDecl = do
     name <- optional (token "module" *> modid <* token ";")
     b <- body
-    optional (token ";")
     return (ModuleDeclaration (fromMaybe (fromText "Scratch") name) b)
-body = impAndTopdecls <|> impdecls <|> topdecls
 
 {- Declarations -}
-impAndTopdecls = do
-    is <- impdecls
-    token ";"
-    ts <- topdecls
+body = do
+    is <- sepEndBy impdecl (token ";")
+    ts <- sepEndBy topdecl (token ";")
     return (is ++ ts)
 
-impdecls = sepBy1 impdecl (token ";")
 impdecl = do
     token "import"
     name <- modid
@@ -91,7 +89,6 @@ impdecl = do
 
 impspec = parenthesized (sepBy spec (token ","))
 
-topdecls = sepBy topdecl (token ";")
 topdecl = typeDeclaration <|> aliasDeclaration <|> decl
 typeDeclaration = do
     token "type"

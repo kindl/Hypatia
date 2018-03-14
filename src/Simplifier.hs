@@ -29,11 +29,11 @@ removeParens m = (transformBi f . transformBi g . transformBi h) m
 
 
 {-
-transform function declaration to expression declaration
-bla a b True = a
-bla c d False = d
+Transform a function declaration to expression declaration
+foo a b True = a
+foo c d False = d
 ==>
-bla = (fun v1 v2 v3 -> case (v1, v2, v3) of
+foo = (fun v1 v2 v3 -> case (v1, v2, v3) of
     (a, b, True) -> a
     (c, d, False) -> d)
 
@@ -58,13 +58,12 @@ transBinds decls =
 fromFunctionDeclaration (FunctionDeclaration n ps e) = Left (n, ps, e)
 fromFunctionDeclaration e = Right e
 
-mergeBinds = foldr mergeBindsAcc []
+-- Merges function declarations with the same name
+mergeBinds = foldr mergeBindsStep []
 
-mergeBindsAcc (ident, ps, e) acc =
-    case acc of
-        ((ident2, xs):rest) | ident == ident2 ->
-            (ident, ((ps, e):xs)):rest
-        _ -> (ident, [(ps, e)]):acc
+mergeBindsStep (id1, ps, e) ((id2, xs):rest) | id1 == id2 =
+    (id1, (ps, e):xs):rest
+mergeBindsStep (id1, ps, e) acc = (id1, [(ps, e)]):acc
 
 transAlt (name, [(ps, e)]) =
     ExpressionDeclaration (VariablePattern name) (LambdaExpression ps e)

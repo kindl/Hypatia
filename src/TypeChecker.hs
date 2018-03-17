@@ -39,8 +39,14 @@ inferModule (ModuleDeclaration modName decls) =
     let signatures = unionMap (gatherTypeSig q) decls
     
     binds <- with constructors (inferDecls q generalize signatures decls)
+    sanitySkolemCheck binds
     return (union constructors (union signatures binds))
 
+-- TODO skolems should be caught earlier
+sanitySkolemCheck = traverseWithKey_ (\k v ->
+    let s = skolems v
+    in unless (null s)
+        (fail (pretty k ++ " leaked skolems " ++ pretty s)))
 
 -- Typecheck Expressions
 typecheck :: Expression -> Type -> Typechecker ()

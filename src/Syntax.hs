@@ -153,12 +153,12 @@ instance Pretty Type where
         parens (pPrint a <+> prettyName op <+> pPrint b)
     pPrint (TypeConstructor n) = prettyName n
     pPrint (TypeVariable n) = prettyId n
-    pPrint (SkolemConstant s) = text "skolem." <+> pPrint s
+    pPrint (SkolemConstant s) = text "skolem." <> pPrint s
     pPrint (TypeApplication a b) = parens (pPrint a <+> pPrint b)
     pPrint (ParenthesizedType t) = parens (pPrint t)
     pPrint (ForAll qual t) =
         text "forall" <+> mintercalate (text " ") (fmap prettyId qual)
-            <+> text "." <+> pPrint t
+            <> text "." <+> pPrint t
 
 instance Pretty Literal where
     pPrint (Numeral n) = pPrint n
@@ -197,6 +197,8 @@ flatModName = flatName (text "_") (text "_")
 prettyName = flatName (text ".") (text ".")
 
 renderName modName = render (prettyName modName)
+
+renderFlatModName modName = render (flatModName modName)
 
 toPath name =
     render (flatName (text "/") (text "/") name <> text ".hyp")

@@ -250,9 +250,9 @@ mkIsArray a = Call (makeVar "Native.isArray") [a]
 mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
 mkSize a = Call (makeVar "Native.size") [a]
 
--- e.g. A module A.B is saved in the file A.B.lua
--- local A_B = require("A.B")
-toLuaPath modName = text (show (renderName modName))
+-- e.g. A module A.B is saved in the file A_B.lua
+-- local A_B = require("A_B")
+toLuaPath modName = text (show (renderFlatModName modName))
 
 -- js needs the leading dot for local modules
-toJsPath modName = text (show ("./" ++ renderName modName))
+toJsPath modName = text (show ("./" ++ renderFlatModName modName))

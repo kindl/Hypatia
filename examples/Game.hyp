@@ -1,13 +1,14 @@
 module Game
 
 import Prelude((/), Tuple, Unit, getn,
-    Numeral, Array, insert, compose)
+    Numeral, Array, insert, compose, write)
 import Obj(getFaces, getVertices, getNormals,
     VTNI, VNI, VTI, VI)
 import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, rotationX,
     normalize, to2d, multiply, transform)
-import Array(map, foldMap)
+import Array(map, foldMap, inspect)
+import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, writeRef, readRef)
 
 
 # Primitives
@@ -15,10 +16,12 @@ polygon : Array Numeral -> Unit
 
 uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
 
-getState : Unit -> Array (Array Numeral)
+gameState : Ref (Array (Array Numeral))
+gameState = unsafeMakeRef []
 
-setState : Array (Array Numeral) -> Unit
+setState x = unsafeRun (writeRef gameState x)
 
+withState f = f (unsafeRun (readRef gameState))
 
 pi = 3.141592653589793
 
@@ -55,6 +58,8 @@ transformPoint rotation vector =
 
 mousemoved = uncurry5 mousemovedC
 
+mousepressed _ = withState (fun x -> write (inspect x))
+
 mousemovedC x y dx dy isTouch =
     let
         rotY = rotationY (x / screenWidth)
@@ -64,9 +69,7 @@ mousemovedC x y dx dy isTouch =
 
 transformFace rotation face = map (compose (transformPoint rotation) getPoint) face
 
-draw _ = map polygon (getState Unit)
-
-load _ = setState []
+draw _ = withState (map polygon)
 
 tuplesToArray = foldMap tupleToArray
 tupleToArray (Tuple a b) = [a, b]

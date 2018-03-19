@@ -153,6 +153,8 @@ strictOr _ b = b
 boolToString False = "False"
 boolToString True = "True"
 
+type Void
+
 type Unit = Unit
 
 type Tuple a b = Tuple a b

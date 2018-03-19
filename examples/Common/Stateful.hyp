@@ -1,0 +1,51 @@
+module Common.Stateful
+
+import Prelude(coerce, Unit, Void, compose)
+
+
+# Stateful computations in the spirit of ST and IO in Haskell
+type Stateful s
+
+# Similar to purescript-effect the computation is modeled
+# after a function of type Unit -> s
+unsafeStateful : (Unit -> s) -> Stateful s
+unsafeStateful = coerce
+
+unsafeRun : Stateful s -> s
+unsafeRun f = coerce f Unit
+
+# Returns a function.
+# andThen f g = unsafeRun (f (unsafeRun g))
+# Would run the computation directly
+andThen f g = unsafeStateful (fun _ ->
+    unsafeRun (f (unsafeRun g)))
+
+map f = andThen (compose point f)
+
+# Usually called return, but renamed
+# because return is a reserved word in Lua
+point : s -> Stateful s
+point x = coerce (fun _ -> x)
+
+#Refs
+# Objects in JS and tables in Lua are passed by reference
+# meaning, if different functions receive an object in JS
+# then both modify the same object
+# Therefore in purescript-refs references are JS objects
+# Here references are realised with a type
+type Ref t = MkRef t
+
+# The constructor MkRef is opaque and should not be imported
+unsafeMakeRef : t -> Ref t
+unsafeMakeRef x = MkRef x
+
+unsafeUnpackRef : Ref t -> t
+unsafeUnpackRef (MkRef x) = x
+
+newRef x = point (unsafeMakeRef x)
+
+readRef r = point (unsafeUnpackRef r)
+
+modifyRef : Ref t -> (t -> t) -> Stateful Void
+
+writeRef r x = modifyRef r (fun _ -> x)

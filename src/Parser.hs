@@ -6,12 +6,12 @@ import qualified Data.Text.IO as Text
 import Data.List(uncons)
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>))
-import Control.Applicative((<|>), some, many, optional)
-import Control.Monad(mzero, guard)
+import Control.Applicative((<|>), optional, empty)
+import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), lexlex, prettyLocated,
     extractLexeme, extractLocation)
-import Data.Attoparsec.Text(sepBy, sepBy1)
+import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1')
 
 
 {-
@@ -34,33 +34,33 @@ parseString s = parse "" s
 
 -- Handles left recursion
 -- for example in application fexpr
--- Previously used fmap (foldl1' f) (some p)
+-- Previously used (foldl1' f <$!> many1' p)
 -- but this created garbage in form of an intermediate list
-chainl1 p op = p >>= rest
+chainl1' p op = p >>= rest
     where rest x = do f <- op
                       y <- p
-                      rest (f x y)
+                      rest $! f x y
                    <|> return x
+
 
 -- get the next lexeme
 next = StateT uncons
 {-# INLINE next #-}
 
-nextLexeme = fmap extractLexeme next
+nextLexeme = extractLexeme <$!> next
 {-# INLINE nextLexeme #-}
 
 token text = do
     Reserved s <- nextLexeme
     guard (text == s)
 
-minus = do
-    Varsym [] "-" <- nextLexeme
-    return ()
-
--- some combinators for parens for readability
+-- parens combinators for readability
 parenthesized p = token "(" *> p <* token ")"
+
 curlyBraces p = token "{" *> p <* token "}"
+
 bracketed p = token "[" *> p <* token "]"
+
 
 {- Module -}
 modDecl = do
@@ -70,8 +70,8 @@ modDecl = do
 
 {- Declarations -}
 body = do
-    is <- many (impdecl <* token ";")
-    ts <- many (topdecl <* token ";")
+    is <- many' (impdecl <* token ";")
+    ts <- many' (topdecl <* token ";")
     return (is ++ ts)
 
 impdecl = do
@@ -81,13 +81,13 @@ impdecl = do
     asAlias <- optional (token "as" *> modid)
     return (ImportDeclaration name imps asAlias)
 
-impspec = parenthesized (sepBy spec (token ","))
+impspec = parenthesized (sepBy' spec (token ","))
 
 topdecl = typeDeclaration <|> aliasDeclaration <|> decl
 typeDeclaration = do
     token "type"
     name <- con
-    variables <- many var
+    variables <- many' var
     constructors <- optional (token "=" *> constrs)
     return (TypeDeclaration name variables (concat constructors))
 aliasDeclaration = do
@@ -97,7 +97,7 @@ aliasDeclaration = do
     val <- otype
     return (AliasDeclaration alias val)
     
-decls = curlyBraces (sepBy decl (token ";"))
+decls = curlyBraces (sepBy' decl (token ";"))
 decl = typeSignature <|> fixityDeclaration
     <|> operatorDeclaration <|> functionDeclaration
     <|> expressionDeclaration
@@ -115,7 +115,7 @@ fixityDeclaration = do
     return (FixityDeclaration f i o a)
 functionDeclaration = do
     v <- var
-    ps <- some apat
+    ps <- many1' apat
     r <- rhs
     return (FunctionDeclaration v ps r)
 operatorDeclaration = do
@@ -146,7 +146,7 @@ qtype = forall <|> otype
 otype = typeArrow <|> typeOperator <|> btype
 forall = do
     token "forall"
-    ids <- some varid
+    ids <- many1' varid
     token "."
     t <- otype
     return (ForAll ids t)
@@ -161,17 +161,17 @@ typeOperator = do
     t <- otype
     return (TypeInfixOperator b o t)
 
-btype = chainl1 atype (return TypeApplication)
+btype = chainl1' atype (return TypeApplication)
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
-typeConstructor = fmap TypeConstructor qcon
-typeVariable = fmap TypeVariable var
-parenthesizedType = fmap ParenthesizedType (parenthesized qtype)
+typeConstructor = TypeConstructor <$!> qcon
+typeVariable = TypeVariable <$!> var
+parenthesizedType = ParenthesizedType <$!> parenthesized qtype
 
-constrs = sepBy1 constr (token "|")
+constrs = sepBy1' constr (token "|")
 constr = do
     c <- con
-    ts <- many atype
+    ts <- many' atype
     return (c, ts)
 
 {- Expressions -}
@@ -188,13 +188,16 @@ infixOperator = do
     o <- qvarsym
     r <- infixexpr
     return (InfixOperator l o r)
-prefixNegation = fmap PrefixNegation (minus *> infixexpr)
+prefixNegation = do
+    Varsym [] "-" <- nextLexeme
+    e <- infixexpr
+    return (PrefixNegation e)
  
 lexpr = lambdaExpression <|> letExpression
     <|> ifExpression <|> caseExpression <|> fexpr
 lambdaExpression = do
     token "fun"
-    ps <- some apat
+    ps <- many1' apat
     token "->"
     e <- expr
     return (LambdaExpression ps e)
@@ -221,19 +224,19 @@ caseExpression = do
     als <- alts
     return (CaseExpression e als)
 
-fexpr = chainl1 aexpr (return FunctionApplication)
+fexpr = chainl1' aexpr (return FunctionApplication)
  
 aexpr = variable <|> constructorExpression <|> literalExpression
     <|> parenthesizedExpression <|> listExpression
-variable = fmap Variable qvar
-constructorExpression = fmap ConstructorExpression qcon
-literalExpression = fmap LiteralExpression literal
+variable = Variable <$!> qvar
+constructorExpression = ConstructorExpression <$!> qcon
+literalExpression = LiteralExpression <$!> literal
 parenthesizedExpression =
-    fmap ParenthesizedExpression (parenthesized expr)
+    ParenthesizedExpression <$!> parenthesized expr
 listExpression =
-    fmap ArrayExpression (bracketed (sepBy expr (token ",")))
+    ArrayExpression <$!> bracketed (sepBy' expr (token ","))
 
-alts = curlyBraces (sepBy alt (token ";"))
+alts = curlyBraces (sepBy' alt (token ";"))
 alt = do
     p <- pat
     token "->"
@@ -253,7 +256,7 @@ patternInfixOperator = do
 lpat = appliedConstructorPattern <|> apat
 appliedConstructorPattern = do
     c <- qcon
-    ps <- some apat
+    ps <- many1' apat
     return (ConstructorPattern c ps)
 
 apat = wildcard <|> variablePattern
@@ -267,14 +270,14 @@ asPattern = do
     p <- apat
     return (AliasPattern v p)
 -}
-variablePattern = fmap VariablePattern var
+variablePattern = VariablePattern <$!> var
 constructorPattern = do
     c <- qcon
     return (ConstructorPattern c [])
-literalPattern = fmap LiteralPattern literal
+literalPattern = LiteralPattern <$!> literal
 wildcard = token "_" $> Wildcard
-parenthesizedPattern = fmap ParenthesizedPattern (parenthesized pat)
-arrayPattern = fmap ArrayPattern (bracketed (sepBy pat (token ",")))
+parenthesizedPattern = ParenthesizedPattern <$!> parenthesized pat
+arrayPattern = ArrayPattern <$!> bracketed (sepBy' pat (token ","))
 
 {-
 Read the following like this example:
@@ -314,7 +317,7 @@ fromQConid _ _ = Nothing
 
 parseLocated f = do
     n <- next
-    maybe mzero return (f (extractLexeme n) (extractLocation n))
+    maybe empty return (f (extractLexeme n) (extractLocation n))
 
 varsym = parseLocated fromVarsym
 qvarsym = parseLocated fromQVarsym
@@ -337,6 +340,6 @@ string = do
     return s
 
 literal =
-    fmap (Numeral . fromIntegral) integer
-    <|> fmap Numeral float
-    <|> fmap Text string
+    Numeral . fromIntegral <$!> integer
+    <|> Numeral <$!> float
+    <|> Text <$!> string

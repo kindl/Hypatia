@@ -9,8 +9,11 @@ import Control.Applicative((<|>), many, liftA2)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
+-- NOTE strict combinators are used
+-- however <$!> instead of fmap would decrease performance
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
-    sepBy1, match, parse, endOfInput, parseOnly, hexadecimal, double)
+    many', sepBy1', match, parse, endOfInput, parseOnly,
+    hexadecimal, double)
 
 {-
 This module converts text to a list of lexemes
@@ -150,7 +153,7 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
     in (endPosition, locatedLexeme)) initialPosition lexemes)
 
 program path = fmap (located path)
-    (many (match (lexeme <|> whitespace)) <* endOfInput)
+    (many' (match (lexeme <|> whitespace)) <* endOfInput)
 
 lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
 -- NOTE . was addded
@@ -167,12 +170,13 @@ comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p
 optionalQualified f parser = do
+    -- NOTE here many performs better than many'
     ms <- many (conid <* char '.')
     result <- parser
     return (if null ms && isReserved result
         then Reserved result else f ms result)
 
-qconid = fmap (liftA2 Conid init last) (sepBy1 conid (char '.'))
+qconid = fmap (liftA2 Conid init last) (sepBy1' conid (char '.'))
 qvarid = optionalQualified Varid varid
 qvarsym = optionalQualified Varsym varsym
 
@@ -182,26 +186,25 @@ isReserved x =
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as",
         ":", "=", "->", "|", "_"]
+
 varid = do
-    x <- small
+    x <- satisfy (\x -> isLower x || x == '_')
     xs <- takeWhile isAlphaNum
     return (Text.cons x xs)
+
 conid = do
-    x <- large
+    x <- satisfy isUpper
     xs <- takeWhile isAlphaNum
     return (Text.cons x xs)
+
 varsym = takeWhile1 isSym
-
-small = satisfy (\x -> isLower x || x == '_')
-
-large = satisfy isUpper
 
 
 {- Literal -}
 literal = number <|> hexdecimal <|> verbatim
 
-hexdecimal =
-    char '0' *> oneOf "xX" *> fmap Integer hexadecimal
+hexdecimal = fmap Integer
+    (char '0' *> oneOf "xX" *> hexadecimal)
 
 -- TODO attoparsec parses a decimal as a double
 -- for example 3 is parsed as 3.0
@@ -209,7 +212,7 @@ hexdecimal =
 number = fmap Double double
 
 verbatim = fmap (String . Text.pack)
-    (char '"' *> many (stringChar <|> escapeSeq) <* char '"')
+    (char '"' *> many' (stringChar <|> escapeSeq) <* char '"')
 
 stringChar = satisfy (\x -> x /='"' && x /= '\\')
 escapeSeq = char '\\' *> oneOf "\\\""

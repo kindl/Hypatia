@@ -5,8 +5,8 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
-import Control.Applicative((<|>), many, liftA2)
-import Data.Char(isSpace, isLower, isUpper, isAlphaNum)
+import Control.Applicative((<|>))
+import Data.Char(isSpace, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
 -- NOTE strict combinators are used
@@ -155,7 +155,7 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
 program path = fmap (located path)
     (many' (match (lexeme <|> whitespace)) <* endOfInput)
 
-lexeme = literal <|> special <|> qvarid <|> qvarsym <|> qconid
+lexeme = literal <|> special <|> qident
 -- NOTE . was addded
 -- it is part of for example forall a. a
 special = do
@@ -168,37 +168,29 @@ whitechars = fmap Whitespace (takeWhile1 isSpace)
 -- NOTE in contrast to the report this does not consume a newline
 comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
--- parse a qualified p
-optionalQualified f parser = do
-    -- NOTE here many performs better than many'
-    ms <- many (conid <* char '.')
-    result <- parser
-    return (if null ms && isReserved result
-        then Reserved result else f ms result)
+qident = do
+    ms <- sepBy1' (ident <|> varsym) (char '.')
+    return (makeIdent (init ms) (last ms))
 
-qconid = fmap (liftA2 Conid init last) (sepBy1' conid (char '.'))
-qvarid = optionalQualified Varid varid
-qvarsym = optionalQualified Varsym varsym
+-- TODO improve this check
+-- qualifiers have to start with an uppercase qualifier
+makeIdent ms i | any (firstIs (not . isUpper)) ms =
+    error ("Bad qualifier for identifier " ++ show i)
+makeIdent [] i | isReserved i = Reserved i
+makeIdent ms i | firstIs isUpper i = Conid ms i
+makeIdent ms i | firstIs isSym i = Varsym ms i
+makeIdent ms i = Varid ms i
 
 {- Identifiers -}
 isReserved x =
     elem x ["alias", "enum", "type", "forall",
         "import", "module", "fun", "let", "in", "where", "case", "of",
-        "if", "then", "else", "infix", "infixl", "infixr", "as",
-        ":", "=", "->", "|", "_"]
+        "if", "then", "else", "infix", "infixl", "infixr", "as", "_",
+        ":", "=", "->", "|"]
 
-varid = do
-    x <- satisfy (\x -> isLower x || x == '_')
-    xs <- takeWhile isAlphaNum
-    return (Text.cons x xs)
-
-conid = do
-    x <- satisfy isUpper
-    xs <- takeWhile isAlphaNum
-    return (Text.cons x xs)
+ident = takeWhile1 (\x -> isAlphaNum x || x == '_')
 
 varsym = takeWhile1 isSym
-
 
 {- Literal -}
 literal = number <|> hexdecimal <|> verbatim
@@ -206,9 +198,9 @@ literal = number <|> hexdecimal <|> verbatim
 hexdecimal = fmap Integer
     (char '0' *> oneOf "xX" *> hexadecimal)
 
--- TODO attoparsec parses a decimal as a double
+-- TODO parse integers
+-- attoparsec parses a decimal as a double
 -- for example 3 is parsed as 3.0
--- this solution here unfortunately parses 3.0 as 3
 number = fmap Double double
 
 verbatim = fmap (String . Text.pack)

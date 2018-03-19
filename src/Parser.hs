@@ -6,11 +6,12 @@ import qualified Data.Text.IO as Text
 import Data.List(uncons)
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>))
-import Control.Applicative((<|>), some, many, optional, liftA2)
+import Control.Applicative((<|>), some, many, optional)
 import Control.Monad(mzero, guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), lexlex, prettyLocated,
     extractLexeme, extractLocation)
+import Data.Attoparsec.Text(sepBy, sepBy1)
 
 
 {-
@@ -30,13 +31,6 @@ parseFile path = do
     fromEitherM (parse path str)
 
 parseString s = parse "" s
-
-sepBy parser seperator =
-    sepBy1 parser seperator <|> pure []
-sepBy1 parser seperator =
-    liftA2 (:) parser (many (seperator *> parser))
-sepEndBy parser seperator =
-    (sepBy1 parser seperator <* seperator) <|> pure []
 
 -- Handles left recursion
 -- for example in application fexpr
@@ -76,8 +70,8 @@ modDecl = do
 
 {- Declarations -}
 body = do
-    is <- sepEndBy impdecl (token ";")
-    ts <- sepEndBy topdecl (token ";")
+    is <- many (impdecl <* token ";")
+    ts <- many (topdecl <* token ";")
     return (is ++ ts)
 
 impdecl = do

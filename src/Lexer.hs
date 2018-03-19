@@ -5,7 +5,7 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
-import Control.Applicative((<|>), many, liftA2, optional)
+import Control.Applicative((<|>), many, liftA2)
 import Data.Char(isSpace, isLower, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
@@ -167,14 +167,12 @@ comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 
 -- parse a qualified p
 optionalQualified f parser = do
-    ms <- fmap concat (optional (modids <* char '.'))
+    ms <- many (conid <* char '.')
     result <- parser
     return (if null ms && isReserved result
         then Reserved result else f ms result)
 
-modids = sepBy1 conid (char '.')
-
-qconid = fmap (liftA2 Conid init last) modids
+qconid = fmap (liftA2 Conid init last) (sepBy1 conid (char '.'))
 qvarid = optionalQualified Varid varid
 qvarsym = optionalQualified Varsym varsym
 
@@ -194,7 +192,8 @@ conid = do
     return (Text.cons x xs)
 varsym = takeWhile1 isSym
 
-small = satisfy isLower <|> char '_'
+small = satisfy (\x -> isLower x || x == '_')
+
 large = satisfy isUpper
 
 
@@ -202,7 +201,7 @@ large = satisfy isUpper
 literal = number <|> hexdecimal <|> verbatim
 
 hexdecimal =
-    char '0' *> (char 'x' <|> char 'X') *> fmap Integer hexadecimal
+    char '0' *> oneOf "xX" *> fmap Integer hexadecimal
 
 -- TODO attoparsec parses a decimal as a double
 -- for example 3 is parsed as 3.0
@@ -213,4 +212,4 @@ verbatim = fmap (String . Text.pack)
     (char '"' *> many (stringChar <|> escapeSeq) <* char '"')
 
 stringChar = satisfy (\x -> x /='"' && x /= '\\')
-escapeSeq = char '\\' *> (char '\\' <|> char '"')
+escapeSeq = char '\\' *> oneOf "\\\""

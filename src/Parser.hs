@@ -36,10 +36,10 @@ parseString s = parse "" s
 -- for example in application fexpr
 -- Previously used (foldl1' f <$!> many1' p)
 -- but this created garbage in form of an intermediate list
-chainl1' p op = p >>= rest
+chainl1 p op = p >>= rest
     where rest x = do f <- op
                       y <- p
-                      rest $! f x y
+                      rest (f x y)
                    <|> return x
 
 
@@ -161,7 +161,7 @@ typeOperator = do
     t <- otype
     return (TypeInfixOperator b o t)
 
-btype = chainl1' atype (return TypeApplication)
+btype = chainl1 atype (return TypeApplication)
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
 typeConstructor = TypeConstructor <$!> qcon
@@ -224,7 +224,7 @@ caseExpression = do
     als <- alts
     return (CaseExpression e als)
 
-fexpr = chainl1' aexpr (return FunctionApplication)
+fexpr = chainl1 aexpr (return FunctionApplication)
  
 aexpr = variable <|> constructorExpression <|> literalExpression
     <|> parenthesizedExpression <|> listExpression

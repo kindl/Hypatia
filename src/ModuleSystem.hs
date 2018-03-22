@@ -10,19 +10,13 @@ import Operators
 import Qualification
 import Data.Functor.Identity(runIdentity)
 import Data.HashMap.Strict(insert)
-import System.FilePath(takeDirectory, takeBaseName)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
-loadProgram path =
-  do
-    let dir = takeDirectory path
-    let modName = fromString (takeBaseName path)
-
-    modDecl <- loadModule dir modName
-    mods <- growModuleEnv dir [modDecl]
+loadProgram path = do
+    modDecl <- loadPath path
+    mods <- growModuleEnv [modDecl]
     let simplified = pipeline mods
     typecheckProgram simplified
-
     return simplified
 
 pipeline :: [ModuleDeclaration] -> [ModuleDeclaration]
@@ -37,23 +31,22 @@ pipeline = sortDeclsMod
     . removeFunctionDeclaration
     . sortModules
 
-loadModule dir modName =
-    let path = dir ++ "/" ++ toPath modName
-    in do
-        putStrLn ("Loading module "
-            ++ renderName modName ++ " from " ++ path)
-        parseFile path
+loadModule modName = loadPath (toPath modName)
+
+loadPath path = do
+    putStrLn ("Loading module from " ++ path)
+    parseFile path
 
 {- Load all imported modules -}
-growModuleEnv dir env =
+growModuleEnv env =
   let
     imported = fmap getName env
     imports = foldMap gatherImports env
   in case excluding imported imports of
         [] -> return env
         needed:_ -> do
-            modDecl <- loadModule dir needed
-            growModuleEnv dir (modDecl:env)
+            modDecl <- loadModule needed
+            growModuleEnv (modDecl:env)
 
 {- Typechecking -}
 typecheckProgram = feedbackM logEnv (\envs modDecl ->

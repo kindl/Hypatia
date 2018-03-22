@@ -23,7 +23,7 @@ aliasTypes aliasTable = rewriteBi f . rewriteBi g . rewriteBi j
 aliasOperators aliases = transformBi f . transformBi g . transformBi j
   where
     f (PrefixNegation e) =
-        FunctionApplication (Variable (fromString "Prelude.negate")) e  
+        FunctionApplication (Variable (fromString "Common.Base.negate")) e  
     f (InfixOperator a n b) =
         makeOp (find n aliases) a b
     f (Variable x) | isOperator (getId x) =

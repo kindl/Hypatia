@@ -1,6 +1,6 @@
 module Common.Stateful
 
-import Prelude(coerce, Unit, Void, compose)
+import Common.Base(coerce, Unit, Void, compose)
 
 
 # Stateful computations in the spirit of ST and IO in Haskell

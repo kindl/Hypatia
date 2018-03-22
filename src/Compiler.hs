@@ -153,7 +153,7 @@ compileEtoS (CaseExpression e alts) =
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
-    [If (mkEq (makeVar "Prelude.True") (compileE c))
+    [If (mkEq (makeVar "Common.Base.True") (compileE c))
         (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]
 

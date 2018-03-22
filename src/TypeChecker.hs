@@ -79,7 +79,7 @@ typecheck (LetExpression decls e) ty =
     with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
-    typecheck c (TypeConstructor (fromString "Prelude.Boolean"))
+    typecheck c (TypeConstructor (fromString "Common.Base.Boolean"))
     typecheck th ty
     typecheck el ty
 typecheck (ArrayExpression es) ty =

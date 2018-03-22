@@ -1,6 +1,6 @@
-module Array
+module Common.Array
 
-import Prelude((&), size, primIf, eq, (+), identity,
+import Common.Base((&), size, primIf, eq, (+), identity,
     geti, Unit, Text, isArray, coerce, toString)
 
 

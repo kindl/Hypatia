@@ -1,6 +1,6 @@
-module Geometry
+module Common.Geometry
 
-import Prelude((+), (*), (/), (-),
+import Common.Base((+), (*), (/), (-),
     negate, sqrt, sin, cos, Tuple)
 
 

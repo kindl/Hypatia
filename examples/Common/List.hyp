@@ -1,7 +1,7 @@
-module List
+module Common.List
 
-import Prelude((&), (-), (+), Tuple, Unit, getn, size, empty, compose)
-import Array(insert)
+import Common.Base((&), (-), (+), Tuple, Unit, getn, size, empty, compose)
+import Common.Array(insert)
 
 
 type List a = Empty | Element a (List a)

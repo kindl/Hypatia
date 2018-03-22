@@ -1,9 +1,9 @@
-module Obj
+module Viewer.Obj
 
-import Prelude((&), notEq, toNumber, file, getn, error,
+import Common.Base((&), notEq, toNumber, file, getn, error,
     Numeral, Text, compose, arrayFoldMap, arrayMap)
-import Geometry(Vector, Vec4)
-import Array(filter, inspect, split, map, foldMap, lines, words, Array)
+import Common.Geometry(Vector, Vec4)
+import Common.Array(filter, inspect, split, map, foldMap, lines, words, Array)
 
 
 type VertexIndex

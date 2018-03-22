@@ -1,9 +1,9 @@
 module Spheres
 
-import Prelude(Unit, Numeral,
+import Common.Base(Unit, Numeral,
     (+), (*), (%), (<), (-),
     sqrt, write, toString, repeatN, geti)
-import Array(Array, map, insert)
+import Common.Array(Array, map, insert)
 
 
 random : Numeral -> Numeral -> Numeral

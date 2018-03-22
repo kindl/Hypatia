@@ -1,13 +1,13 @@
-module Game
+module Viewer.Main
 
-import Prelude((/), Tuple, Unit, getn,
+import Common.Base((/), Tuple, Unit, getn,
     Numeral, Array, insert, compose, write)
-import Obj(getFaces, getVertices, getNormals,
+import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
-import Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
+import Common.Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, rotationX,
     normalize, to2d, multiply, transform)
-import Array(map, foldMap, inspect)
+import Common.Array(map, foldMap, inspect)
 import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, writeRef, readRef)
 
 
@@ -26,7 +26,7 @@ withState f = f (unsafeRun (readRef gameState))
 pi = 3.141592653589793
 
 ## Load
-model = Obj.load "cube.obj"
+model = load "cube.obj"
 
 screenWidth = 800
 screenHeight = 600

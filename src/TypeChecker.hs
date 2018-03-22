@@ -8,7 +8,7 @@ import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
 import Control.Monad(when, unless, zipWithM)
-import Data.IORef(readIORef, newIORef, modifyIORef, IORef)
+import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_)
 
@@ -282,7 +282,7 @@ newUnique =
 
 newTyVar = fmap TypeVariable newUniqueName
 
-newUniqueName = fmap (makeId . ("t" ++) . show) newUnique
+newUniqueName = fmap makeV newUnique
 
 -- extract skolem constants
 skolems ty = [c | SkolemConstant c <- universe ty]
@@ -349,7 +349,7 @@ info s = lift (putStrLn s)
 
 readRef s = lift (readIORef s)
 
-modifyRef s f = lift (modifyIORef s f)
+modifyRef s f = lift (modifyIORef' s f)
 
 -- Variants of union that error on overwriting a key
 union = unionWithKey (\k v1 v2 ->

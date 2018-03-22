@@ -278,9 +278,6 @@ makeOpPat op a b =
 makeOpTyp op a b =
     TypeApplication (TypeApplication (TypeConstructor op) a) b
 
-fromEitherM (Left s) = fail s
-fromEitherM (Right r) = return r
-
 find o m = runIdentity (mfind o m)
 
 mfind o m = maybe (fail ("Unknown " ++ pretty o ++ " in "

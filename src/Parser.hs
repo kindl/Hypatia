@@ -28,7 +28,7 @@ parse path s = do
 
 parseFile path = do
     str <- Text.readFile path
-    fromEitherM (parse path str)
+    either fail return (parse path str)
 
 parseString s = parse "" s
 

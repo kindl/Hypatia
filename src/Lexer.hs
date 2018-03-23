@@ -13,7 +13,7 @@ import Syntax
 -- however <$!> instead of fmap would decrease performance
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
     many', sepBy1', match, parse, endOfInput, parseOnly,
-    hexadecimal, double)
+    hexadecimal, double, Parser)
 
 {-
 This module converts text to a list of lexemes
@@ -116,7 +116,8 @@ advance (Position l c) _ =
 
 initialPosition = Position 1 1
 
-oneOf xs = satisfy (\x -> Text.any (==x) xs)
+oneOf :: String -> Parser Char
+oneOf xs = satisfy (\x -> elem x xs)
 
 data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
@@ -176,14 +177,13 @@ qident = do
 -- qualifiers have to start with an uppercase qualifier
 makeIdent ms i | any (firstIs (not . isUpper)) ms =
     error ("Bad qualifier for identifier " ++ show i)
-makeIdent [] i | isReserved i = Reserved i
+makeIdent [] i | elem i reserved = Reserved i
 makeIdent ms i | firstIs isUpper i = Conid ms i
 makeIdent ms i | firstIs isSym i = Varsym ms i
 makeIdent ms i = Varid ms i
 
 {- Identifiers -}
-isReserved x =
-    elem x ["alias", "enum", "type", "forall",
+reserved = ["alias", "enum", "type", "forall",
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as", "_",
         ":", "=", "->", "|"]

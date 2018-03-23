@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Simplifier where
 
 import Syntax
@@ -78,5 +79,5 @@ transAlt (name, alts) =
         (LambdaExpression (fmap VariablePattern vs)
             (CaseExpression e nalts))
 
-toTuplesP1 = foldr1 (makeOpPat (fromString "Tuple"))
-toTuplesE1 = foldr1 (makeOp (fromString "Tuple"))
+toTuplesP1 = foldr1 (makeOpPat (fromText "Tuple"))
+toTuplesE1 = foldr1 (makeOp (fromText "Tuple"))

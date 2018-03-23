@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module TypeChecker where
 
 import Prelude hiding (lookup)
@@ -79,14 +80,14 @@ typecheck (LetExpression decls e) ty =
     with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
-    typecheck c (TypeConstructor (fromString "Common.Base.Boolean"))
+    typecheck c (TypeConstructor (fromText "Common.Base.Boolean"))
     typecheck th ty
     typecheck el ty
 typecheck (ArrayExpression es) ty =
   do
     alpha <- newTyVar
     traverse_ (flip typecheck alpha) es
-    unify (TypeApplication (TypeConstructor (fromString "Native.Array")) alpha) ty
+    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
 typecheck other _ = fail ("Typecheck " ++ show other)
 
 typecheckVar x ty =
@@ -204,16 +205,16 @@ typecheckPattern qual (ArrayPattern ps) ty =
   do
     alpha <- newTyVar
     binds <- traverse (\p -> typecheckPattern qual p alpha) ps
-    unify (TypeApplication (TypeConstructor (fromString "Native.Array")) alpha) ty
+    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
     return (uconcat binds)
 typecheckPattern _ other _ =
     fail ("Cannot typecheck pattern " ++ pretty other)
 
 -- Typecheck Literals
 typecheckLiteral (Numeral _) ty =
-    unify (TypeConstructor (fromString "Native.Numeral")) ty
+    unify (TypeConstructor (fromText "Native.Numeral")) ty
 typecheckLiteral (Text _) ty =
-    unify (TypeConstructor (fromString "Native.Text")) ty
+    unify (TypeConstructor (fromText "Native.Text")) ty
 
 -- Unification
 unify x y =

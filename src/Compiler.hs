@@ -237,14 +237,14 @@ makeForeigns decls =
     defs = foldMap getDefsD decls
     sigs = getSignatures decls
     foreigns = excluding defs sigs
-  in Imp (fromString "Native"):fmap (Assign <*> makeNat) foreigns
+  in Imp (fromText "Native"):fmap (Assign <*> makeNat) foreigns
 
 getSignatures decls =
     [name | TypeSignature name _ <- decls]
 
-makeNat = Var . qualifyId (fromString "Native")
+makeNat = Var . qualifyId (fromText "Native")
 
-makeVar = Var . fromString
+makeVar = Var . fromText
 
 mkError s = Call (makeVar "Native.error") [LitT (pack s)]
 mkIsArray a = Call (makeVar "Native.isArray") [a]

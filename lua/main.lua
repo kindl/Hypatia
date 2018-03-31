@@ -1,5 +1,5 @@
 local loadtime = 0
-local filename = "Game.lua"
+local filename = "Example.lua"
 local game
 
 local watch = function(dt)

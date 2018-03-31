@@ -1,37 +1,31 @@
 module Spheres
 
+import Native((+), (*), (%), (-),
+    write, toString, geti, uncurry4, uncurry5,
+    random, setColor, circle, getWidth, getHeight,
+    modifyRef)
 import Common.Base(Unit, Numeral,
-    (+), (*), (%), (<), (-),
-    sqrt, write, toString, repeatN, geti)
+    (<),
+    sqrt, repeatN)
+import Common.Stateful(unsafeMakeRef, unsafeRun,
+    writeRef, readRef, Ref)
 import Common.Array(Array, map, insert)
 
 
-random : Numeral -> Numeral -> Numeral
+gameState : Ref (Array Sphere)
+gameState = unsafeMakeRef []
 
-getWidth : Unit -> Numeral
+withState f = f (unsafeRun (readRef gameState))
 
-getHeight : Unit -> Numeral
+modifyState f = unsafeRun (modifyRef gameState f)
 
-getState : Unit -> Array Sphere
+setColor_ (Vec3 c1 c2 c3) = setColor c1 c2 c3
 
-setState : Array Sphere -> Unit
-
-uncurry2 : a -> b -> c -> Native.Fun2 a b c
-
-uncurry3 : a -> b -> c -> d -> Native.Fun3 a b c d
-
-uncurry4 : a -> b -> c -> d -> e -> Native.Fun4 a b c d e
-
-uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
-
-# Drawing
-setColor : Vector Numeral -> Unit
-
-circle : Vector Numeral -> Numeral -> Unit
+circle_ (Vec2 x y) r = circle "fill" x y r
 
 drawSphere sphere = let {
-    _ = setColor (color sphere)
-        } in circle (position sphere) (radius sphere)
+    _ = setColor_ (color sphere)
+        } in circle_ (position sphere) (radius sphere)
 
 type Vector a = Vec2 a a | Vec3 a a a
 
@@ -60,7 +54,7 @@ load _ =
     let
         state = []
         _ = repeatN (fun _ -> addSphere state) 10
-    in setState state
+    in modifyState (fun _ -> state)
 
 update dt = modifyState (map (updateSphere dt))
 
@@ -79,8 +73,6 @@ mousepressedC x y button isTouch =
     modifyState (map (hideSphere (Vec2 x y)))
 
 mousemoved = uncurry5 mousemovedC
-
-#TODO
 
 mousemovedC x y dx dy isTouch =
     modifyState (map (moveSphere (Vec2 x y)))
@@ -109,6 +101,4 @@ distance vec1 vec2 = length (sub vec1 vec2)
 
 length vec = sqrt (dot vec vec)
 
-draw _ = map drawSphere (getState Unit)
-
-modifyState f = setState (f (getState Unit))
+draw _ = withState (map drawSphere)

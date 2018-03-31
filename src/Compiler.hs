@@ -119,7 +119,7 @@ block s = text "{" $$ s $$ text "}"
 
 -- Compile to simplified language
 compile (ModuleDeclaration modName decls) =
-    Mod modName (makeForeigns decls ++ foldMap (compileT modName) decls)
+    Mod modName (foldMap (compileT modName) decls)
 
 compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c
@@ -154,8 +154,7 @@ compileEtoS (CaseExpression e alts) =
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
-    [If (mkEq (makeVar "Common.Base.True") (compileE c))
-        (compileEtoS th) (compileEtoS el)]
+    [If (compileE c) (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]
 
 compileL (Numeral n) = LitD n
@@ -231,24 +230,11 @@ descendAccess f i j (p:ps) =
 
 immediate sts = Call (Func [] sts) []
 
--- Type annotations without implementation are assumed to be native
-makeForeigns decls =
-  let
-    defs = foldMap getDefsD decls
-    sigs = getSignatures decls
-    foreigns = excluding defs sigs
-  in Imp (fromText "Native"):fmap (Assign <*> makeNat) foreigns
-
-getSignatures decls =
-    [name | TypeSignature name _ <- decls]
-
-makeNat = Var . qualifyId (fromText "Native")
-
 makeVar = Var . fromText
 
 mkError s = Call (makeVar "Native.error") [LitT (pack s)]
 mkIsArray a = Call (makeVar "Native.isArray") [a]
-mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
+mkEq a b = Call (Call (makeVar "Native.natEq") [a]) [b]
 mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A_B.lua

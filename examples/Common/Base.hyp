@@ -1,84 +1,26 @@
 module Common.Base
 
-
-# Operators
-infixl 4 < genLt
-infixl 4 > greaterThan
-infixl 4 <= lesserOrEqal
-infixl 4 >= greaterOrEqal
-
-infixl 6 + plus
-infixl 6 - minus
-
-infixl 7 * times
-infixl 7 / divide
-infixl 7 % modulo
-
-infixr 8 ^ power
-
-infixr 5 & concat
-infixr 5 ++ append
-
-infix 9 == genEq
-
-infixr 3 && and
-infixr 2 || or
-
-
-alias Numeral = Native.Numeral
-alias Text = Native.Text
-alias Path = Native.Text
-alias Array = Native.Array
-alias Bool = Native.Bool
-
-
-# Math
-negate : Numeral -> Numeral
-
-(*) : Numeral -> Numeral -> Numeral
-
-(/) : Numeral -> Numeral -> Numeral
-
-(+) : Numeral -> Numeral -> Numeral
-
-(-) : Numeral -> Numeral -> Numeral
-
-(^) : Numeral -> Numeral -> Numeral
-
-(%) : Numeral -> Numeral -> Numeral
-
-sin : Numeral -> Numeral
-
-cos : Numeral -> Numeral
+import Native(Numeral, Text, Array,
+    (^), (-), (+),
+    geti, size, isArray, coerce,
+    natEq, natLt, natIf,
+    True, False)
 
 sqrt x = x ^ 0.5
 
-
-# Primitive
-coerce : a -> b
-
-error : Text -> a
-
-
-# Arrays
-geti : Numeral -> Array a -> a
-
 getn n = geti (n - 1)
 
-size : Array a -> Numeral
+# Comparison
+infix 9 == eq
 
-isArray : a -> Bool
+infixl 4 < lessThan
+infixl 4 > greaterThan
+infixl 4 <= lessOrEqal
+infixl 4 >= greaterOrEqal
 
+eq l r = genComp natEq l r
 
-# Equality
-genEq l r = toBoolean (genComp eq l r)
-
-genLt l r = toBoolean (genComp lt l r)
-
-# Comparing Numerals, Strings and Constructors
-eq : e -> e -> Bool
-
-lt : e -> e -> Bool
+lessThan l r = genComp natLt l r
 
 # Generic comparison
 genComp comp l r =
@@ -95,70 +37,38 @@ seqComp comp l r =
     let
         lsize = size l
         rsize = size r
-    in primLazyAnd (eq lsize rsize)
+    in primLazyAnd (natEq lsize rsize)
         (fun _ -> seqCompAux comp 0 lsize l r)
 
 seqCompAux comp i maxN l r =
-    primLazyOr (eq i maxN) (fun _ ->
+    primLazyOr (natEq i maxN) (fun _ ->
         primLazyAnd (comp (geti i l) (geti i r)) (fun _ -> seqCompAux comp (i + 1) maxN l r))
 
-# Working with built in boolean values
-primIf : Bool -> val -> val -> val
+notEq a b = not_ (eq a b)
 
-# turn foreign bool into Boolean
-toBoolean val = primIf val True False
+primLazyOr x f = natIf x (fun _ -> x) f Unit
 
-notEq a b = primIf (eq a b) False True
-
-primLazyOr x f = primIf x (fun _ -> x) f Unit
-
-primLazyAnd x f = primIf x f (fun _ -> x) Unit
-
-
-# IO
-write : Text -> Unit
-
-file : Path -> Text
+primLazyAnd x f = natIf x f (fun _ -> x) Unit
 
 repeatN f n =
-    primIf (eq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
-
-
-# Strings
-toString : a -> Text
-
-concat : Text -> Text -> Text
-
-toNumber : Text -> Numeral
-
+    natIf (natEq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
 
 # Basic Types
 type Option a = None | A a
-
-type Boolean = True | False
 
 lazyAnd x f = if x then f Unit else x
 
 lazyOr x f = if x then x else f Unit
 
-strictNot True = False
-strictNot False = True
-
-strictAnd False _ = False
-strictAnd _ b = b
-
-strictOr True _ = True
-strictOr _ b = b
+not_ True = False
+not_ False = True
 
 boolToString False = "False"
 boolToString True = "True"
 
-type Void
-
 type Unit = Unit
 
 type Tuple a b = Tuple a b
-
 
 # Functions
 fix f x = f (fix f) x

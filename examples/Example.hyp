@@ -1,17 +1,11 @@
 module Example
 
+import Native(setColor, circle)
+
 # Define a vector with two constructors
 # A vector has either two or three elements
 type Vector a = Vec2 a a | Vec3 a a a
 
-# A type without a constructor
-type Void
+fillCircle (Vec2 x y) r = circle "fill" x y r
 
-# A shorthand for the native number type
-alias Numeral = Native.Numeral
-
-# Functions without implementation are imported from Native.lua
-circle : Vector Numeral -> Numeral -> Void
-setColor : Vector Numeral -> Void
-
-draw _ = let { _ = setColor (Vec3 40 30 240) } in circle (Vec2 400 300) 200
+draw _ = let { _ = setColor 40 30 240 } in fillCircle (Vec2 400 300) 200

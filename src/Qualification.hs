@@ -5,6 +5,9 @@ import Data.HashMap.Strict(fromList)
 import Data.Generics.Uniplate.Data(transform, descend)
 
 
+-- TODO split into value level and type level
+-- otherwise type Unit = Unit is problematic
+-- Rename qualified imports
 qualifyNames quals (ModuleDeclaration name decls) =
     ModuleDeclaration name (fmap (qualifyD quals) decls)
 

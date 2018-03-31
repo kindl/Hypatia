@@ -1,16 +1,14 @@
 module Common.Array
 
-import Common.Base((&), size, primIf, eq, (+), identity,
-    geti, Unit, Text, isArray, coerce, toString)
+import Native((&), natIf, Text, isArray, coerce, toString,
+    split, insert)
+import Common.Base((&), size, eq, (+), identity,
+    geti, Unit)
 
 
 alias Array = Native.Array
 
 # Beware that insert is impure and changes the array
-insert : Array a -> a -> Array a
-
-split : Text -> Text -> Array Text
-
 words a = split "%s" a
 
 lines a = split newline a
@@ -32,9 +30,9 @@ foldMap f a = foldl (fun z e -> append z (f e)) [] a
 foldl f z a = foldlAux 0 (size a) f z a
 
 foldlAux i maxN f z a =
-    primIf (eq i maxN) (fun _ -> z) (fun _ -> foldlAux (i + 1) maxN f (f z (geti i a)) a) Unit
+    natIf (eq i maxN) (fun _ -> z) (fun _ -> foldlAux (i + 1) maxN f (f z (geti i a)) a) Unit
 
 inspect x =
-    primIf (isArray x) (fun _ -> "{"
+    natIf (isArray x) (fun _ -> "{"
         & foldl (fun z i -> z & " " & inspect i) "" (coerce x)
         & "}") (fun _ -> toString x) Unit 

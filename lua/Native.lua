@@ -1,12 +1,12 @@
 local Native = {}
 
-function Native.eq(v1)
+function Native.natEq(v1)
     return function(v2)
         return v1 == v2
     end
 end
 
-function Native.lt(v1)
+function Native.natLt(v1)
     return function(v2)
         return v1 < v2
     end
@@ -101,7 +101,7 @@ function Native.geti(i)
     end
 end
 
-function Native.primIf(val)
+function Native.natIf(val)
     return function(x)
         return function(y)
             if val then return x else return y end
@@ -120,27 +120,17 @@ function Native.insert(a)
     end
 end
 
-function Native.getState()
-    return state
-end
-
-function Native.setState(newState)
-    state = newState
+function Native.modifyRef(ref)
+    return function(f)
+        return function(s)
+            ref[2] = f(ref[2])
+        end
+    end
 end
 
 function Native.random(mini)
     return function(maxi)
         return love.math.random(mini, maxi)
-    end
-end
-
-function Native.setColor(c)
-    love.graphics.setColor(c[2], c[3], c[4])
-end
-
-function Native.circle(p)
-    return function(r)
-        love.graphics.circle("fill", p[2], p[3], r)
     end
 end
 
@@ -168,14 +158,38 @@ Native.uncurry5 = function(f)
     end
 end
 
+Native.True = true
+Native.False = false
+
 Native.sin = math.sin
 Native.cos = math.cos
 Native.write = print
+
 Native.file = love.filesystem.read
 Native.image = love.graphics.newImage
 Native.getWidth = love.graphics.getWidth
 Native.getHeight = love.graphics.getHeight
+
+Native.setColor = function(c1)
+    return function(c2)
+        return function(c3)
+            love.graphics.setColor(c1, c2, c3)
+        end
+    end
+end
+
+Native.circle = function(f)
+    return function(x)
+        return function(y)
+            return function(r)
+                love.graphics.circle(f, x, y, r)
+            end
+        end
+    end
+end
+
 Native.toString = tostring
+
 Native.toNumber = function(s)
     r = tonumber(s)
     if r == nil then
@@ -184,6 +198,7 @@ Native.toNumber = function(s)
         return r
     end
 end
+
 Native.error = error
 
 return Native

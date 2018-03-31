@@ -1,6 +1,7 @@
 module Common.Stateful
 
-import Common.Base(coerce, Unit, Void, compose)
+import Native(coerce, modifyRef)
+import Common.Base(Unit, compose)
 
 
 # Stateful computations in the spirit of ST and IO in Haskell
@@ -45,7 +46,5 @@ unsafeUnpackRef (MkRef x) = x
 newRef x = point (unsafeMakeRef x)
 
 readRef r = point (unsafeUnpackRef r)
-
-modifyRef : Ref t -> (t -> t) -> Stateful Void
 
 writeRef r x = modifyRef r (fun _ -> x)

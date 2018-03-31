@@ -1,6 +1,7 @@
 module Viewer.Obj
 
-import Common.Base((&), notEq, toNumber, file, getn, error,
+import Native(toNumber, file, (&))
+import Common.Base(notEq, getn, error,
     Numeral, Text, compose, arrayFoldMap, arrayMap)
 import Common.Geometry(Vector, Vec4)
 import Common.Array(filter, inspect, split, map, foldMap, lines, words, Array)

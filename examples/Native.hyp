@@ -1,0 +1,108 @@
+module Native
+
+type Numeral
+
+type Array
+
+type Text
+
+type Void
+
+type Boolean = True | False
+
+infixl 6 + plus
+infixl 6 - minus
+
+infixl 7 * times
+infixl 7 / divide
+infixl 7 % modulo
+
+infixr 8 ^ power
+
+infixr 5 & concat
+infixr 5 ++ append
+
+infixr 3 && and
+infixr 2 || or
+
+
+# Math
+negate : Numeral -> Numeral
+
+(*) : Numeral -> Numeral -> Numeral
+
+(/) : Numeral -> Numeral -> Numeral
+
+(+) : Numeral -> Numeral -> Numeral
+
+(-) : Numeral -> Numeral -> Numeral
+
+(^) : Numeral -> Numeral -> Numeral
+
+(%) : Numeral -> Numeral -> Numeral
+
+sin : Numeral -> Numeral
+
+cos : Numeral -> Numeral
+
+
+# Primitive
+coerce : a -> b
+
+error : Text -> a
+
+# Arrays
+geti : Numeral -> Array a -> a
+
+size : Array a -> Numeral
+
+isArray : a -> Boolean
+
+insert : Array a -> a -> Array a
+
+split : Text -> Text -> Array Text
+
+# Comparing Numerals, Strings and Constructors
+natEq : e -> e -> Boolean
+
+natLt : e -> e -> Boolean
+
+natIf : Boolean -> val -> val -> val
+
+# IO
+write : Text -> Void
+
+#      Path -> Content
+file : Text -> Text
+
+# Strings
+toString : a -> Text
+
+concat : Text -> Text -> Text
+
+toNumber : Text -> Numeral
+
+modifyRef : ref t -> (t -> t) -> s Void
+
+uncurry2 : a -> b -> c -> Native.Fun2 a b c
+
+uncurry3 : a -> b -> c -> d -> Native.Fun3 a b c d
+
+uncurry4 : a -> b -> c -> d -> e -> Native.Fun4 a b c d e
+
+uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
+
+# Love
+polygon : Array Numeral -> Void
+
+random : Numeral -> Numeral -> Numeral
+
+getWidth : unit -> Numeral
+
+getHeight : unit -> Numeral
+
+# Drawing
+setColor : Numeral -> Numeral -> Numeral -> Void
+
+circle : Text -> Numeral -> Numeral -> Numeral -> Void
+

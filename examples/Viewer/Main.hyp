@@ -1,6 +1,7 @@
 module Viewer.Main
 
-import Common.Base((/), Tuple, Unit, getn,
+import Native((/), write, polygon, uncurry5)
+import Common.Base(Tuple, Unit, getn,
     Numeral, Array, insert, compose, write)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
@@ -12,10 +13,6 @@ import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, writeRef, readRef)
 
 
 # Primitives
-polygon : Array Numeral -> Unit
-
-uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
-
 gameState : Ref (Array (Array Numeral))
 gameState = unsafeMakeRef []
 

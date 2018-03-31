@@ -1,7 +1,7 @@
 module Common.Geometry
 
-import Common.Base((+), (*), (/), (-),
-    negate, sqrt, sin, cos, Tuple)
+import Native((+), (*), (/), (-), negate, sin, cos)
+import Common.Base(sqrt, Tuple)
 
 
 # Vectors

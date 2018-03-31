@@ -12,9 +12,16 @@ compileFile path =
     traverse_ writeResult program
 
 writeResult modDecl =
-    writeFile ("lua/" ++ renderFlatModName (getName modDecl) ++ ".lua")
-        (renderLua (compile modDecl))
---    *> writeFile ("javascript/" ++ renderName (getName modDecl) ++ ".js") (renderJavaScript (compile modDecl))
+    let
+        name = renderFlatModName (getName modDecl)
+        compiled = compile modDecl
+    in if name == "Native"
+-- NOTE the Native module is not written
+-- If there are more than one Native module
+-- then others could be added with a flag
+        then putStrLn "Skipped writing Native module"
+        else writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
+              *> writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)
 
 main =
   do

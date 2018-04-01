@@ -16,8 +16,6 @@ qualifyD quals (TypeDeclaration identifier vars constructors) =
         (fmap (fmap (fmap (qualifyT quals))) constructors)
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
-qualifyD quals (AliasDeclaration identifier t) =
-    AliasDeclaration identifier (qualifyT quals t)
 qualifyD quals (TypeSignature identifier t) =
     TypeSignature identifier (qualifyT quals t)
 qualifyD quals (FunctionDeclaration identifier ps e) =
@@ -25,6 +23,7 @@ qualifyD quals (FunctionDeclaration identifier ps e) =
         (fmap (qualifyP quals) ps) (qualifyE quals e)
 qualifyD _ decl@(ImportDeclaration _ _ _) = decl
 qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
+qualifyD _ decl@(AliasDeclaration _ _) = decl
 
 qualifyT quals ty =
     let

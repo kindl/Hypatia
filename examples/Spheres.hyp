@@ -3,13 +3,13 @@ module Spheres
 import Native((+), (*), (%), (-),
     write, toString, geti, uncurry4, uncurry5,
     random, setColor, circle, getWidth, getHeight,
-    modifyRef)
+    modifyRef, Array)
 import Common.Base(Unit, Numeral,
     (<),
     sqrt, repeatN)
 import Common.Stateful(unsafeMakeRef, unsafeRun,
     writeRef, readRef, Ref)
-import Common.Array(Array, map, insert)
+import Common.Array(map, insert)
 
 
 gameState : Ref (Array Sphere)
@@ -29,9 +29,9 @@ drawSphere sphere = let {
 
 type Vector a = Vec2 a a | Vec3 a a a
 
-alias Position = Vector Native.Numeral
-alias Velocity = Vector Native.Numeral
-alias Color = Vector Native.Numeral
+alias Position = Spheres.Vector Native.Numeral
+alias Velocity = Spheres.Vector Native.Numeral
+alias Color = Spheres.Vector Native.Numeral
 alias Radius = Native.Numeral
 
 type Sphere = Sphere Position Velocity Color Radius

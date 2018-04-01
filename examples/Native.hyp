@@ -63,11 +63,9 @@ insert : Array a -> a -> Array a
 split : Text -> Text -> Array Text
 
 # Comparing Numerals, Strings and Constructors
-natEq : e -> e -> Boolean
+eq : e -> e -> Boolean
 
-natLt : e -> e -> Boolean
-
-natIf : Boolean -> val -> val -> val
+lt : e -> e -> Boolean
 
 # IO
 write : Text -> Void

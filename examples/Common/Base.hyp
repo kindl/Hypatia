@@ -3,7 +3,7 @@ module Common.Base
 import Native(Numeral, Text, Array,
     (^), (-), (+),
     geti, size, isArray, coerce,
-    natEq, natLt, natIf,
+    eq, lt,
     True, False)
 
 sqrt x = x ^ 0.5
@@ -11,64 +11,68 @@ sqrt x = x ^ 0.5
 getn n = geti (n - 1)
 
 # Comparison
-infix 9 == eq
+infix 9 == equals
 
 infixl 4 < lessThan
 infixl 4 > greaterThan
 infixl 4 <= lessOrEqal
 infixl 4 >= greaterOrEqal
 
-eq l r = genComp natEq l r
+equals l r = genComp eq l r
 
-lessThan l r = genComp natLt l r
+lessThan l r = genComp lt l r
 
 # Generic comparison
 genComp comp l r =
-    primLazyOr (comp l r)
-        (fun _ -> trySeqComp (genComp comp) l r)
+    if comp l r
+        then True
+        else trySeqComp (genComp comp) l r
 
 trySeqComp comp l r =
-    primLazyAnd (bothArray l r)
-        (fun _ -> seqComp comp (coerce l) (coerce r))
+    if bothArray l r
+        then seqComp comp (coerce l) (coerce r)
+        else False
 
-bothArray l r = primLazyAnd (isArray l) (fun _ -> isArray r)
+bothArray l r =
+    if isArray l
+        then isArray r
+        else False
 
 seqComp comp l r =
     let
         lsize = size l
         rsize = size r
-    in primLazyAnd (natEq lsize rsize)
-        (fun _ -> seqCompAux comp 0 lsize l r)
+    in if eq lsize rsize
+        then seqCompAux comp 0 lsize l r
+        else False
 
 seqCompAux comp i maxN l r =
-    primLazyOr (natEq i maxN) (fun _ ->
-        primLazyAnd (comp (geti i l) (geti i r)) (fun _ -> seqCompAux comp (i + 1) maxN l r))
+    if eq i maxN
+        then True
+        else (if comp (geti i l) (geti i r)
+            then seqCompAux comp (i + 1) maxN l r
+            else False)
 
-notEq a b = not_ (eq a b)
-
-primLazyOr x f = natIf x (fun _ -> x) f Unit
-
-primLazyAnd x f = natIf x f (fun _ -> x) Unit
+notEq a b = not_ (equals a b)
 
 repeatN f n =
-    natIf (natEq n 0) (fun _ -> Unit) (fun _ -> let { _ = f Unit } in repeatN f (n - 1)) Unit
+    if eq n 0 then Unit
+        else let { _ = f Unit } in repeatN f (n - 1)
 
-# Basic Types
-type Option a = None | A a
-
-lazyAnd x f = if x then f Unit else x
-
-lazyOr x f = if x then x else f Unit
-
+# not is a keyword in lua
 not_ True = False
 not_ False = True
 
 boolToString False = "False"
 boolToString True = "True"
 
+
+type Option a = None | A a
+
 type Unit = Unit
 
 type Tuple a b = Tuple a b
+
 
 # Functions
 fix f x = f (fix f) x

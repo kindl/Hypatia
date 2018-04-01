@@ -234,7 +234,7 @@ makeVar = Var . fromText
 
 mkError s = Call (makeVar "Native.error") [LitT (pack s)]
 mkIsArray a = Call (makeVar "Native.isArray") [a]
-mkEq a b = Call (Call (makeVar "Native.natEq") [a]) [b]
+mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
 mkSize a = Call (makeVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A_B.lua

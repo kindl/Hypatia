@@ -1,12 +1,12 @@
 local Native = {}
 
-function Native.natEq(v1)
+function Native.eq(v1)
     return function(v2)
         return v1 == v2
     end
 end
 
-function Native.natLt(v1)
+function Native.lt(v1)
     return function(v2)
         return v1 < v2
     end
@@ -98,14 +98,6 @@ end
 function Native.geti(i)
     return function(a)
         return a[i + 1]
-    end
-end
-
-function Native.natIf(val)
-    return function(x)
-        return function(y)
-            if val then return x else return y end
-        end
     end
 end
 

@@ -21,7 +21,8 @@ writeResult modDecl =
 -- then others could be added with a flag
         then putStrLn "Skipped writing Native module"
         else writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
-              *> writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)
+-- NOTE disabled javascript output
+-- *> writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)
 
 main =
   do

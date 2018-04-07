@@ -230,12 +230,12 @@ descendAccess f i j (p:ps) =
 
 immediate sts = Call (Func [] sts) []
 
-makeVar = Var . fromText
+mkVar = Var . fromText
 
-mkError s = Call (makeVar "Native.error") [LitT (pack s)]
-mkIsArray a = Call (makeVar "Native.isArray") [a]
-mkEq a b = Call (Call (makeVar "Native.eq") [a]) [b]
-mkSize a = Call (makeVar "Native.size") [a]
+mkError s = Call (mkVar "Native.error") [LitT (pack s)]
+mkIsArray a = Call (mkVar "Native.isArray") [a]
+mkEq a b = Call (Call (mkVar "Native.eq") [a]) [b]
+mkSize a = Call (mkVar "Native.size") [a]
 
 -- e.g. A module A.B is saved in the file A_B.lua
 -- local A_B = require("A_B")

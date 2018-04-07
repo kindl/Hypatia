@@ -236,8 +236,8 @@ builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
 makeId s = Id s builtinLocation
 
-makeV x = makeId (pack ("_v" ++ show x))
-{-# INLINE makeV #-}
+makeVar x = makeId (pack ("_v" ++ show x))
+{-# INLINE makeVar #-}
 
 getQualifiers (Name q _) = q
 
@@ -266,7 +266,7 @@ getDefsP p =
         f _ = []
     in concatMap f (universe p)
 
-nNewVars n = fmap makeV [1..n]
+nNewVars n = fmap makeVar [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication

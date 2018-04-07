@@ -283,7 +283,7 @@ newUnique =
 
 newTyVar = fmap TypeVariable newUniqueName
 
-newUniqueName = fmap makeV newUnique
+newUniqueName = fmap makeVar newUnique
 
 -- extract skolem constants
 skolems ty = [c | SkolemConstant c <- universe ty]

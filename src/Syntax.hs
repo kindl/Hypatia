@@ -8,7 +8,8 @@ import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Functor.Identity(runIdentity)
 import Data.Hashable(Hashable, hashWithSalt)
-import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
+import Data.HashMap.Strict(lookup, keys, foldrWithKey,
+    filterWithKey, fromListWith, unionWith)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), (<>),
     parens, brackets, render)
@@ -285,3 +286,11 @@ mfind o m = maybe (fail ("Unknown " ++ pretty o ++ " in "
     ++ pretty (keys m))) return (lookup o m)
 
 locationInfo other = pretty [l | Id _ l <- universeBi other]
+
+-- Functions for maps that error on overwriting a key
+fromListUnique xs = fromListWith shadowingError xs
+
+shadowingError v1 v2 = error (pretty v1
+    ++ " shadows " ++ pretty v2)
+
+unionUnique m = unionWith shadowingError m

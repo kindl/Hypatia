@@ -23,12 +23,13 @@ pipeline :: [ModuleDeclaration] -> [ModuleDeclaration]
 pipeline = sortDeclsMod
     . aliasProgram
     . aliasOperatorsProgram
-    . fmap aliasDecls
     . removeParens
     . fixAssocProgram
     . qualifyProgram
+    . qualifyTypesProgram
     . splitLambdas
     . removeFunctionDeclaration
+    . fmap aliasDecls
     . sortModules
 
 loadModule modName = loadPath (toPath modName)
@@ -61,6 +62,9 @@ logEnv env modDecl =
 {- Operators and Aliasing -}
 qualifyProgram =
     feedback qualifyNames (captureSimple filterIds captureNames)
+
+qualifyTypesProgram =
+    feedback qualifyTypeNames (captureSimple filterIds captureTypeNames)
 
 fixAssocProgram = feedbackSimple fixAssoc captureAssocs
 

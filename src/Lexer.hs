@@ -21,6 +21,7 @@ Inspired by the Haskell2010 report
 -}
 lexlex path s =
     fmap pipeline (parseOnly (program path) s)
+{-# INLINE lexlex #-}
 
 lexFileDebug2 path = do
     str <- Text.readFile path
@@ -56,6 +57,7 @@ layout (t@(LocatedLexeme (Reserved l) _):ts) ms
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
 layout [] (_:ms) = close builtinLocation : layout [] ms
+{-# INLINE layout #-}
 
 semi pos = LocatedLexeme (Reserved ";") pos
 open pos = LocatedLexeme (Reserved "{") pos
@@ -93,12 +95,14 @@ insertIndentTokens (l:rest)
     | isWhite l = insertIndentTokens rest
     | otherwise = l:insertIndentTokens rest
 insertIndentTokens [] = []
+{-# INLINE insertIndentTokens #-}
 
 -- Cut the open and close braces
 cut xs = init (tail xs)
 
 pipeline ls = cut (layout (
     LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
+{-# INLINE pipeline #-}
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True
@@ -118,6 +122,7 @@ initialPosition = Position 1 1
 
 oneOf :: String -> Parser Char
 oneOf xs = satisfy (\x -> elem x xs)
+{-# INLINE oneOf #-}
 
 data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
@@ -152,26 +157,36 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
         location = Location startPosition endPosition path
         locatedLexeme = LocatedLexeme result location
     in (endPosition, locatedLexeme)) initialPosition lexemes)
+{-# INLINE located #-}
 
 program path = fmap (located path)
     (many' (match (lexeme <|> whitespace)) <* endOfInput)
 
 lexeme = literal <|> special <|> qident
+{-# INLINE lexeme #-}
+
 -- NOTE . was addded
 -- it is part of for example forall a. a
 special = do
     c <- oneOf "(),;[]`{}."
     return (Reserved (Text.singleton c))
+{-# INLINE special #-}
 
 -- TODO multi-line comments
 whitespace = whitechars <|> comment
+{-# INLINE whitespace #-}
+
 whitechars = fmap Whitespace (takeWhile1 isSpace)
+{-# INLINE whitechars #-}
+
 -- NOTE in contrast to the report this does not consume a newline
 comment = fmap Comment (char '#' *> takeWhile (/='\n'))
+{-# INLINE comment #-}
 
 qident = do
     ms <- sepBy1' (ident <|> varsym) (char '.')
     return (makeIdent (init ms) (last ms))
+{-# INLINE qident #-}
 
 -- TODO improve this check
 -- qualifiers have to start with an uppercase qualifier
@@ -181,6 +196,7 @@ makeIdent [] i | elem i reserved = Reserved i
 makeIdent ms i | firstIs isUpper i = Conid ms i
 makeIdent ms i | firstIs isSym i = Varsym ms i
 makeIdent ms i = Varid ms i
+{-# INLINE makeIdent #-}
 
 {- Identifiers -}
 reserved = ["alias", "enum", "type", "forall",
@@ -189,22 +205,31 @@ reserved = ["alias", "enum", "type", "forall",
         ":", "=", "->", "|"]
 
 ident = takeWhile1 (\x -> isAlphaNum x || x == '_')
+{-# INLINE varsym #-}
 
 varsym = takeWhile1 isSym
+{-# INLINE ident #-}
 
 {- Literal -}
 literal = number <|> hexdecimal <|> verbatim
+{-# INLINE literal #-}
 
 hexdecimal = fmap Integer
     (char '0' *> oneOf "xX" *> hexadecimal)
+{-# INLINE hexdecimal #-}
 
 -- TODO parse integers
 -- attoparsec parses a decimal as a double
 -- for example 3 is parsed as 3.0
 number = fmap Double double
+{-# INLINE number #-}
 
 verbatim = fmap (String . Text.pack)
     (char '"' *> many' (stringChar <|> escapeSeq) <* char '"')
+{-# INLINE verbatim #-}
 
 stringChar = satisfy (\x -> x /='"' && x /= '\\')
+{-# INLINE stringChar #-}
+
 escapeSeq = char '\\' *> oneOf "\\\""
+{-# INLINE escapeSeq #-}

@@ -4,7 +4,7 @@ module TypeChecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
-    lookup, singleton, unionWithKey, difference)
+    lookup, singleton, difference)
 import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
@@ -36,12 +36,12 @@ inferModule (ModuleDeclaration modName decls) =
     
     -- Qualify means rename Ty to AnyModuleName.Ty
     let q = qualifyId modName
-    let constructors = unionMap (gatherConstructor q) decls
-    let signatures = unionMap (gatherTypeSig q) decls
+    let constructors = foldMap (gatherConstructor q) decls
+    let signatures = foldMap (gatherTypeSig q) decls
     
     binds <- with constructors (inferDecls q generalize signatures decls)
     sanitySkolemCheck binds
-    return (union constructors (union signatures binds))
+    return (mappend constructors (mappend signatures binds))
 
 -- TODO skolems should be caught earlier
 sanitySkolemCheck = traverseWithKey_ (\k v ->
@@ -75,7 +75,7 @@ typecheck (LambdaExpression [p] e) ty =
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
-    let types = unionMap (gatherTypeSig fromId) decls
+    let types = foldMap (gatherTypeSig fromId) decls
     binds <- inferDecls fromId return types decls
     with binds (typecheck e ty)
 typecheck (IfExpression c th el) ty =
@@ -116,7 +116,7 @@ Vec2 is a constructor and Vector a type constructor
 -}
 gatherConstructor qual (TypeDeclaration ident vars constructors) =
     let ty = TypeConstructor (qual ident)
-    in unionMap (constructorToType qual ty vars) constructors
+    in foldMap (constructorToType qual ty vars) constructors
 gatherConstructor _ _ = mempty
 
 -- convert a constructor declaration to a type
@@ -158,7 +158,7 @@ inferDecl qual gen signatures (ExpressionDeclaration p e) next =
     let newTys = difference generalized signatures
 
     nextTys <- with newTys next
-    return (union newTys nextTys)
+    return (mappend newTys nextTys)
 inferDecl _ _ _ _ ff = ff
 
 -- Check the type signatures against the inferred types
@@ -200,13 +200,13 @@ typecheckPattern qual (ConstructorPattern c ps) ty =
             ++ " was given wrong number of arguments"))
     binds <- zipWithM (typecheckPattern qual) ps consTys
     unify resultTy ty
-    return (uconcat binds)
+    return (mconcat binds)
 typecheckPattern qual (ArrayPattern ps) ty =
   do
     alpha <- newTyVar
     binds <- traverse (\p -> typecheckPattern qual p alpha) ps
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
-    return (uconcat binds)
+    return (mconcat binds)
 typecheckPattern _ other _ =
     fail ("Cannot typecheck pattern " ++ pretty other)
 
@@ -272,7 +272,7 @@ getSubst =
     readRef r
 
 with binds = local (\(TypecheckerState env r s) ->
-    TypecheckerState (union binds env) r s)
+    TypecheckerState (mappend binds env) r s)
 
 -- Type Variables
 newUnique =
@@ -351,12 +351,3 @@ info s = lift (putStrLn s)
 readRef s = lift (readIORef s)
 
 modifyRef s f = lift (modifyIORef' s f)
-
--- Variants of union that error on overwriting a key
-union = unionWithKey (\k v1 v2 ->
-    error (pretty k ++ " was defined twice "
-        ++ pretty v1 ++ " " ++ pretty v2))
-
-uconcat m = unionMap id m
-
-unionMap f m = foldr (union . f) mempty m

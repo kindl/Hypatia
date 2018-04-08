@@ -8,7 +8,8 @@ import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Functor.Identity(runIdentity)
 import Data.Hashable(Hashable, hashWithSalt)
-import Data.HashMap.Strict(lookup, keys, foldrWithKey, filterWithKey)
+import Data.HashMap.Strict(lookup, keys, foldrWithKey,
+    filterWithKey, fromListWith, unionWith)
 import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), (<>),
     parens, brackets, render)
@@ -133,6 +134,7 @@ qualify _ n = n
 qualifyId q n = qualify q (fromId n)
 
 pretty p = render (pPrint p)
+{-# INLINE pretty #-}
 
 instance Pretty Position where
     pPrint (Position l c) =
@@ -191,6 +193,7 @@ instance Pretty Id where
 
 -- displays the module name joined with underscore
 flatVar = flatName (text "_") (text ".")
+{-# INLINE flatVar #-}
 
 flatModName = flatName (text "_") (text "_")
 
@@ -207,11 +210,14 @@ flatName _ _ (Name [] i) = prettyId i
 flatName qualSep idSep (Name qs i) =
     mintercalate qualSep (fmap (text . unpack) qs)
         <> idSep <> prettyId i
+{-# INLINE flatName #-}
 
 prettyId i = text (unpack (getText i))
+{-# INLINE prettyId #-}
 
 renderEnv m = render (foldrWithKey (\k v r ->
     prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
+{-# INLINE renderEnv #-}
 
 fromText s =
     let is = split (== '.') s
@@ -221,13 +227,15 @@ fromId = Name []
 
 isConstructor i = firstIs isUpper (getText i)
 
-isOperator i = Text.any isSym (getText i)
+isOperator i = firstIs isSym (getText i)
 
 firstIs f = Text.foldr (const . f) False
+{-# INLINE firstIs #-}
 
 -- these are not symbols in unicode, but in the language
 -- otherwise e.g 2 - 2 would not be lexed as minus
 isSym x = isSymbol x || elem x "!%&*/?@-:"
+{-# INLINE isSym #-}
 
 isUnqualified (Name [] _) = True
 isUnqualified _ = False
@@ -248,12 +256,16 @@ getText (Id t _) = t
 getLocation (Id _ l) = l
 
 excluding xs = filter (flip notElem xs)
+{-# INLINE excluding #-}
 
 including xs = filter (flip elem xs)
+{-# INLINE including #-}
 
 excludingKeys xs = filterWithKey (const . flip notElem xs)
+{-# INLINE excludingKeys #-}
 
 includingKeys xs = filterWithKey (const . flip elem xs)
+{-# INLINE includingKeys #-}
 
 getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (TypeDeclaration _ _ cs) = fmap fst cs
@@ -283,5 +295,15 @@ find o m = runIdentity (mfind o m)
 
 mfind o m = maybe (fail ("Unknown " ++ pretty o ++ " in "
     ++ pretty (keys m))) return (lookup o m)
+{-# INLINE mfind #-}
 
 locationInfo other = pretty [l | Id _ l <- universeBi other]
+{-# INLINE locationInfo #-}
+
+-- Functions for maps that error on overwriting a key
+fromListUnique xs = fromListWith shadowingError xs
+
+shadowingError v1 v2 = error (pretty v1
+    ++ " shadows " ++ pretty v2)
+
+unionUnique m = unionWith shadowingError m

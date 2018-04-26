@@ -80,7 +80,10 @@ concat : Text -> Text -> Text
 
 toNumber : Text -> Numeral
 
-modifyRef : ref t -> (t -> t) -> s Void
+# Stateful computations in the spirit of ST and IO in Haskell
+type Stateful s
+
+modifyRef : ref t -> (t -> t) -> Stateful Void
 
 uncurry2 : a -> b -> c -> Native.Fun2 a b c
 
@@ -95,9 +98,9 @@ polygon : Array Numeral -> Void
 
 random : Numeral -> Numeral -> Numeral
 
-getWidth : unit -> Numeral
+getWidth : Stateful Numeral
 
-getHeight : unit -> Numeral
+getHeight : Stateful Numeral
 
 # Drawing
 setColor : Numeral -> Numeral -> Numeral -> Void

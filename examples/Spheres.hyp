@@ -63,8 +63,8 @@ updateSphere dt (Sphere p v c r) =
 
 updatePosition (Vec2 x y) (Vec2 vx vy) dt =
     let
-        nx = (x + vx * dt) % getWidth Unit
-        ny = (y + vy * dt) % getHeight Unit
+        nx = (x + vx * dt) % unsafeRun getWidth
+        ny = (y + vy * dt) % unsafeRun getHeight
     in Vec2 nx ny
 
 mousepressed = uncurry4 mousepressedC

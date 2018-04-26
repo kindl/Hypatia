@@ -1,11 +1,7 @@
 module Common.Stateful
 
-import Native(coerce, modifyRef)
+import Native(coerce, modifyRef, Stateful)
 import Common.Base(Unit, compose)
-
-
-# Stateful computations in the spirit of ST and IO in Haskell
-type Stateful s
 
 # Similar to purescript-effect the computation is modeled
 # after a function of type Unit -> s
@@ -25,8 +21,7 @@ map f = andThen (compose point f)
 
 # Usually called return, but renamed
 # because return is a reserved word in Lua
-point : s -> Stateful s
-point x = coerce (fun _ -> x)
+point x = unsafeStateful (fun _ -> x)
 
 #Refs
 # Objects in JS and tables in Lua are passed by reference
@@ -37,10 +32,8 @@ point x = coerce (fun _ -> x)
 type Ref t = MkRef t
 
 # The constructor MkRef is opaque and should not be imported
-unsafeMakeRef : t -> Ref t
 unsafeMakeRef x = MkRef x
 
-unsafeUnpackRef : Ref t -> t
 unsafeUnpackRef (MkRef x) = x
 
 newRef x = point (unsafeMakeRef x)

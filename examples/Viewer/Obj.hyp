@@ -1,10 +1,10 @@
 module Viewer.Obj
 
-import Native(toNumber, file, (&), Array)
+import Native(toNumber, file, (&), Array, split)
 import Common.Base(notEq, getn, error,
     Numeral, Text, compose, arrayFoldMap, arrayMap)
 import Common.Geometry(Vector, Vec4)
-import Common.Array(filter, inspect, split, map, foldMap, lines, words)
+import Common.Array(filter, inspect, map, foldMap, lines, words)
 
 
 type VertexIndex

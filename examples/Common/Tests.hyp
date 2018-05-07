@@ -1,14 +1,13 @@
 module Common.Tests
 
-import Common.Base((&), (==), (*), (+),
-    matches, write, boolToString, arrayFoldl,
-        Unit, Tuple, insert, empty, size)
+import Native((+), (*), (&), write)
+import Common.Base((==), boolToString, Unit, Tuple)
 import Common.Geometry(Vec4, Mat4, transpose, multiply, dot)
-import Common.Array(foldl, append, inspect, words)
+import Common.Array(inspect, words, size)
 import Viewer.Obj
 
 
-testLoad = test "Obj.load" (Obj.load "cube.obj")
+testLoad = test "Viewer.Obj.load" (Viewer.Obj.load "cube.obj")
 
 test name result = write (name & " " & inspect result)
 
@@ -86,11 +85,3 @@ testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
 testWords = test "words should be 3" (size (words "Hello Little World!"))
-
-
-idNum : Native.Numeral -> Native.Numeral
-idNum x = x
-
-#lol = idNum "hi"
-
-rofl = idNum 1

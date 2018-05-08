@@ -44,9 +44,9 @@ fixAssocO operatorTable constr f1 o1 fe1 o2 fe2 =
         LT -> constr f1 o1 (constr fe1 o2 fe2)
         GT -> constr (constr f1 o1 fe1) o2 fe2
         EQ -> case (assoc1, assoc2) of
-            (LeftAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
+            (LeftAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o2 fe2
             -- TODO this is probably an ambiguous parse?
-            (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
-            (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o1 fe2
-            (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o1 fe2)
+            (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o2 fe2)
+            (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o2 fe2
+            (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o2 fe2)
             _ -> error ("Operator " ++ pretty o1 ++ " has no associativity")

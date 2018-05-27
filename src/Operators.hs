@@ -1,52 +1,62 @@
 module Operators where
 
 import Syntax
-import Data.Generics.Uniplate.Data(transformBi)
+import Data.Generics.Uniplate.Data(transformBi, rewrite)
 import Data.HashMap.Strict(fromList)
 
 
 {-
-In the beginning we parse everything
-right-associative and without precedence.
+In the beginning every operator is parsed right associative.
+This module changes the operators in the syntax tree
+to their specified precedence and associativity
 
-This module changes the syntax tree
-to the specified precedence and associativity
+This blog post turned out to be really helpful
+http://qfpl.io/posts/quick-and-easy-user-defined-operators/
 -}
 fixAssoc operatorTable =
-  let
-    g (PatternInfixOperator a o1 (PatternInfixOperator b o2 c)) =
-        fixAssocO operatorTable PatternInfixOperator a o1 b o2 c
-    g p = p
+    let
+        f = rewrite (fixAssocE operatorTable)
+        g = rewrite (fixAssocP operatorTable)
+        h = rewrite (fixAssocT operatorTable)
+    in transformBi f . transformBi g . transformBi h
 
-    f (InfixOperator (InfixOperator a o1 b) o2 c) =
-        fixAssocO operatorTable InfixOperator a o1 b o2 c
-    f (InfixOperator a o1 (InfixOperator b o2 c)) =
-        fixAssocO operatorTable InfixOperator a o1 b o2 c
-    f e = e
-
-    h (TypeInfixOperator a o1 (TypeInfixOperator b o2 c)) =
-        fixAssocO operatorTable TypeInfixOperator a o1 b o2 c
-    h e = e
-  in transformBi f . transformBi g . transformBi h
-
-{- Gather information -}
--- Read the fixity declarations from the tree
+{- Read the fixity declarations -}
 captureAssocs (ModuleDeclaration modName decls) =
     fromList [(qualifyId modName op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
 
--- General helper function for patterns and expressions
--- TODO 2 * 3 + 5 * 7 + 11 * 13
-fixAssocO operatorTable constr f1 o1 fe1 o2 fe2 =
+fixAssocE operatorTable (InfixOperator (InfixOperator e1 child e2) root e3) =
+    fixAssocAux operatorTable LeftAssociative InfixOperator e1 child e2 root e3
+fixAssocE operatorTable (InfixOperator e1 root (InfixOperator e2 child e3)) =
+    fixAssocAux operatorTable RightAssociative InfixOperator e1 child e2 root e3
+fixAssocE _ _ = Nothing
+
+fixAssocP operatorTable (PatternInfixOperator (PatternInfixOperator e1 child e2) root e3) =
+    fixAssocAux operatorTable LeftAssociative PatternInfixOperator e1 child e2 root e3
+fixAssocP operatorTable (PatternInfixOperator e1 root (PatternInfixOperator e2 child e3)) =
+    fixAssocAux operatorTable RightAssociative PatternInfixOperator e1 child e2 root e3
+fixAssocP _ _ = Nothing
+
+fixAssocT operatorTable (TypeInfixOperator (TypeInfixOperator e1 child e2) root e3) =
+    fixAssocAux operatorTable LeftAssociative TypeInfixOperator e1 child e2 root e3
+fixAssocT operatorTable (TypeInfixOperator e1 root (TypeInfixOperator e2 child e3)) =
+    fixAssocAux operatorTable RightAssociative TypeInfixOperator e1 child e2 root e3
+fixAssocT _ _ = Nothing
+
+-- General helper function for patterns, types and expressions
+fixAssocAux operatorTable prevAssoc constr e1 child e2 root e3 =
     let
-        (assoc1, prec1) = find o1 operatorTable
-        (assoc2, prec2) = find o2 operatorTable
-    in case compare prec1 prec2 of
-        LT -> constr f1 o1 (constr fe1 o2 fe2)
-        GT -> constr (constr f1 o1 fe1) o2 fe2
-        EQ -> case (assoc1, assoc2) of
-            (LeftAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o2 fe2
-            -- TODO this is probably an ambiguous parse?
-            (LeftAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o2 fe2)
-            (RightAssociative, LeftAssociative) -> constr (constr f1 o1 fe1) o2 fe2
-            (RightAssociative, RightAssociative) -> constr f1 o1 (constr fe1 o2 fe2)
-            _ -> error ("Operator " ++ pretty o1 ++ " has no associativity")
+        (assoc1, prec1) = find root operatorTable
+        (assoc2, prec2) = find child operatorTable
+        left = constr (constr e1 root e2) child e3
+        right = constr e1 child (constr e2 root e3)
+    in case (compare prec1 prec2, prevAssoc, assoc1, assoc2) of
+        (EQ, LeftAssociative, RightAssociative, RightAssociative) -> Just right
+        (EQ, RightAssociative, LeftAssociative, LeftAssociative) -> Just left
+        (EQ, _, RightAssociative, LeftAssociative) -> fixAssocError child root
+        (EQ, _, LeftAssociative, RightAssociative) -> fixAssocError child root
+        (GT, LeftAssociative, _, _) -> Just right
+        (GT, RightAssociative, _, _) -> Just left
+        _ -> Nothing
+
+fixAssocError child root =
+    error ("Cannot mix operator " ++ pretty child ++ " and " ++ pretty root)

@@ -29,7 +29,6 @@ executable hypatia
     pretty < 1.2,
     transformers < 0.6,
     uniplate < 1.7,
-    filepath < 1.5,
     attoparsec < 0.14
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -23,15 +23,14 @@ lexlex path s =
     fmap pipeline (parseOnly (program path) s)
 {-# INLINE lexlex #-}
 
-lexFileDebug2 path = do
-    str <- Text.readFile path
-    return (fmap (fmap extractLexeme) (lexlex path str))
+lexFileDebug path =
+    fmap (parse (program path)) (Text.readFile path)
 
-lexFileDebug path = do
-    str <- Text.readFile path
-    return (parse (program path) str)
+lexFileDebug2 path =
+    fmap (fmap (fmap extractLexeme) . lexlex path)
+        (Text.readFile path)
 
-lexDebug str = parseOnly (program "") str
+lexDebug = parseOnly (program "")
 
 {- Layout -}
 layout ls@(LocatedLexeme (Indent n) pos:ts) (m:ms)
@@ -72,9 +71,14 @@ indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Block (indLength ws)) pos
+getBlock (LocatedLexeme _ pos) =
+    error ("getBlock impossible case at " ++ pretty pos)
 
 getIndent (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Indent (indLength ws)) pos
+getIndent (LocatedLexeme _ pos) =
+    error ("getIndent impossible case at " ++ pretty pos)
+    
 
 followedByOpen rest = case dropWhile isWhite rest of
     (LocatedLexeme (Reserved t) _:_) | t == "{" -> True
@@ -167,9 +171,7 @@ lexeme = literal <|> special <|> qident
 
 -- NOTE . was addded
 -- it is part of for example forall a. a
-special = do
-    c <- oneOf "(),;[]`{}."
-    return (Reserved (Text.singleton c))
+special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
 
 -- TODO multi-line comments
@@ -183,9 +185,8 @@ whitechars = fmap Whitespace (takeWhile1 isSpace)
 comment = fmap Comment (char '#' *> takeWhile (/='\n'))
 {-# INLINE comment #-}
 
-qident = do
-    ms <- sepBy1' (ident <|> varsym) (char '.')
-    return (makeIdent (init ms) (last ms))
+qident = fmap (\ms -> makeIdent (init ms) (last ms))
+    (sepBy1' (ident <|> varsym) (char '.'))
 {-# INLINE qident #-}
 
 -- TODO improve this check

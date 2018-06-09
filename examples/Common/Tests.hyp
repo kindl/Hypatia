@@ -1,6 +1,6 @@
 module Common.Tests
 
-import Native((+), (*), (&), write)
+import Native((+), (-), (*), (^), (&), write)
 import Common.Base((==), boolToString, Unit, Tuple)
 import Common.Geometry(Vec4, Mat4, transpose, multiply, dot)
 import Common.Array(inspect, words, size)
@@ -41,17 +41,29 @@ testMultiply =
             (Vec4 15894 16634 17888 18710)
     } in test "multiply" (boolToString (multiply m1 m2 == m))
 
+testDot =
+    let
+        v1 = Vec4 2 3 5 7
+        v2 = Vec4 11 13 17 19
+    in test "dot prod" (boolToString (dot v1 v2 == 279))
+
 testPrecedence =
     let
         v1 = 5 + 3 * 4
         v2 = 3 * 4 + 5
     in test "precedence" (boolToString (v1 == v2))
 
-testDot =
+testAssocL =
     let
-        v1 = Vec4 2 3 5 7
-        v2 = Vec4 11 13 17 19
-    in test "dot prod" (boolToString (dot v1 v2 == 279))
+        v1 = 2 - 3 - 4 - 5
+        v2 = -10
+    in test "assocL" (boolToString (v1 == v2))
+
+testAssocR =
+    let
+        v1 = 2 ^ 2 ^ 2 ^ 2
+        v2 = 65536
+    in test "assocR" (boolToString (v1 == v2))
 
 testParens1 =
     let

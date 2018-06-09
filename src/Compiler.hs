@@ -2,6 +2,7 @@
 module Compiler where
 
 
+import Prelude hiding ((<>))
 import Syntax
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, (<+>), (<>), ($$),

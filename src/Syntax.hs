@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Syntax where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, (<>))
 import Data.Data
 import Data.Text(Text, unpack, pack, split)
 import qualified Data.Text as Text

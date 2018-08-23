@@ -189,6 +189,41 @@ compileConstructor modName (c, vs) =
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])
 
+
+{-
+Compiling case expressions
+
+A case expression of the form
+    case e of {p1 -> e1; p2 -> e2; ...}
+is converted to if-statements as follows
+    local v = e
+    if matches(p1, v) then
+        local a1, a2, ... = v[1], v[2][3], ...
+        return e1
+    end
+    if matches(p2, v) then
+        local a1, a2, ... = v[1], v[2][3], ...
+        return e2
+    end
+    return error
+v is a temporal variable and contains the value of expression e
+a are variables appearing in the pattern p
+
+A constructor returns an array, for example in
+type Option a = Just a | Nothing
+Just is compiled as
+    local Just = function(x)
+        return {Just, x}
+    end
+Matching on the pattern (Just y) compiles to
+    if isArray(v) and #v == 2 and v[1] == Just then
+        local y = v[2]
+        ...
+    end
+
+descendAccess is used to recurse deeper into the patterns.
+The y in (Just y) could be any pattern and not only a variable.
+-}
 compileAlts v = foldr (\(p, e) rest ->
     let s = getAssignments v [] p ++ compileEtoS e
     in case getConditions v [] p of

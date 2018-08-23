@@ -128,9 +128,10 @@ compileE (FunctionApplication f e) = Call (compileE f) [compileE e]
 compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
-    Func [makeId "_v"]
-        (compileAlts [Ret (mkError ("failed pattern match lambda at "
-            ++ locationInfo p))] [(p, e)])
+    let
+        v = makeId "_vl"
+        err = Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))
+    in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
 compileE (LiteralExpression l) =
@@ -149,9 +150,10 @@ compileE e = error ("compileE does not work on " ++ show e)
 -- however nested case expressions lead to problems
 -- e.g. multiple defined local _v
 compileEtoS (CaseExpression e alts) =
-    Assign (makeId "_v") (compileE e) :
-        compileAlts [Ret (mkError ("failed pattern match case at "
-            ++ locationInfo (fmap fst alts)))] alts
+    let
+        v = makeId "_vc"
+        err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
+    in Assign v (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
@@ -171,7 +173,7 @@ compileT _ other = compileD other
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
-    [Assign (makeId "_w") (compileE e)]
+    [Assign (makeId "_vw") (compileE e)]
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
@@ -187,42 +189,42 @@ compileConstructor modName (c, vs) =
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])
 
-compileAlts = foldr (\(p, e) rest ->
-    let s = getAssignments [] p ++ compileEtoS e
-    in case getMatching [] p of
+compileAlts v = foldr (\(p, e) rest ->
+    let s = getAssignments v [] p ++ compileEtoS e
+    in case getConditions v [] p of
         [] -> s
-        ms -> If (foldr1 And ms) s []:rest)
+        cs -> If (foldr1 And cs) s []:rest)
 
-getMatching _ Wildcard = []
-getMatching _ (VariablePattern _) = []
-getMatching i (AliasPattern _ p) =
-    getMatching i p
-getMatching i (ConstructorPattern c []) =
-    [mkEq (Access (makeId "_v") i) (Var c)]
-getMatching i (ConstructorPattern c ps) =
-    [mkIsArray (Access (makeId "_v") i),
-    mkEq (mkSize (Access (makeId "_v") i)) (LitD (fromIntegral (length ps + 1))),
-    mkEq (Access (makeId "_v") (i ++ [0])) (Var c)]
-    ++ descendAccess getMatching i 1 ps
-getMatching i (ArrayPattern ps) =
-    [mkIsArray (Access (makeId "_v") i),
-    mkEq (mkSize (Access (makeId "_v") i)) (LitD (fromIntegral (length ps)))]
-    ++ descendAccess getMatching i 0 ps
-getMatching i (LiteralPattern l) =
-    [mkEq (Access (makeId "_v") i) (compileL l)]
-getMatching _ p = error ("getMatching on " ++ pretty p)
+getConditions v i (AliasPattern _ p) =
+    getConditions v i p
+getConditions v i (ConstructorPattern c []) =
+    [mkEq (Access v i) (Var c)]
+getConditions v i (ConstructorPattern c ps) =
+    [mkIsArray (Access v i),
+    mkEq (mkSize (Access v i)) (LitD (fromIntegral (length ps + 1))),
+    mkEq (Access v (i ++ [0])) (Var c)]
+    ++ descendAccess (getConditions v) i 1 ps
+getConditions v i (ArrayPattern ps) =
+    [mkIsArray (Access v i),
+    mkEq (mkSize (Access v i)) (LitD (fromIntegral (length ps)))]
+    ++ descendAccess (getConditions v) i 0 ps
+getConditions v i (LiteralPattern l) =
+    [mkEq (Access v i) (compileL l)]
+getConditions _ _ Wildcard = []
+getConditions _ _ (VariablePattern _) = []
+getConditions _ _ p = error ("getConditions on " ++ pretty p)
 
-getAssignments i (VariablePattern x) =
-    [Assign x (Access (makeId "_v") i)]
-getAssignments i (AliasPattern x p) =
-    Assign x (Access (makeId "_v") i):getAssignments i p
-getAssignments i (ConstructorPattern _ ps) =
-    descendAccess getAssignments i 1 ps
-getAssignments i (ArrayPattern ps) =
-    descendAccess getAssignments i 0 ps
-getAssignments _ (LiteralPattern _) = []
-getAssignments _ Wildcard = []
-getAssignments _ p = error ("getAssignments on " ++ pretty p)
+getAssignments v i (VariablePattern x) =
+    [Assign x (Access v i)]
+getAssignments v i (AliasPattern x p) =
+    Assign x (Access v i):getAssignments v i p
+getAssignments v i (ConstructorPattern _ ps) =
+    descendAccess (getAssignments v) i 1 ps
+getAssignments v i (ArrayPattern ps) =
+    descendAccess (getAssignments v) i 0 ps
+getAssignments _ _ (LiteralPattern _) = []
+getAssignments _ _ Wildcard = []
+getAssignments _ _ p = error ("getAssignments on " ++ pretty p)
 
 descendAccess _ _ _ [] = []
 descendAccess f i j (p:ps) =

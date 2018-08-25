@@ -63,7 +63,6 @@ type Precedence = Double
 type Alias = Id
 
 data Declaration
-    -- TODO qualified imports
     = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
     | TypeDeclaration Id [Id] [(Id, [Type])]
     | ExpressionDeclaration Pattern Expression
@@ -218,6 +217,8 @@ prettyId i = text (unpack (getText i))
 renderEnv m = render (foldrWithKey (\k v r ->
     prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
 {-# INLINE renderEnv #-}
+
+nameToList (Name is i) = is ++ [getText i]
 
 fromText s =
     let is = split (== '.') s

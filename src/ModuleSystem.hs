@@ -27,6 +27,7 @@ pipeline = sortDeclsMod
     . fixAssocProgram
     . qualifyProgram
     . qualifyTypesProgram
+    . fmap resolveQualifiedImports
     . splitLambdas
     . removeFunctionDeclaration
     . fmap aliasDecls

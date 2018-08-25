@@ -4,6 +4,7 @@ module Compiler where
 
 import Prelude hiding ((<>))
 import Syntax
+import Data.List(nub)
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, (<+>), (<>), ($$),
     equals, text, int, braces, parens, brackets, double, render, semi)
@@ -120,7 +121,10 @@ block s = text "{" $$ s $$ text "}"
 
 -- Compile to simplified language
 compile (ModuleDeclaration modName decls) =
-    Mod modName (foldMap (compileT modName) decls)
+    let
+        compiledDecls = foldMap (compileTop modName) decls
+        imports = compileImports decls
+    in Mod modName (imports ++ compiledDecls)
 
 compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c
@@ -163,11 +167,20 @@ compileEtoS e = [Ret (compileE e)]
 compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
 
-compileT modName (TypeDeclaration _ _ cs) =
+-- Compile top level declarations
+compileTop modName (TypeDeclaration _ _ cs) =
     fmap (compileConstructor modName) cs
-compileT _ (ImportDeclaration modName _ _) = [Imp modName]
-compileT _ (FixityDeclaration _ _ _ _) = []
-compileT _ other = compileD other
+compileTop _ (ImportDeclaration _ _ _) = []
+compileTop _ (FixityDeclaration _ _ _ _) = []
+compileTop _ other = compileD other
+
+{-
+Only import a module once in cases as for example
+import Viewer.Obj(getFaces)
+import Viewer.Obj as Obj
+-}
+compileImports decls = fmap Imp (nub [modName |
+    ImportDeclaration modName _ _ <- decls])
 
 -- TODO should patterns in expression declarations be allowed?
 compileD (ExpressionDeclaration (VariablePattern x) e) =

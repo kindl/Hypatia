@@ -4,7 +4,6 @@ import Syntax
 import Data.Generics.Uniplate.Data(transform, descend, transformBi)
 
 
--- TODO Rename qualified imports
 {-
 Values
 split into value level and type level
@@ -15,7 +14,7 @@ qualifyNames quals (ModuleDeclaration name decls) =
 
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
-qualifyD _ decl@(TypeDeclaration _ _ _) = decl        
+qualifyD _ decl@(TypeDeclaration _ _ _) = decl
 qualifyD _ decl@(TypeSignature _ _) = decl
 qualifyD _ decl@(ImportDeclaration _ _ _) = decl
 qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
@@ -63,7 +62,7 @@ qualifyA quals (p, e) =
 
 captureNames (ModuleDeclaration modName decls) = mappend
     (toQualifieds modName (foldMap captureNameD decls))
-    (toQualifieds modName (foldMap captureNameTop decls))
+    (toQualifieds modName (foldMap captureTopName decls))
 
 captureNameD (ExpressionDeclaration p _) = getDefsP p
 captureNameD _ = []
@@ -71,21 +70,21 @@ captureNameD _ = []
 -- Type signatures can also appear in normal declarations,
 -- but then they need an expression declaration
 -- and are captured there
-captureNameTop (TypeSignature identifier _) = [identifier]
-captureNameTop (TypeDeclaration _ _ cs) = fmap fst cs
-captureNameTop (AliasDeclaration identifier _) = [identifier]
-captureNameTop (FixityDeclaration _ _ op _) = [op]
-captureNameTop _ = []
+captureTopName (TypeSignature identifier _) = [identifier]
+captureTopName (TypeDeclaration _ _ cs) = fmap fst cs
+captureTopName (AliasDeclaration identifier _) = [identifier]
+captureTopName (FixityDeclaration _ _ op _) = [op]
+captureTopName _ = []
 
 {- Types -}
-qualifyTypeNames quals ty =
+qualifyTypeNames quals m =
     let
         f (TypeInfixOperator ta op tb) =
             TypeInfixOperator ta (findName op quals) tb
         f (TypeConstructor c) =
             TypeConstructor (findName c quals)
         f t = t
-    in transformBi f ty
+    in transformBi f m
 
 captureTypeNames (ModuleDeclaration modName decls) =
     toQualifieds modName (foldMap captureTypeNameD decls)
@@ -102,3 +101,40 @@ findName n _ = n
 toLocals ids = fmap fromId (toMap ids)
 toQualifieds modName ids = fmap (qualifyId modName) (toMap ids)
 toMap ids = fromListUnique (fmap (\i -> (i, i)) ids)
+
+{- Resolve qualified imports -}
+resolveQualifiedImports (ModuleDeclaration modName decls) =
+    let quals = captureQualifiedImportDeclarations decls
+    in ModuleDeclaration modName (renameQualifiedNames quals decls)
+
+renameQualifiedNames quals =
+    let
+        f (Variable n) =
+            Variable (renameQualified n quals)
+        f (ConstructorExpression c) =
+            ConstructorExpression (renameQualified c quals)
+        f (InfixOperator ea name eb) =
+            InfixOperator ea (renameQualified name quals) eb
+        f e = e
+
+        g (ConstructorPattern c ps) =
+            ConstructorPattern (renameQualified c quals) ps
+        g (PatternInfixOperator p1 op p2) =
+            PatternInfixOperator p1 (renameQualified op quals) p2
+        g p = p
+
+        h (TypeInfixOperator ta op tb) =
+            TypeInfixOperator ta (renameQualified op quals) tb
+        h (TypeConstructor c) =
+            TypeConstructor (renameQualified c quals)
+        h t = t
+    in transformBi f . transformBi g . transformBi h
+
+captureQualifiedImportDeclarations decls =
+    [(nameToList renamedModName, nameToList modName) |
+        ImportDeclaration modName Nothing (Just renamedModName) <- decls]
+
+renameQualified n@(Name modNames identifier) quals =
+    case lookup modNames quals of
+        Nothing -> n
+        Just renamedModNames -> Name renamedModNames identifier

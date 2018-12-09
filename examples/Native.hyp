@@ -58,6 +58,7 @@ size : Array a -> Numeral
 
 isArray : a -> Boolean
 
+# Beware that insert is impure and changes the array
 insert : Array a -> a -> Array a
 
 split : Text -> Text -> Array Text

@@ -6,7 +6,6 @@ import Native((&), (+),
 import Common.Base(identity, Unit, (==))
 
 
-# Beware that insert is impure and changes the array
 words a = split "%s" a
 
 lines a = split newline a

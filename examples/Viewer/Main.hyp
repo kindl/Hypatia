@@ -5,25 +5,31 @@ import Common.Base(Tuple, Unit, getn,
     Numeral, Array, insert, compose, write)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
+import Viewer.Obj as Obj
 import Common.Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, rotationX,
     normalize, to2d, multiply, transform)
 import Common.Array(map, foldMap, inspect)
-import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, writeRef, readRef)
+import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef)
 
+# TODO that's not a nice way to have State
+# Better: have a datatype for the game state
+# Better: do not use global unsafe references
 
 # Primitives
 gameState : Ref (Array (Array Numeral))
 gameState = unsafeMakeRef []
 
-setState x = unsafeRun (writeRef gameState x)
+constant a _ = a
 
-withState f = f (unsafeRun (readRef gameState))
+setState x = modifyState (constant x)
+
+modifyState f = unsafeRun (modifyRef gameState f)
 
 pi = 3.141592653589793
 
 ## Load
-model = load "cube.obj"
+model = Obj.load "cube.obj"
 
 screenWidth = 800
 screenHeight = 600
@@ -55,8 +61,6 @@ transformPoint rotation vector =
 
 mousemoved = uncurry5 mousemovedC
 
-mousepressed _ = withState (fun x -> write (inspect x))
-
 mousemovedC x y dx dy isTouch =
     let
         rotY = rotationY (x / screenWidth)
@@ -66,7 +70,7 @@ mousemovedC x y dx dy isTouch =
 
 transformFace rotation face = map (compose (transformPoint rotation) getPoint) face
 
-draw _ = withState (map polygon)
+draw _ = modifyState (fun x -> constant x (map polygon x))
 
 tuplesToArray = foldMap tupleToArray
 tupleToArray (Tuple a b) = [a, b]

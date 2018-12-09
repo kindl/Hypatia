@@ -1,5 +1,7 @@
 module Viewer.Obj
 
+#A module for parsing obj files
+
 import Native(toNumber, file, (&), Array, split)
 import Common.Base(notEq, getn, error,
     Numeral, Text, compose, arrayFoldMap, arrayMap)

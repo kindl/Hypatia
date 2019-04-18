@@ -256,11 +256,14 @@ getText (Id t _) = t
 
 getLocation (Id _ l) = l
 
-excluding xs = filter (flip notElem xs)
-{-# INLINE excluding #-}
-
+-- A flipped version of intersect that works on foldables
 including xs = filter (flip elem xs)
 {-# INLINE including #-}
+
+-- Similar to a flipped version of difference
+-- but deletes all, not only single occurences
+excluding xs = filter (flip notElem xs)
+{-# INLINE excluding #-}
 
 excludingKeys xs = filterWithKey (const . flip notElem xs)
 {-# INLINE excludingKeys #-}

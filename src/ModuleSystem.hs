@@ -33,7 +33,10 @@ pipeline = sortDeclsMod
     . fmap aliasDecls
     . sortModules
 
-loadModule modName = loadPath (toPath modName)
+loadModule modName = do
+    m <- loadPath (toPath modName)
+    if getName m == modName then return m else
+        fail ("The file name did not match the name of the module " ++ pretty (getName m))
 
 loadPath path = do
     putStrLn ("Loading module from " ++ path)

@@ -5,6 +5,7 @@ import Compiler
 import Syntax
 import System.Environment
 import Data.Foldable(traverse_)
+import Data.List(isPrefixOf)
 
 compileFile path =
   do
@@ -15,11 +16,11 @@ writeResult modDecl =
     let
         name = renderFlatModName (getName modDecl)
         compiled = compile modDecl
-    in if name == "Native"
+    in if name == "Native" || isPrefixOf "Native_" name
 -- NOTE the Native module is not written
 -- If there are more than one Native module
 -- then others could be added with a flag
-        then putStrLn "Skipped writing Native module"
+        then putStrLn ("Skipped writing native module " ++ name ++ "(.lua)")
         else writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
 -- NOTE disabled javascript output
 -- *> writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)

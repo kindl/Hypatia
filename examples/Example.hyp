@@ -1,6 +1,6 @@
 module Example
 
-import Native(setColor, circle)
+import Native.Love(setColor, circle)
 
 # Define a vector with two constructors
 # A vector has either two or three elements

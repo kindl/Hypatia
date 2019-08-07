@@ -1,0 +1,19 @@
+module Native.Love
+
+import Native(Numeral, Stateful, Array, Void, Text)
+
+#      Path -> Content
+file : Text -> Text
+
+random : Numeral -> Numeral -> Numeral
+
+getWidth : Stateful Numeral
+
+getHeight : Stateful Numeral
+
+# Drawing
+polygon : Array Numeral -> Void
+
+setColor : Numeral -> Numeral -> Numeral -> Void
+
+circle : Text -> Numeral -> Numeral -> Numeral -> Void

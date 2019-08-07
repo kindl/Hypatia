@@ -2,7 +2,8 @@ module Viewer.Obj
 
 #A module for parsing obj files
 
-import Native(toNumber, file, (&), Array, split)
+import Native(toNumber, (&), Array, split)
+import Native.Love(file)
 import Common.Base(notEq, getn, error,
     Numeral, Text, compose, arrayFoldMap, arrayMap)
 import Common.Geometry(Vector, Vec4)

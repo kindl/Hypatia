@@ -1,9 +1,8 @@
 module Spheres
 
 import Native((+), (*), (%), (-),
-    write, toString, geti, uncurry4, uncurry5,
-    random, setColor, circle, getWidth, getHeight,
-    modifyRef, Array)
+    write, toString, geti, uncurry4, uncurry5, modifyRef, Array)
+import Native.Love(random, setColor, circle, getWidth, getHeight)
 import Common.Base(Unit, Numeral,
     (<),
     sqrt, repeatN)

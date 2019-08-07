@@ -1,6 +1,7 @@
 module Viewer.Main
 
-import Native((/), write, polygon, uncurry5)
+import Native((/), write, uncurry5)
+import Native.Love(polygon)
 import Common.Base(Tuple, Unit, getn,
     Numeral, Array, insert, compose, write)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,

@@ -71,9 +71,6 @@ lt : e -> e -> Boolean
 # IO
 write : Text -> Void
 
-#      Path -> Content
-file : Text -> Text
-
 # Strings
 toString : a -> Text
 
@@ -93,18 +90,3 @@ uncurry3 : a -> b -> c -> d -> Native.Fun3 a b c d
 uncurry4 : a -> b -> c -> d -> e -> Native.Fun4 a b c d e
 
 uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f
-
-# Love
-polygon : Array Numeral -> Void
-
-random : Numeral -> Numeral -> Numeral
-
-getWidth : Stateful Numeral
-
-getHeight : Stateful Numeral
-
-# Drawing
-setColor : Numeral -> Numeral -> Numeral -> Void
-
-circle : Text -> Numeral -> Numeral -> Numeral -> Void
-

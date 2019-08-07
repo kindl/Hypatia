@@ -148,16 +148,36 @@ compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
--- Compiles an expression in a statement context
--- TODO investigate
--- This seemed to be a good way of saving immediate functions
--- however nested case expressions lead to problems
--- e.g. multiple defined local _v
+{-
+Compiles an expression in a statement context
+TODO investigate
+Compiling an expressions to a statement seemed to be a good way of saving immediate functions
+however nested case expressions lead to problems e.g. multiple defined local _v
+-}
 compileEtoS (CaseExpression e alts) =
     let
         v = makeId "_vc"
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
     in Assign v (compileE e) : compileAlts v [err] alts
+{-
+First idea for compiling pattern matches in let expressions like
+
+let
+    Tuple a b = Tuple 2 3
+in write (toString a)
+
+First written for compileD, but compileD does not know about e
+For this to work there has to be a hollistic view on all declarations
+Furthermore, to work on the top level, v has to have the module name included
+-}
+compileEtoS (LetExpression [ExpressionDeclaration p pe] e) =
+    let
+        v = makeId "_vd"
+        err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
+        s = getAssignments v [] p ++ compileEtoS e
+    in Assign v (compileE pe) : (case getConditions v [] p of
+        [] -> s
+        cs -> [If (foldr1 And cs) s [err]])
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
@@ -182,7 +202,6 @@ import Viewer.Obj as Obj
 compileImports decls = fmap Imp (nub [modName |
     ImportDeclaration modName _ _ <- decls])
 
--- TODO should patterns in expression declarations be allowed?
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =

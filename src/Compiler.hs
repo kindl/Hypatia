@@ -57,6 +57,8 @@ toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
     text "if" <+> toLuaE e <+> text "then" $$ toLua th $$ text "end"
+toLuaS (If e [] th) =
+    text "if not" <+> parens (toLuaE e) <+> text "then" $$ toLua th $$ text "end"
 toLuaS (If e th el) =
     text "if" <+> toLuaE e <+> text "then"
         $$ toLua th $$ text "else"
@@ -96,6 +98,9 @@ toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> semi
 toJavaScriptS (If e th []) =
     text "if" <> parens (toJavaScriptE e)
+        $$ block (vcatMap toJavaScriptS th)
+toJavaScriptS (If e [] th) =
+    text "if" <> parens (text "!" <> parens (toJavaScriptE e))
         $$ block (vcatMap toJavaScriptS th)
 toJavaScriptS (If e th el) =
     text "if" <> parens (toJavaScriptE e)
@@ -159,25 +164,6 @@ compileEtoS (CaseExpression e alts) =
         v = makeId "_vc"
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
     in Assign v (compileE e) : compileAlts v [err] alts
-{-
-First idea for compiling pattern matches in let expressions like
-
-let
-    Tuple a b = Tuple 2 3
-in write (toString a)
-
-First written for compileD, but compileD does not know about e
-For this to work there has to be a hollistic view on all declarations
-Furthermore, to work on the top level, v has to have the module name included
--}
-compileEtoS (LetExpression [ExpressionDeclaration p pe] e) =
-    let
-        v = makeId "_vd"
-        err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
-        s = getAssignments v [] p ++ compileEtoS e
-    in Assign v (compileE pe) : (case getConditions v [] p of
-        [] -> s
-        cs -> [If (foldr1 And cs) s [err]])
 compileEtoS (LetExpression decls e) =
     foldMap compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
@@ -206,6 +192,22 @@ compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
     [Assign (makeId "_vw") (compileE e)]
+{-
+Compile pattern matches in let expressions like
+let
+    Tuple a b = Tuple 2 3
+in write (toString a)
+
+To work on the top level, v would need to have the module name included
+-}
+compileD (ExpressionDeclaration p pe) =
+    let
+        v = makeId "_vd"
+        err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
+        s = getAssignments v [] p
+    in Assign v (compileE pe) : (case getConditions v [] p of
+        [] -> []
+        cs -> If (foldr1 And cs) [] [err]) ++ s
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)

@@ -205,9 +205,8 @@ compileD (ExpressionDeclaration p pe) =
         v = makeId "_vd"
         err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
         s = getAssignments v [] p
-    in Assign v (compileE pe) : (case getConditions v [] p of
-        [] -> []
-        cs -> If (foldr1 And cs) [] [err]) ++ s
+        cs = getConditions v [] p
+    in Assign v (compileE pe) : If (foldr1 And cs) [] [err] : s
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)

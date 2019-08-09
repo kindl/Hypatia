@@ -351,19 +351,28 @@ appliedConstructorPattern = do
     return (ConstructorPattern c ps)
 {-# INLINE appliedConstructorPattern #-}
 
-apat = wildcard <|> variablePattern
+apat = aliasPattern <|> wildcard <|> variablePattern
     <|> constructorPattern <|> literalPattern
     <|> parenthesizedPattern <|> arrayPattern
 {-# INLINE apat #-}
 
-{-
-TODO this should be apat and then var but it is left recursive
-asPattern = do
-    v <- var
-    token "as"
-    p <- apat
-    return (AliasPattern v p)
+{- NOTE
+(s alias Sphere p v c r)    uses keyword instead @ and requires parens around
+
+Here are some alternative ideas
+(Sphere p v c r as s)       hard to read because as looks like a variable
+(s as Sphere p v c r)       would be clearer, but switched compared to imports
+                            e.g. import Viewer.Obj as Obj
+
+TODO warn or eliminate patterns of the form
+(aVar alias anotherVar) and (aVar alias (anotherVar))
 -}
+aliasPattern = parenthesized (do
+    v <- var
+    token "alias"
+    p <- pat
+    return (AliasPattern v p))
+{-# INLINE aliasPattern #-}
 
 variablePattern = VariablePattern <$!> var
 {-# INLINE variablePattern #-}

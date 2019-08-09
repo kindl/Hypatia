@@ -74,15 +74,15 @@ mousemoved = uncurry5 mousemovedC
 mousemovedC x y dx dy isTouch =
     modifyState (map (moveSphere (Vec2 x y)))
 
-moveSphere screenPos (Sphere p v c r) =
+moveSphere screenPos (s alias Sphere p v c r) =
     if distance p screenPos < r
         then Sphere screenPos v c r
-        else Sphere p v c r
+        else s
 
-hideSphere screenPos (Sphere p v c r) =
+hideSphere screenPos (s alias Sphere p v c r) =
     if distance p screenPos < r
         then Sphere p v c 0
-        else Sphere p v c r
+        else s
 
 
 add (Vec2 a b) (Vec2 c d) =

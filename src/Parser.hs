@@ -357,7 +357,8 @@ apat = aliasPattern <|> wildcard <|> variablePattern
 {-# INLINE apat #-}
 
 {- NOTE
-(s alias Sphere p v c r)    uses keyword instead @ and requires parens around
+aliasPattern uses keyword instead of @, allows pat instead of apat
+and requires enclosing parentheses e.g. (s alias Sphere p v c r)
 
 Here are some alternative ideas
 (Sphere p v c r as s)       hard to read because as looks like a variable

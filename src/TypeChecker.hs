@@ -124,10 +124,9 @@ constructorToType qual ty vars (name, tys) =
     let
         res = foldl' TypeApplication ty (fmap TypeVariable vars)
         resTy = foldr TypeArrow res tys
-        frees = excluding vars (freeVars resTy)
-    in case frees of
+    in case excluding vars (freeVars resTy) of
         [] -> singleton (qual name) (makeForAll vars resTy)
-        _  -> error ("Type variables " ++ pretty frees
+        frees -> error ("Type variables " ++ pretty frees
                ++ " appear free in " ++ pretty name )
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs

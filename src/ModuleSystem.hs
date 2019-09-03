@@ -19,6 +19,8 @@ loadProgram path = do
     typecheckProgram simplified
     return simplified
 
+-- This uses normal function composition
+-- So the lowest in this list is the first step of the pipeline
 pipeline :: [ModuleDeclaration] -> [ModuleDeclaration]
 pipeline = sortDeclsMod
     . aliasProgram

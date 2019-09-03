@@ -66,7 +66,7 @@ isLayout (LocatedLexeme (Reserved t) _)
     | elem t ["let", "where", "of"] = True
 isLayout _ = False
 
--- + 1 because it is the column
+-- add 1 because counting columns starts from 1 
 indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =

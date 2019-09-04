@@ -3,7 +3,7 @@ module Parser where
 
 import Syntax
 import qualified Data.Text.IO as Text
-import Data.List(uncons)
+import Data.List(uncons, foldl1')
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty)
@@ -34,18 +34,6 @@ parseFile path = do
 
 parseString s = parse "" s
 {-# INLINE parseString #-}
-
--- Handles left recursion
--- for example in application fexpr
--- Previously used (foldl1' f <$!> many1' p)
--- but this created garbage in form of an intermediate list
-chainl1 p op = p >>= rest
-    where rest x = do f <- op
-                      y <- p
-                      rest (f x y)
-                   <|> return x
-{-# INLINE chainl1 #-}
-
 
 -- get the next lexeme
 next = StateT uncons
@@ -203,7 +191,8 @@ typeOperator = do
     return (TypeInfixOperator b o t)
 {-# INLINE typeOperator #-}
 
-btype = chainl1 atype (return TypeApplication)
+-- NOTE The left fold handles left recursion
+btype = foldl1' TypeApplication <$!> many1' atype
 {-# INLINE btype #-}
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
@@ -295,7 +284,8 @@ caseExpression = do
     return (CaseExpression e als)
 {-# INLINE caseExpression #-}
 
-fexpr = chainl1 aexpr (return FunctionApplication)
+-- NOTE The left fold handles left recursion
+fexpr = foldl1' FunctionApplication <$!> many1' aexpr
 {-# INLINE fexpr #-}
 
 aexpr = variable <|> constructorExpression <|> literalExpression
@@ -357,7 +347,7 @@ apat = aliasPattern <|> wildcard <|> variablePattern
 {-# INLINE apat #-}
 
 {- NOTE
-aliasPattern uses keyword instead of @, allows pat instead of apat
+aliasPattern uses a keyword instead of @, allows pat instead of apat
 and requires enclosing parentheses e.g. (s alias Sphere p v c r)
 
 Here are some alternative ideas

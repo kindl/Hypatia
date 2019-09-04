@@ -88,7 +88,7 @@ typecheck (ArrayExpression es) ty =
     alpha <- newTyVar
     traverse_ (flip typecheck alpha) es
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
-typecheck other _ = fail ("Typecheck " ++ show other)
+typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 
 typecheckVar x ty =
   do

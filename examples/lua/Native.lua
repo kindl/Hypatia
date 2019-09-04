@@ -75,18 +75,6 @@ function Native.split(seperator)
     end
 end
 
-function Native.polygon(line)
-    love.graphics.polygon("line", line)
-end
-
-function Native.draw(img)
-    return function(x)
-        return function(y)
-            love.graphics.draw(img, x, y)
-        end
-    end
-end
-
 function Native.size(a)
     return #a
 end
@@ -120,12 +108,6 @@ function Native.modifyRef(ref)
     end
 end
 
-function Native.random(mini)
-    return function(maxi)
-        return love.math.random(mini, maxi)
-    end
-end
-
 Native.uncurry2 = function(f)
     return function(a, b)
         return f(a)(b)
@@ -156,29 +138,6 @@ Native.False = false
 Native.sin = math.sin
 Native.cos = math.cos
 Native.write = print
-
-Native.file = love.filesystem.read
-Native.image = love.graphics.newImage
-Native.getWidth = love.graphics.getWidth
-Native.getHeight = love.graphics.getHeight
-
-Native.setColor = function(c1)
-    return function(c2)
-        return function(c3)
-            love.graphics.setColor(c1, c2, c3)
-        end
-    end
-end
-
-Native.circle = function(f)
-    return function(x)
-        return function(y)
-            return function(r)
-                love.graphics.circle(f, x, y, r)
-            end
-        end
-    end
-end
 
 Native.toString = tostring
 

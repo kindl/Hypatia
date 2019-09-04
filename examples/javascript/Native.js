@@ -1,128 +1,98 @@
 ﻿const Native = {};
 
-Native.eq = function(v1)
-{
-    return function(v2)
-    {
-        return v1 == v2;
+Native.eq = function (v1) {
+    return function (v2) {
+        return v1 === v2;
     };
 };
 
-Native.times = function(v1)
-{
-    return function(v2)
-    {
+Native.times = function (v1) {
+    return function (v2) {
         return v1 * v2;
     };
 };
 
-Native.divide = function(v1)
-{
-    return function(v2)
-    {
+Native.divide = function (v1) {
+    return function (v2) {
         return v1 / v2;
     };
 };
 
-Native.modulo = function(v1)
-{
-    return function(v2)
-    {
+Native.modulo = function (v1) {
+    return function (v2) {
         return v1 % v2;
     };
 };
 
-Native.plus = function(v1)
-{
-    return function(v2)
-    {
+Native.plus = function (v1) {
+    return function (v2) {
         return v1 + v2;
     };
 };
 
-Native.minus = function(v1)
-{
-    return function(v2)
-    {
+Native.minus = function (v1) {
+    return function (v2) {
         return v1 - v2;
     };
 };
 
-Native.concat = function(v1)
-{
-    return function(v2)
-    {
+Native.concat = function (v1) {
+    return function (v2) {
         return v1 + v2;
     };
 };
 
-Native.negate = function(v)
-{
+Native.negate = function (v) {
     return -v;
 };
 
-Native.size = function(v)
-{
+Native.size = function (v) {
     return v.length;
 };
 
-Native.isArray = function(v)
-{
-    return typeof(v) === typeof([]);
+Native.isArray = function (v) {
+    return typeof (v) === typeof ([]);
 };
 
-Native.getn = function(n)
-{
-    return function(a)
-    {
-        return a[n - 1];
+Native.geti = function (n) {
+    return function (a) {
+        return a[n];
     };
 };
 
-Native.primIf = function(val)
-{
-    return function(x)
-    {
-        return function(y)
-        {
-            if(val)
-            {
+Native.primIf = function (val) {
+    return function (x) {
+        return function (y) {
+            if (val) {
                 return x;
             }
-            else
-            {
+            else {
                 return y;
             }
         };
     };
 };
 
-Native.coerce = function(x)
-{
+Native.coerce = function (x) {
     return x;
 };
 
-Native.insert = function(a)
-{
-    return function(e)
-    {
+Native.insert = function (a) {
+    return function (e) {
         a.push(e);
         return a;
     };
 };
 
-Native.toString = function(x)
-{
+Native.toString = function (x) {
     return x.toString();
 };
 
-Native.write = function(x)
-{
+Native.write = function (x) {
     console.log(x);
 };
 
-Native.error = function(x)
-{
+Native.error = function (x) {
     throw x;
 };
 

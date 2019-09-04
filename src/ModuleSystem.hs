@@ -16,7 +16,7 @@ loadProgram path = do
     modDecl <- loadPath path
     mods <- growModuleEnv [modDecl]
     let simplified = pipeline mods
-    typecheckProgram simplified
+    _ <- typecheckProgram simplified
     return simplified
 
 -- This uses normal function composition

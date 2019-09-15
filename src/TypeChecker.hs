@@ -5,13 +5,14 @@ import Prelude hiding (lookup)
 import Syntax
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
     lookup, singleton, difference)
-import Control.Monad.Trans.Reader(ReaderT, runReaderT, asks, local)
+import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_)
+import Control.Exception(onException)
 
 
 type Environment = HashMap Name Type
@@ -31,7 +32,6 @@ typecheckModule env m =
 
 inferModule (ModuleDeclaration modName decls) =
   do
-    info "---------------------------------"
     info ("Typechecking Module " ++ renderName modName)
     
     -- Qualify means rename Ty to AnyModuleName.Ty
@@ -142,15 +142,19 @@ gatherTypeSig _ _ = mempty
 inferDecls qual gen signatures =
     foldr (inferDecl qual gen signatures) (return mempty)
 
-inferDecl qual gen signatures (ExpressionDeclaration p e) next =
+-- A version of onException that works with ReaderT
+onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
+
+inferDecl qual gen signatures (ExpressionDeclaration p e) next = 
   do
-    info ("Typechecking declaration " ++ pretty p)
     ty <- newTyVar
     binds <- typecheckPattern qual p ty
 
     -- Here we have to use mappend because the signatures
     -- should overwrite the binds
-    with (mappend signatures binds) (typecheck e ty)
+    onException' (with (mappend signatures binds) (typecheck e ty))
+        (putStrLn ("When typechecking declaration " ++ pretty p
+            ++ " at " ++ locationInfo p))
 
     generalized <- traverse gen binds
     checkAgainst generalized signatures

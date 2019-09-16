@@ -26,10 +26,10 @@ drawSphere sphere = let {
 
 type Vector a = Vec2 a a | Vec3 a a a
 
-alias Position = Spheres.Vector Native.Numeral
-alias Velocity = Spheres.Vector Native.Numeral
-alias Color = Spheres.Vector Native.Numeral
-alias Radius = Native.Numeral
+alias Position = Vector Numeral
+alias Velocity = Vector Numeral
+alias Color = Vector Numeral
+alias Radius = Numeral
 
 type Sphere = Sphere Position Velocity Color Radius
 

@@ -8,21 +8,33 @@ How did you end up here? Let me introduce myself, I am Hypatia, youngest child o
 ```
 module Example
 
-# Define a vector with two constructors
-# A vector has either two or three elements
-type Vector a = Vec2 a a | Vec3 a a a
+import Native(Numeral, Array)
+import Native.Love(setColor, circle, rectangle)
+import Common.Array(map)
 
-# A type without a constructor
-type Void
+# This is an algebraic datatype. A primitive is either a Rectangle or a Circle
+type Primitive = Rectangle Point Point | Circle Point Radius
 
-# A shorthand for the native number type
-alias Numeral = Native.Numeral
+# Datatypes can have type variables
+type Vector2 a = Vec2 a a
 
-# Functions without implementation are imported from Native.lua
-circle : Vector Numeral -> Numeral -> Void
-setColor : Vector Numeral -> Void
+# Typing Vector2 Numeral would be tedious. Let's give it a new name
+alias Point = Vector2 Numeral
 
-draw _ = let { _ = setColor (Vec3 40 30 240) } in circle (Vec2 400 300) 200
+alias Radius = Numeral
+
+fill (Circle (Vec2 x y) r) = circle "fill" x y r
+fill (Rectangle (Vec2 x y) (Vec2 w h)) = rectangle "fill" x y w h
+
+primitives : Array Primitive
+primitives = [
+    Rectangle (Vec2 150 100) (Vec2 100 400),
+    Rectangle (Vec2 350 100) (Vec2 100 400),
+    Rectangle (Vec2 250 250) (Vec2 100 100),
+    Rectangle (Vec2 550 300) (Vec2 100 200),
+    Circle (Vec2 550 200) 100]
+
+draw _ = let { _ = setColor 70 40 250 } in map fill primitives
 ```
 
 People say, I look like my father, Haskell, but somehow I am a little different:
@@ -37,14 +49,13 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 ### My Stages
 Let me tell you about my daily routine:
 
-* Lexer: While I am dreaming the Lexer takes all the strings I have read and turns them into tokens.
-* Parser: Shortly before I wake up, token seeds grow into a syntax tree in the Parser.
+* Lexer: While I am dreaming, the Lexer turns all the strings I have read into tokens.
+* Parser: In the Parser, token seeds grow into syntax trees.
 * Operators: Yawn! Time to wake up and I already have my first chores to do. Sigh... I shake out my blanket, rename my operator symbols to plain names and change their associativity and precedence.
 * Simplifier: I can't think before I had my coffee. A sip from the Simplifier and my world looks much clearer.
-* Aliases: Time to brush my teeth. The Aliases brushes out all the bacteria and rename complicated patterns and types to simpler ones.
-* Typechecker: Now I start with the actual work and I check if my types are correct.
-* Sorting: In the evening, my creativity awakes. I sort my let-bindings and compile my syntax tree into an imperative dynamic language.
-* Compiler: At night, I write the result down in lua, so that I don't forget anything.
+* Aliases: Time to brush my teeth. Aliases brushes out all the bacteria and renames complicated patterns and types to simpler ones.
+* Typechecker: Now I start with the actual work and check if my types are correct.
+* Compiler: In the evening, my creativity awakes. I compile my syntax tree into an imperative dynamic language and write the results down in lua, so that I don't forget anything.
 * ModuleSystem: Is it bedtime already? Again? Tomorrow will be a good day, good that I have everything planned in my ModuleSystem.
 
 It was nice to talk with you stranger.

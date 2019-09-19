@@ -1,11 +1,29 @@
 module Example
 
-import Native.Love(setColor, circle)
+import Native(Numeral, Array)
+import Native.Love(setColor, circle, rectangle)
+import Common.Array(map)
 
-# Define a vector with two constructors
-# A vector has either two or three elements
-type Vector a = Vec2 a a | Vec3 a a a
+# This is an algebraic datatype. A primitive is either a Rectangle or a Circle
+type Primitive = Rectangle Point Point | Circle Point Radius
 
-fillCircle (Vec2 x y) r = circle "fill" x y r
+# Datatypes can have type variables
+type Vector2 a = Vec2 a a
 
-draw _ = let { _ = setColor 40 30 240 } in fillCircle (Vec2 400 300) 200
+# Typing Vector2 Numeral would be tedious. Let's give it a new name
+alias Point = Vector2 Numeral
+
+alias Radius = Numeral
+
+fill (Circle (Vec2 x y) r) = circle "fill" x y r
+fill (Rectangle (Vec2 x y) (Vec2 w h)) = rectangle "fill" x y w h
+
+primitives : Array Primitive
+primitives = [
+    Rectangle (Vec2 150 100) (Vec2 100 400),
+    Rectangle (Vec2 350 100) (Vec2 100 400),
+    Rectangle (Vec2 250 250) (Vec2 100 100),
+    Rectangle (Vec2 550 300) (Vec2 100 200),
+    Circle (Vec2 550 200) 100]
+
+draw _ = let { _ = setColor 70 40 250 } in map fill primitives

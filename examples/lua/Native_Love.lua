@@ -41,4 +41,16 @@ Native_Love.circle = function(f)
     end
 end
 
+Native_Love.rectangle = function(f)
+    return function(x)
+        return function(y)
+            return function(w)
+                return function(h)
+                    love.graphics.rectangle(f, x, y, w, h)
+                end
+            end
+        end
+    end
+end
+
 return Native_Love

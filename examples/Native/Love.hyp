@@ -17,3 +17,5 @@ polygon : Array Numeral -> Void
 setColor : Numeral -> Numeral -> Numeral -> Void
 
 circle : Text -> Numeral -> Numeral -> Numeral -> Void
+
+rectangle : Text -> Numeral -> Numeral -> Numeral -> Numeral -> Void

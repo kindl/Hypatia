@@ -1,31 +1,32 @@
 module Viewer.Main
 
-import Native((/), write, uncurry5)
+import Native((/), (*), (+), uncurry2, uncurry5)
 import Native.Love(polygon)
-import Common.Base(Tuple, Unit, getn,
-    Numeral, Array, insert, compose, write)
+import Common.Base((>>), Tuple, Numeral, Array, getn)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
 import Viewer.Obj as Obj
-import Common.Geometry(Vec4, translateMatrix, scaleMatrix, simpleProjectionMatrix,
+import Common.Geometry(Vec4, Matrix,
+    translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, rotationX,
     normalize, to2d, multiply, transform)
-import Common.Array(map, foldMap, inspect)
+import Common.Array(map, foldMap)
 import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef)
 
-# TODO that's not a nice way to have State
-# Better: have a datatype for the game state
-# Better: do not use global unsafe references
 
-# Primitives
-gameState : Ref (Array (Array Numeral))
-gameState = unsafeMakeRef []
+alias Points = Array (Array Numeral)
+alias Rotation = Matrix Numeral
+alias Scale = Numeral
+
+type GameState = MkGameState Points Rotation Scale 
+
+gameState = unsafeMakeRef (MkGameState [] (scaleMatrix 1) (screenHeight / 2))
 
 constant a _ = a
 
-setState x = modifyState (constant x)
-
 modifyState f = unsafeRun (modifyRef gameState f)
+
+onState f = modifyState (fun st -> constant st (f st))
 
 pi = 3.141592653589793
 
@@ -35,10 +36,8 @@ model = Obj.load "cube.obj"
 screenWidth = 800
 screenHeight = 600
 t = translateMatrix (screenWidth / 2) (screenHeight / 2) 0
-s = scaleMatrix (screenHeight / 2)
 r = rotationZ pi
 
-modelview = multiply t (multiply r s)
 projection = simpleProjectionMatrix 5000
  
 lightDirection = normalize (Vec4 0 0 1 0)
@@ -52,7 +51,7 @@ getPoint (VNI v _) = getn v vertices
 getPoint (VTI v _) = getn v vertices
 getPoint (VI v) = getn v vertices
 
-transformPoint rotation vector =
+transformPoint modelview rotation vector =
     let
         rotated = transform rotation vector
         transformed = transform modelview rotated
@@ -62,16 +61,28 @@ transformPoint rotation vector =
 
 mousemoved = uncurry5 mousemovedC
 
-mousemovedC x y dx dy isTouch =
+mousemovedC x y dx dy isTouch = modifyState (fun (MkGameState _ _ scale) ->
     let
-        rotY = rotationY (x / screenWidth)
-        rotX = rotationX (y / screenHeight)
+        rotY = rotationY (x / screenWidth * 5)
+        rotX = rotationX (y / screenHeight * 5)
         rotation = multiply rotY rotX
-    in setState (map (compose tuplesToArray (transformFace rotation)) faces)
+        points = map (tuplesToArray >> transformFace rotation scale) faces
+    in MkGameState points rotation scale)
 
-transformFace rotation face = map (compose (transformPoint rotation) getPoint) face
+wheelmoved = uncurry2 wheelmovedC
 
-draw _ = modifyState (fun x -> constant x (map polygon x))
+# y is either -1 or 1 depending on scroll direction
+wheelmovedC _ y = modifyState (fun (MkGameState _ rotation oldScale) ->
+    let
+        scale = oldScale + y * 5
+        points = map (tuplesToArray >> transformFace rotation scale) faces
+    in MkGameState points rotation scale)
 
-tuplesToArray = foldMap tupleToArray
-tupleToArray (Tuple a b) = [a, b]
+transformFace rotation scale face =
+    let
+        modelview = multiply t (multiply r (scaleMatrix scale))
+    in map (transformPoint modelview rotation >> getPoint) face
+
+draw _ = onState (fun (MkGameState ps _ _) -> map polygon ps)
+
+tuplesToArray = foldMap (fun (Tuple a b) -> [a, b])

@@ -77,17 +77,22 @@ type Tuple a b = Tuple a b
 # Functions
 fix f x = f (fix f) x
 
-
-infixr 0 <| reverseApply
-
-reverseApply f a = f a
-
-
-infixl 0 |> apply
-
-apply a f = f a
-
+flip f x y = f y x
 
 identity x = x
 
+infixr 0 <| apply
+
+apply f x = f x
+
+infixl 0 |> reverseApply
+
+reverseApply x f = f x
+
+infixr 9 >> compose
+
 compose f g x = f (g x)
+
+infixr 9 << reverseCompose
+
+reverseCompose = flip compose

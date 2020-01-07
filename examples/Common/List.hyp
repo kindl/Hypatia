@@ -1,6 +1,6 @@
 module Common.List
 
-import Common.Base((&), (-), (+), Tuple, Unit, getn, size, empty, compose)
+import Common.Base((&), (-), (+), Tuple, Unit, getn, size, empty)
 import Common.Array(insert)
 
 

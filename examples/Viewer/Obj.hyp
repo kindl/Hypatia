@@ -5,7 +5,7 @@ module Viewer.Obj
 import Native(toNumber, (&), Array, split)
 import Native.Love(file)
 import Common.Base(notEq, getn, error,
-    Numeral, Text, compose, arrayFoldMap, arrayMap)
+    Numeral, Text, arrayFoldMap, arrayMap)
 import Common.Geometry(Vector, Vec4)
 import Common.Array(filter, inspect, map, foldMap, lines, words)
 

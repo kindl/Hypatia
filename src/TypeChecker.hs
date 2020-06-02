@@ -75,9 +75,9 @@ typecheck (LambdaExpression [p] e) ty =
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
-    let types = foldMap (gatherTypeSig fromId) decls
-    binds <- inferDecls fromId return types decls
-    with binds (typecheck e ty)
+    let signatures = foldMap (gatherTypeSig fromId) decls
+    binds <- inferDecls fromId return signatures decls
+    with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty =
   do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))

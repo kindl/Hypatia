@@ -49,6 +49,8 @@ sanitySkolemCheck = traverseWithKey_ (\k v ->
     in unless (null s)
         (fail (pretty k ++ " leaked skolems " ++ pretty s)))
 
+traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
+
 -- Typecheck Expressions
 typecheck :: Expression -> Type -> Typechecker ()
 typecheck (LiteralExpression lit) ty =
@@ -67,6 +69,8 @@ typecheck (CaseExpression expr alts) ty =
     matchTy <- newTyVar
     traverse_ (typecheckAlt matchTy ty) alts
     typecheck expr matchTy
+typecheck (LambdaExpression [p] e) (TypeArrow alpha beta) =
+    typecheckAlt alpha beta (p, e)
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
@@ -145,9 +149,17 @@ inferDecls qual gen signatures =
 -- A version of onException that works with ReaderT
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
+-- If a signature is given, check against it
+-- if not, create a new type variable and infer a type
+findTypePattern qual signatures (VariablePattern v) =
+  case mfind (qual v) signatures of
+    Just ty -> return ty
+    Nothing -> newTyVar
+findTypePattern _ _ _ = newTyVar
+
 inferDecl qual gen signatures (ExpressionDeclaration p e) next = 
   do
-    ty <- newTyVar
+    ty <- findTypePattern qual signatures p
     binds <- typecheckPattern qual p ty
 
     -- Here we have to use mappend because the signatures
@@ -157,23 +169,11 @@ inferDecl qual gen signatures (ExpressionDeclaration p e) next =
             ++ " at " ++ locationInfo p))
 
     generalized <- traverse gen binds
-    checkAgainst generalized signatures
     let newTys = difference generalized signatures
 
     nextTys <- with newTys next
     return (mappend newTys nextTys)
 inferDecl _ _ _ _ ff = ff
-
--- Check the type signatures against the inferred types
--- for example
--- identityNum : Native.Numeral -> Native.Numeral
--- identityNum x = x
--- the generalized inferred type will be forall t. t -> t
--- the type is narrowed down to be only applicable to Numerals
-checkAgainst ts = traverseWithKey_ (\k s ->
-    traverse_ (flip subsume s) (lookup k ts))
-
-traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
 -- Typecheck Patterns
 typecheckPattern qual (VariablePattern x) ty =

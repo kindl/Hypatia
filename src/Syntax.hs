@@ -157,8 +157,8 @@ instance Pretty Type where
     pPrint (SkolemConstant s) = text "skolem." <> pPrint s
     pPrint (TypeApplication a b) = parens (pPrint a <+> pPrint b)
     pPrint (ParenthesizedType t) = parens (pPrint t)
-    pPrint (ForAll qual t) =
-        text "forall" <+> mintercalate (text " ") (fmap prettyId qual)
+    pPrint (ForAll ts t) =
+        text "forall" <+> mintercalate (text " ") (fmap prettyId ts)
             <> text "." <+> pPrint t
 
 instance Pretty Literal where

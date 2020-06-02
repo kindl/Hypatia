@@ -142,12 +142,7 @@ Native.write = print
 Native.toString = tostring
 
 Native.toNumber = function(s)
-    r = tonumber(s)
-    if r == nil then
-        error("\"" .. s .. "\" is not a number")
-    else
-        return r
-    end
+    return tonumber(s) or error("\"" .. s .. "\" is not a number")
 end
 
 Native.error = error

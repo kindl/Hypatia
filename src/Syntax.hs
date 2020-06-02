@@ -243,6 +243,8 @@ isUnqualified _ = False
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
+-- TODO these can be made into one function
+-- by moving the show of makeVar outside
 makeId s = Id s builtinLocation
 
 makeVar x = makeId (pack ("_v" ++ show x))
@@ -273,6 +275,11 @@ includingKeys xs = filterWithKey (const . flip elem xs)
 
 getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (TypeDeclaration _ _ cs) = fmap fst cs
+-- Remove signatures to have functions like
+-- ping : Unit -> IO b
+-- ping a = write "ping" *> pong a
+-- pong a = write "pong" *> ping a
+getDefsD (TypeSignature id _) = [id]
 getDefsD _ = []
 
 getDefsP p =

@@ -9,6 +9,7 @@ import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
 import Control.Monad(when, unless, zipWithM)
+import Control.Arrow(first)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_)
@@ -35,11 +36,11 @@ inferModule (ModuleDeclaration modName decls) =
     info ("Typechecking Module " ++ renderName modName)
     
     -- Qualify means rename Ty to AnyModuleName.Ty
-    let q = qualifyId modName
-    let constructors = foldMap (gatherConstructor q) decls
-    let signatures = foldMap (gatherTypeSig q) decls
+    let qual = qualifyId modName
+    let constructors = foldMap (gatherConstructor qual) decls
+    let signatures = fromList' qual (foldMap gatherTypeSig decls)
     
-    binds <- with constructors (inferDecls q generalize signatures decls)
+    binds <- with constructors (inferDecls qual generalize signatures decls)
     sanitySkolemCheck binds
     return (mappend constructors (mappend signatures binds))
 
@@ -79,7 +80,7 @@ typecheck (LambdaExpression [p] e) ty =
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
-    let signatures = foldMap (gatherTypeSig fromId) decls
+    let signatures = fromList' fromId (foldMap gatherTypeSig decls)
     binds <- inferDecls fromId return signatures decls
     with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty =
@@ -102,8 +103,8 @@ typecheckVar x ty =
 
 typecheckAlt pty ety (pat, expr)  =
   do
-    binds <- typecheckPattern fromId pat pty
-    with binds (typecheck expr ety)
+    binds <- typecheckPattern pat pty
+    with (fromList' fromId binds) (typecheck expr ety)
 
 -- Typecheck Constructors
 
@@ -118,11 +119,11 @@ Vec3 : forall a. a -> a -> a -> Vector a
 
 Vec2 is a constructor and Vector a type constructor
 -}
-gatherConstructor qual (TypeDeclaration tyIdent vars cs) =
+gatherConstructor qual (TypeDeclaration tyIdent vars constructors) =
     let
         qualTy = TypeConstructor (qual tyIdent)
         tyCon = foldl' TypeApplication qualTy (fmap TypeVariable vars)
-    in fromList (fmap (\(i, tys) -> (qual i, constructorToType tyCon vars tys)) cs)
+    in fromList' qual (fmap (fmap (constructorToType tyCon vars)) constructors)
 gatherConstructor _ _ = mempty
 
 -- convert a constructor declaration to a type
@@ -140,9 +141,9 @@ arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]
 
 -- Typecheck Bindings
-gatherTypeSig qual (TypeSignature name ty) =
-    singleton (qual name) (makeForAll (freeVars ty) ty)
-gatherTypeSig _ _ = mempty
+gatherTypeSig (TypeSignature name ty) =
+    [(name, makeForAll (freeVars ty) ty)]
+gatherTypeSig _ = mempty
 
 -- Assumes that the let bindings are already sorted
 -- Let bindings have to be sorted for the translation anyway
@@ -155,43 +156,43 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 -- If a signature is given, check against it
 -- if not, create a new type variable and infer a type
 findTypePattern qual signatures (VariablePattern v) =
-  case mfind (qual v) signatures of
-    Just ty -> return ty
-    Nothing -> newTyVar
+    case mfind (qual v) signatures of
+        Just ty -> return ty
+        Nothing -> newTyVar
 findTypePattern _ _ _ = newTyVar
 
 inferDecl qual gen signatures (ExpressionDeclaration p e) next = 
   do
     ty <- findTypePattern qual signatures p
-    binds <- typecheckPattern qual p ty
+    binds <- fmap (fromList' qual) (typecheckPattern p ty)
 
-    -- Here we have to use mappend because the signatures
-    -- should overwrite the binds
+    -- Overwrite the binds with the more precise signatures
     onException' (with (mappend signatures binds) (typecheck e ty))
         (putStrLn ("When typechecking declaration " ++ pretty p
             ++ " at " ++ locationInfo p))
 
-    generalized <- traverse gen binds
-    let newTys = difference generalized signatures
+    -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
+    -- Don't generalize signatures
+    generalized <- traverse gen (difference binds signatures)
 
-    nextTys <- with newTys next
-    return (mappend newTys nextTys)
-inferDecl _ _ _ _ ff = ff
+    nextTys <- with generalized next
+    return (mappend generalized nextTys)
+inferDecl _ _ _ _ next = next
 
 -- Typecheck Patterns
-typecheckPattern qual (VariablePattern x) ty =
-    return (singleton (qual x) ty)
-typecheckPattern qual (AliasPattern x p) ty =
+typecheckPattern (VariablePattern x) ty =
+    return [(x, ty)]
+typecheckPattern (AliasPattern x p) ty =
   do
-    binds <- typecheckPattern qual p ty
-    return (insert (qual x) ty binds)
-typecheckPattern _ Wildcard _ =
+    binds <- typecheckPattern p ty
+    return ((x, ty):binds)
+typecheckPattern Wildcard _ =
     return mempty
-typecheckPattern _ (LiteralPattern l) ty =
+typecheckPattern (LiteralPattern l) ty =
   do
     typecheckLiteral l ty
     return mempty
-typecheckPattern qual (ConstructorPattern c ps) ty =
+typecheckPattern (ConstructorPattern c ps) ty =
   do
     env <- getEnv
     scheme <- mfind c env
@@ -204,16 +205,16 @@ typecheckPattern qual (ConstructorPattern c ps) ty =
     when (length ps /= length consTys)
         (fail ("Constructor " ++ pretty c
             ++ " was given wrong number of arguments"))
-    binds <- zipWithM (typecheckPattern qual) ps consTys
+    binds <- zipWithM typecheckPattern ps consTys
     unify resultTy ty
     return (mconcat binds)
-typecheckPattern qual (ArrayPattern ps) ty =
+typecheckPattern (ArrayPattern ps) ty =
   do
     alpha <- newTyVar
-    binds <- traverse (\p -> typecheckPattern qual p alpha) ps
+    binds <- traverse (\p -> typecheckPattern p alpha) ps
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
     return (mconcat binds)
-typecheckPattern _ other _ =
+typecheckPattern other _ =
     fail ("Cannot typecheck pattern " ++ pretty other)
 
 -- Typecheck Literals
@@ -357,3 +358,5 @@ info s = lift (putStrLn s)
 readRef s = lift (readIORef s)
 
 modifyRef s f = lift (modifyIORef' s f)
+
+fromList' qual l = fromList (fmap (first qual) l)

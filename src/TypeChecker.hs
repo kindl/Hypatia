@@ -156,9 +156,7 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 -- If a signature is given, check against it
 -- if not, create a new type variable and infer a type
 findTypePattern qual signatures (VariablePattern v) =
-    case mfind (qual v) signatures of
-        Just ty -> return ty
-        Nothing -> newTyVar
+    maybe newTyVar return (mfind (qual v) signatures)
 findTypePattern _ _ _ = newTyVar
 
 inferDecl qual gen signatures (ExpressionDeclaration p e) next = 

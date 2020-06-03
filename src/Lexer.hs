@@ -20,7 +20,7 @@ This module converts text to a list of lexemes
 Inspired by the Haskell2010 report
 -}
 lexlex path s =
-    fmap pipeline (parseOnly (program path) s)
+    fmap withIndentTokens (parseOnly (program path) s)
 {-# INLINE lexlex #-}
 
 lexFileDebug path =
@@ -104,9 +104,9 @@ insertIndentTokens [] = []
 -- Cut the open and close braces
 cut xs = init (tail xs)
 
-pipeline ls = cut (layout (
+withIndentTokens ls = cut (layout (
     LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
-{-# INLINE pipeline #-}
+{-# INLINE withIndentTokens #-}
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True
@@ -164,7 +164,7 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
 {-# INLINE located #-}
 
 program path = fmap (located path)
-    (many' (match (lexeme <|> whitespace)) <* endOfInput)
+    (many' (match (whitespace <|> lexeme)) <* endOfInput)
 
 lexeme = literal <|> special <|> qident
 {-# INLINE lexeme #-}
@@ -175,15 +175,18 @@ special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
 
 -- TODO multi-line comments
-whitespace = whitechars <|> comment
+whitespace = whitechars <|> hashcomment <|> slashcomment
 {-# INLINE whitespace #-}
 
 whitechars = fmap Whitespace (takeWhile1 isSpace)
 {-# INLINE whitechars #-}
 
 -- NOTE in contrast to the report this does not consume a newline
-comment = fmap Comment (char '#' *> takeWhile (/='\n'))
-{-# INLINE comment #-}
+hashcomment = fmap Comment (char '#' *> takeWhile (/='\n'))
+{-# INLINE hashcomment #-}
+
+slashcomment = fmap Comment (char '/' *> char '/' *> takeWhile (/='\n'))
+{-# INLINE slashcomment #-}
 
 qident = fmap (\ms -> makeIdent (init ms) (last ms))
     (sepBy1' (ident <|> varsym) (char '.'))

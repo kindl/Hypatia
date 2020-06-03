@@ -138,7 +138,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     let
-        v = makeId "_vl"
+        v = makeVar "l"
         err = Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))
     in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
@@ -161,7 +161,7 @@ however nested case expressions lead to problems e.g. multiple defined local _v
 -}
 compileEtoS (CaseExpression e alts) =
     let
-        v = makeId "_vc"
+        v = makeVar "c"
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
     in Assign v (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
@@ -191,7 +191,7 @@ compileImports decls = fmap Imp (nub [modName |
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
-    [Assign (makeId "_vw") (compileE e)]
+    [Assign (makeVar "w") (compileE e)]
 {-
 Compile pattern matches in let expressions like
 let
@@ -202,7 +202,7 @@ To work on the top level, v would need to have the module name included
 -}
 compileD (ExpressionDeclaration p pe) =
     let
-        v = makeId "_vd"
+        v = makeVar "d"
         err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
         s = getAssignments v [] p
         cs = getConditions v [] p

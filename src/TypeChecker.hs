@@ -118,20 +118,23 @@ Vec3 : forall a. a -> a -> a -> Vector a
 
 Vec2 is a constructor and Vector a type constructor
 -}
-gatherConstructor qual (TypeDeclaration ident vars constructors) =
-    let ty = TypeConstructor (qual ident)
-    in foldMap (constructorToType qual ty vars) constructors
+gatherConstructor qual (TypeDeclaration tyIdent vars cs) =
+    let
+        qualTy = TypeConstructor (qual tyIdent)
+        tyCon = foldl' TypeApplication qualTy (fmap TypeVariable vars)
+    in fromList (fmap (\(i, tys) -> (qual i, constructorToType tyCon vars tys)) cs)
 gatherConstructor _ _ = mempty
 
 -- convert a constructor declaration to a type
-constructorToType qual ty vars (name, tys) =
-    let
-        res = foldl' TypeApplication ty (fmap TypeVariable vars)
-        resTy = foldr TypeArrow res tys
-    in case excluding vars (freeVars resTy) of
-        [] -> singleton (qual name) (makeForAll vars resTy)
-        frees -> error ("Type variables " ++ pretty frees
-               ++ " appear free in " ++ pretty name )
+constructorToType tyCon vars tys =
+    scopeCheck (makeForAll vars (foldr TypeArrow tyCon tys))
+
+-- fails type W = Wrapped (a -> a)
+-- works type W a = Wrapped (a -> a)
+-- works type W = Wrapped (forall a. a -> a)
+scopeCheck ty = case freeVars ty of
+    [] -> ty
+    frees -> error ("Type variables " ++ pretty frees ++ " have no definition")
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]

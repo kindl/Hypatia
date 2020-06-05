@@ -4,7 +4,7 @@ module TypeChecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
-    lookup, singleton, difference)
+    lookup, difference)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
@@ -288,7 +288,7 @@ newUnique =
 
 newTyVar = fmap TypeVariable newUniqueName
 
-newUniqueName = fmap (makeVar . show) newUnique
+newUniqueName = fmap (prefixedId . show) newUnique
 
 -- extract skolem constants
 skolems ty = [c | SkolemConstant c <- universe ty]

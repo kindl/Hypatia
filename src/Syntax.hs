@@ -243,8 +243,8 @@ isUnqualified _ = False
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
-makeVar x = Id (pack ("_v" ++ x)) builtinLocation
-{-# INLINE makeVar #-}
+prefixedId x = Id (pack ("_v" ++ x)) builtinLocation
+{-# INLINE prefixedId #-}
 
 getQualifiers (Name q _) = q
 
@@ -281,7 +281,7 @@ getDefsP p =
         f _ = []
     in concatMap f (universe p)
 
-nNewVars n = fmap (makeVar . show) [1..n]
+nNewVars n = fmap (prefixedId . show) [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication

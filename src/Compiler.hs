@@ -138,7 +138,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
     Func [v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     let
-        v = makeVar "l"
+        v = prefixedId "l"
         err = Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))
     in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
@@ -161,7 +161,7 @@ however nested case expressions lead to problems e.g. multiple defined local _v
 -}
 compileEtoS (CaseExpression e alts) =
     let
-        v = makeVar "c"
+        v = prefixedId "c"
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
     in Assign v (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
@@ -191,7 +191,7 @@ compileImports decls = fmap Imp (nub [modName |
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration Wildcard e) =
-    [Assign (makeVar "w") (compileE e)]
+    [Assign (prefixedId "w") (compileE e)]
 {-
 Compile pattern matches in let expressions like
 let
@@ -202,7 +202,7 @@ To work on the top level, v would need to have the module name included
 -}
 compileD (ExpressionDeclaration p pe) =
     let
-        v = makeVar "d"
+        v = prefixedId "d"
         err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
         s = getAssignments v [] p
         cs = getConditions v [] p
@@ -301,12 +301,11 @@ descendAccess f i j (p:ps) =
 
 immediate sts = Call (Func [] sts) []
 
-mkVar = Var . fromText
 
-mkError s = Call (mkVar "Native.error") [LitT (pack s)]
-mkIsArray a = Call (mkVar "Native.isArray") [a]
-mkEq a b = Call (Call (mkVar "Native.eq") [a]) [b]
-mkSize a = Call (mkVar "Native.size") [a]
+mkError s = Call (Var (fromText "Native.error")) [LitT (pack s)]
+mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
+mkEq a b = Call (Call (Var (fromText "Native.eq")) [a]) [b]
+mkSize a = Call (Var (fromText "Native.size")) [a]
 
 -- e.g. A module A.B is saved in the file A_B.lua
 -- local A_B = require("A_B")

@@ -4,7 +4,7 @@ import Syntax
 import Aliases
 import Simplifier
 import Sorting
-import Parser hiding (spec, modDecl)
+import Parser
 import TypeChecker
 import Operators
 import Qualification
@@ -13,8 +13,8 @@ import Data.HashMap.Strict(insert)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
 loadProgram path = do
-    modDecl <- loadPath path
-    mods <- growModuleEnv [modDecl]
+    loadedModule <- loadPath path
+    mods <- growModuleEnv [loadedModule]
     let simplified = pipeline mods
     _ <- typecheckProgram simplified
     return simplified
@@ -51,17 +51,17 @@ growModuleEnv env =
     imports = foldMap gatherImports env
   in case excluding imported imports of
         [] -> return env
-        needed:_ -> do
-            modDecl <- loadModule needed
-            growModuleEnv (modDecl:env)
+        needed -> do
+            mods <- traverse loadModule needed
+            growModuleEnv (mods ++ env)
 
 {- Typechecking -}
-typecheckProgram = feedbackM logEnv (\envs modDecl ->
-    typecheckModule (filterNames (gatherSpecs modDecl) envs) modDecl)
+typecheckProgram = feedbackM logEnv (\envs m ->
+    typecheckModule (filterNames (gatherSpecs m) envs) m)
 
-logEnv env modDecl =
+logEnv env m =
     let
-        modName = getName modDecl
+        modName = getName m
         path = "logs/" ++ renderName modName ++ ".log"
     in writeFile path (renderEnv env)
 
@@ -82,8 +82,8 @@ aliasProgram = feedbackSimple aliasTypes captureAliases
 feedbackSimple action capture =
     feedback action (captureSimple filterNames capture)
 
-captureSimple filterEnvs capture envs modDecl =
-    capture modDecl `mappend` filterEnvs (gatherSpecs modDecl) envs
+captureSimple filterEnvs capture envs m =
+    capture m `mappend` filterEnvs (gatherSpecs m) envs
 
 {-
 Incrementally grow an environment
@@ -95,11 +95,11 @@ envs: a map of the module name and its captured environment
 feedbackM action capture mods =
     fmap fst (mapAccumM (step action capture) mempty mods)
 
-step action capture envs modDecl =
+step action capture envs m =
     do
-        captured <- capture envs modDecl
-        result <- action captured modDecl
-        return (result, insert (getName modDecl) captured envs)
+        captured <- capture envs m
+        result <- action captured m
+        return (result, insert (getName m) captured envs)
 
 feedback action capture mods =
     runIdentity (feedbackM (ret action) (ret capture) mods)
@@ -110,8 +110,8 @@ ret f a b = return (f a b)
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =
-    foldMap (\(modName, spec) ->
-        case spec of
+    foldMap (\(modName, importedIds) ->
+        case importedIds of
             Just ids -> includingKeys ids (find modName envs)
             Nothing -> mempty) imports
 

@@ -194,6 +194,10 @@ instance Pretty Id where
 flatVar = flatName (text "_") (text ".")
 {-# INLINE flatVar #-}
 
+-- TODO what would be a good character for file names?
+-- In Lua dots have a special meaning, so we use underscore instead
+--local module = require "folder.file"
+-- However, we would need to disallow module names with underscore in it
 flatModName = flatName (text "_") (text "_")
 
 prettyName = flatName (text ".") (text ".")

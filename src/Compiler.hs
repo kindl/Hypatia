@@ -43,35 +43,42 @@ toLuaT modName (Assign x e) =
     flatVar (qualifyId modName x) <+> equals <+> toLuaE e
 toLuaT _ s = toLuaS s
 
-toLua sts = forwardLocals sts $$ vcatMap toLuaS sts
-
-forwardLocals sts =
-    vcat [text "local" <+> prettyId x | Assign x _ <- sts]
-
+-- for recursion local functions need to be declared beforehand
+--local fix = function(f) return f(fix(f)) end
+-- would result in an error not knowing "fix"
+-- so we declare "local fix" beforehand
+toLuaS (Assign x e@(Func _ _)) =
+    text "local" <+> prettyId x $$
+        prettyId x <+> equals <+> toLuaE e
 toLuaS (Assign x e) =
-    prettyId x <+> equals <+> toLuaE e
+    text "local" <+> prettyId x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) =
-    text "if" <+> toLuaE e <+> text "then" $$ toLua th $$ text "end"
+    text "if" <+> toLuaE e <+> text "then" $$ vcatMap toLuaS th $$ text "end"
 toLuaS (If e [] th) =
-    text "if not" <+> parens (toLuaE e) <+> text "then" $$ toLua th $$ text "end"
+    text "if not" <+> parens (toLuaE e) <+> text "then" $$ vcatMap toLuaS th $$ text "end"
 toLuaS (If e th el) =
     text "if" <+> toLuaE e <+> text "then"
-        $$ toLua th $$ text "else"
-        $$ toLua el $$ text "end"
+        $$ vcatMap toLuaS th $$ text "else"
+        $$ vcatMap toLuaS el $$ text "end"
 
 toLuaE (Var x) = flatVar x
 toLuaE (LitD d) = double d
 toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
-    parens (text "function" <> parens (commas (fmap prettyId vs))
-        $$ toLua sts $$ text "end")
+    text "function" <> parens (commas (fmap prettyId vs))
+        $$ vcatMap toLuaS sts $$ text "end"
 toLuaE (Access v indices) =
     prettyId v <> foldMap (brackets . int . (+ 1)) indices
+-- Special case for immediate functions
+-- (function () print "Hi" end)() would be a syntax error
+-- without parentheses 
+toLuaE (Call e@(Func _ _) es) =
+    parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
@@ -111,10 +118,13 @@ toJavaScriptE (Var x) = flatVar x
 toJavaScriptE (LitD d) = double d
 toJavaScriptE (LitT t) = text (show t)
 toJavaScriptE (Func vs sts) =
-    parens (text "function" <> parens (commas (fmap prettyId vs))
-        $$ block (vcatMap toJavaScriptS sts))
+    text "function" <> parens (commas (fmap prettyId vs))
+        $$ block (vcatMap toJavaScriptS sts)
 toJavaScriptE (Access v indices) =
     prettyId v <> foldMap (brackets . int) indices
+-- Special case for immediate functions
+toJavaScriptE (Call e@(Func _ _) es) =
+    parens (toJavaScriptE e) <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Call e es) =
     toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))

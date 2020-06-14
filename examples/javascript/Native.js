@@ -60,19 +60,6 @@ Native.geti = function (n) {
     };
 };
 
-Native.primIf = function (val) {
-    return function (x) {
-        return function (y) {
-            if (val) {
-                return x;
-            }
-            else {
-                return y;
-            }
-        };
-    };
-};
-
 Native.coerce = function (x) {
     return x;
 };

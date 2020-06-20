@@ -65,12 +65,13 @@ type Alias = Id
 data Declaration
     = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
     | TypeDeclaration Id [Id] [(Id, [Type])]
-    | ExpressionDeclaration Pattern Expression
     | AliasDeclaration Id Type
-    -- simplified to an expression declaration
-    | FunctionDeclaration Id [Pattern] Expression
     | FixityDeclaration Associativity Precedence Id Alias
     | TypeSignature Id Type
+    | ExpressionDeclaration Pattern Expression
+    -- simplified to an expression declaration
+    | FunctionDeclaration Id [Pattern] Expression
+    | AwaitDeclaration Pattern Expression
         deriving (Show, Data, Typeable)
 
 

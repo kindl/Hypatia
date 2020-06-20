@@ -203,7 +203,7 @@ makeIdent ms i = Varid ms i
 {-# INLINE makeIdent #-}
 
 {- Identifiers -}
-reserved = ["alias", "enum", "type", "forall",
+reserved = ["alias", "enum", "type", "forall", "await",
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as", "_",
         ":", "=", "->", "|"]

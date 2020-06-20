@@ -1,7 +1,7 @@
 module Common.Stateful
 
 import Native(coerce, modifyRef, Stateful)
-import Common.Base(Unit, compose)
+import Common.Base(Unit, compose, flip)
 
 # Similar to purescript-effect the computation is modeled
 # after a function of type Unit -> s
@@ -12,12 +12,14 @@ unsafeRun : Stateful s -> s
 unsafeRun f = coerce f Unit
 
 # Returns a function.
-# andThen f g = unsafeRun (f (unsafeRun g))
+# bind f g = unsafeRun (f (unsafeRun g))
 # Would run the computation directly
-andThen f g = unsafeStateful (fun _ ->
+bind f g = unsafeStateful (fun _ ->
     unsafeRun (f (unsafeRun g)))
 
-map f = andThen (compose point f)
+andThen = flip bind
+
+map f = bind (compose point f)
 
 # Usually called return, but renamed
 # because return is a reserved word in Lua

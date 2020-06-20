@@ -31,6 +31,7 @@ pipeline = sortDeclsMod
     . qualifyTypesProgram
     . fmap resolveQualifiedImports
     . splitLambdas
+    . removeAwaitDeclaration
     . removeFunctionDeclaration
     . fmap aliasDecls
     . sortModules

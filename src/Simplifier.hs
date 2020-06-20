@@ -28,17 +28,52 @@ removeParens m = (transformBi f . transformBi g . transformBi h) m
     h (ParenthesizedType t) = t
     h t = t
 
+{-
+f =
+    let
+        fileName = await readFile "Test.txt"
+        content = await readFile fileName
+    in printText content
+
+is translated to
+
+f = andThen (readFile "Test.txt") (fun fileName ->
+  andThen (readFile fileName) (fun content -> printText content))
+-}
+removeAwaitDeclaration m = transformBi f m
+  where
+    f (LetExpression decls e) =
+        translateAwait decls e
+    f e = e
+
+translateAwait decls e = case break isAwaitDecl decls of
+    -- If it is a let expression without await
+    (otherDecls, []) -> LetExpression otherDecls e
+    (otherDecls, AwaitDeclaration p a:rest)
+        -> maybeLetExpression otherDecls (makeOp (fromText "andThen") a
+            (LambdaExpression [p] (translateAwait rest e)))
+
+-- Don't create empty let expressions
+-- when first declaration is AwaitDeclaration
+maybeLetExpression [] e = e
+maybeLetExpression decls e = LetExpression decls e
+
+isAwaitDecl (AwaitDeclaration _ _) = True
+isAwaitDecl _ = False
 
 {-
 Transform a function declaration to expression declaration
+
 foo a b True = a
 foo c d False = d
-==>
+
+is translated to
+
 foo = (fun v1 v2 v3 -> case (v1, v2, v3) of
     (a, b, True) -> a
     (c, d, False) -> d)
 
--}    
+-}
 removeFunctionDeclaration m = (transformBi f . transformBi k) m
   where
     f (LetExpression decls e) =

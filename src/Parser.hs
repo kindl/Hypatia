@@ -142,13 +142,15 @@ operatorDeclaration = do
 
 expressionDeclaration = do
     p <- lpat
-    r <- rhs
-    return (ExpressionDeclaration p r)
+    token "="
+    aw <- optional (token "await")
+    e <- exprWithWhere
+    return (case aw of
+        Just _ -> AwaitDeclaration p e
+        Nothing -> ExpressionDeclaration p e)
 {-# INLINE expressionDeclaration #-}
 
-rhs = do
-    token "="
-    exprWithWhere
+rhs = token "=" *> exprWithWhere
 {-# INLINE rhs #-}
 
 exprWithWhere = do

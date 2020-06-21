@@ -145,9 +145,9 @@ expressionDeclaration = do
     token "="
     aw <- optional (token "await")
     e <- exprWithWhere
-    return (case aw of
-        Just _ -> AwaitDeclaration p e
-        Nothing -> ExpressionDeclaration p e)
+    return (ExpressionDeclaration p (case aw of
+        Just _ -> AwaitExpression e
+        Nothing -> e))
 {-# INLINE expressionDeclaration #-}
 
 rhs = token "=" *> exprWithWhere

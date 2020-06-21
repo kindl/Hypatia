@@ -49,7 +49,7 @@ removeAwaitDeclaration m = transformBi f m
 translateAwait decls e = case break isAwaitDecl decls of
     -- If it is a let expression without await
     (otherDecls, []) -> LetExpression otherDecls e
-    (otherDecls, AwaitDeclaration p a:rest)
+    (otherDecls, ExpressionDeclaration p (AwaitExpression a):rest)
         -> maybeLetExpression otherDecls (makeOp (fromText "andThen") a
             (LambdaExpression [p] (translateAwait rest e)))
 
@@ -58,7 +58,7 @@ translateAwait decls e = case break isAwaitDecl decls of
 maybeLetExpression [] e = e
 maybeLetExpression decls e = LetExpression decls e
 
-isAwaitDecl (AwaitDeclaration _ _) = True
+isAwaitDecl (ExpressionDeclaration _ (AwaitExpression _)) = True
 isAwaitDecl _ = False
 
 {-

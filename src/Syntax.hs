@@ -71,7 +71,6 @@ data Declaration
     | ExpressionDeclaration Pattern Expression
     -- simplified to an expression declaration
     | FunctionDeclaration Id [Pattern] Expression
-    | AwaitDeclaration Pattern Expression
         deriving (Show, Data, Typeable)
 
 
@@ -107,13 +106,15 @@ data Expression
     | LetExpression [Declaration] Expression
 -- TODO think about a nicer way to add case lambdas
 -- It should have a way to match on more than just a single value
--- The functions could be easily turned into case lambdas as well
--- Without the use of tuples
---    | CaseLambdaExpression [(Pattern, Expression)]
+-- Then function declarations could be easily turned into case lambdas as well
+--  | CaseLambdaExpression [(Pattern, Expression)]
     | ParenthesizedExpression Expression
     | ArrayExpression [Expression]
     | InfixOperator Expression Name Expression
     | PrefixNegation Expression
+-- Await expressions are only allowed in the form
+-- pat = await expr
+    | AwaitExpression Expression
     | IfExpression Expression Expression Expression
     | CaseExpression Expression [(Pattern, Expression)]
     | LambdaExpression [Pattern] Expression

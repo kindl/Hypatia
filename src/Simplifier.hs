@@ -2,7 +2,7 @@
 module Simplifier where
 
 import Syntax
-import Data.Either(partitionEithers)
+import Data.Either(either)
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
 
@@ -28,38 +28,45 @@ removeParens m = (transformBi f . transformBi g . transformBi h) m
     h (ParenthesizedType t) = t
     h t = t
 
+
 {-
-f =
-    let
-        fileName = await readFile "Test.txt"
+Transform declarations with await into bind expressions
+
+f = let
+        filePath = "Test"
+        fileEnding ".txt"
+        fileName = await readFile (filePath & fileEnding)
         content = await readFile fileName
     in printText content
 
 is translated to
 
-f = andThen (readFile "Test.txt") (fun fileName ->
-  andThen (readFile fileName) (fun content -> printText content))
+f = let
+        filePath = "Test"
+        fileEnding ".txt"
+    in bind (readFile (filePath & fileEnding)) (fun fileName ->
+        bind (readFile fileName) (fun content -> printText content))
 -}
 removeAwaitDeclaration m = transformBi f m
   where
     f (LetExpression decls e) =
-        translateAwait decls e
+        translateAwait (splitAwaitDecls decls) e
     f e = e
 
-translateAwait decls e = case break isAwaitDecl decls of
-    -- If it is a let expression without await
-    (otherDecls, []) -> LetExpression otherDecls e
-    (otherDecls, ExpressionDeclaration p (AwaitExpression a):rest)
-        -> maybeLetExpression otherDecls (makeOp (fromText "andThen") a
-            (LambdaExpression [p] (translateAwait rest e)))
+translateAwait [] e = e
+translateAwait (Right ds:rest) e = LetExpression ds (translateAwait rest e)
+translateAwait (Left (p, a):rest) e = makeOp (fromText "bind") a
+    (LambdaExpression [p] (translateAwait rest e))
 
--- Don't create empty let expressions
--- when first declaration is AwaitDeclaration
-maybeLetExpression [] e = e
-maybeLetExpression decls e = LetExpression decls e
+-- Put normal declarations into groups and break on declarations with await
+splitAwaitDecls :: [Declaration] -> [Either (Pattern, Expression) [Declaration]]
+splitAwaitDecls = foldr splitAwaitDeclsStep []
 
-isAwaitDecl (ExpressionDeclaration _ (AwaitExpression _)) = True
-isAwaitDecl _ = False
+splitAwaitDeclsStep (ExpressionDeclaration p (AwaitExpression a)) acc =
+    Left (p, a):acc
+splitAwaitDeclsStep d (Right ds:rest) = Right (d:ds):rest
+splitAwaitDeclsStep d acc = Right [d]:acc
+
 
 {-
 Transform a function declaration to expression declaration
@@ -84,22 +91,20 @@ removeFunctionDeclaration m = (transformBi f . transformBi k) m
         ModuleDeclaration name (transBinds decls)
 
 transBinds decls =
-  let
-    splitted = fmap fromFunctionDeclaration decls
-    (funDecls, rest) = partitionEithers splitted
-    merged = mergeBinds funDecls
-    transformed = fmap transAlt merged
-  in rest ++ transformed
+    let
+        merged = groupBinds decls
+        transformed = fmap (fmap transAlt) merged
+    in fmap (either id id) transformed
 
-fromFunctionDeclaration (FunctionDeclaration n ps e) = Left (n, ps, e)
-fromFunctionDeclaration e = Right e
 
--- Merges function declarations with the same name
-mergeBinds = foldr mergeBindsStep []
+-- Groups function declarations with the same name
+groupBinds :: [Declaration] -> [Either Declaration (Id, [([Pattern], Expression)])]
+groupBinds = foldr groupBindsStep []
 
-mergeBindsStep (id1, ps, e) ((id2, xs):rest) | id1 == id2 =
-    (id1, (ps, e):xs):rest
-mergeBindsStep (id1, ps, e) acc = (id1, [(ps, e)]):acc
+groupBindsStep (FunctionDeclaration id1 ps e) (Right (id2, xs):rest) | id1 == id2 =
+    Right (id1, (ps, e):xs):rest
+groupBindsStep (FunctionDeclaration id1 ps e) acc = Right (id1, [(ps, e)]):acc
+groupBindsStep other acc = Left other:acc
 
 transAlt (name, [(ps, e)]) =
     ExpressionDeclaration (VariablePattern name) (LambdaExpression ps e)
@@ -115,4 +120,5 @@ transAlt (name, alts) =
             (CaseExpression e nalts))
 
 toTuplesP1 = foldr1 (makeOpPat (fromText "Tuple"))
+
 toTuplesE1 = foldr1 (makeOp (fromText "Tuple"))

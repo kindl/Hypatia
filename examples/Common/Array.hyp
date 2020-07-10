@@ -1,8 +1,8 @@
 module Common.Array
 
 import Native((&), (+),
-    Text, isArray, coerce, toString,
-    split, insert, size, geti)
+    Text, isArray, unsafeCoerce, toString,
+    split, unsafeInsert, size, geti)
 import Common.Base(identity, Unit, (==))
 
 
@@ -15,12 +15,12 @@ newline = "
 
 filter p a = foldMap (fun e -> if p e then [e] else []) a
 
-copy a = foldl insert [] a
+copy a = foldl unsafeInsert [] a
 
 # The first array is copied to avoid inserting the elements into a
-append a b = foldl insert (copy a) b
+append a b = foldl unsafeInsert (copy a) b
 
-map f a = foldl (fun z e -> insert z (f e)) [] a
+map f a = foldl (fun z e -> unsafeInsert z (f e)) [] a
 
 foldMap f a = foldl (fun z e -> append z (f e)) [] a
 
@@ -30,5 +30,5 @@ foldlAux i maxN f z a =
     if i == maxN then z else foldlAux (i + 1) maxN f (f z (geti i a)) a
 
 inspect x = if isArray x
-    then "{" & foldl (fun z i -> z & " " & inspect i) "" (coerce x) & "}"
+    then "{" & foldl (fun z i -> z & " " & inspect i) "" (unsafeCoerce x) & "}"
     else toString x 

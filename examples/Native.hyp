@@ -47,7 +47,7 @@ cos : Numeral -> Numeral
 
 
 # Primitive
-coerce : a -> b
+unsafeCoerce : a -> b
 
 error : Text -> a
 
@@ -58,8 +58,11 @@ size : Array a -> Numeral
 
 isArray : a -> Boolean
 
-# Beware that insert is impure and changes the array
-insert : Array a -> a -> Array a
+# Beware that insert and set is impure and changes the array
+unsafeInsert : Array a -> a -> Array a
+
+unsafeSet : Array a -> Numeral -> a -> Array a
+
 
 split : Text -> Text -> Array Text
 
@@ -78,10 +81,6 @@ concat : Text -> Text -> Text
 
 toNumber : Text -> Numeral
 
-# Stateful computations in the spirit of ST and IO in Haskell
-type Stateful s
-
-modifyRef : ref t -> (t -> t) -> Stateful Void
 
 uncurry2 : a -> b -> c -> Native.Fun2 a b c
 

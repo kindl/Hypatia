@@ -11,7 +11,7 @@ import Common.Geometry(Vec4, Matrix,
     rotationZ, rotationY, rotationX,
     normalize, to2d, multiply, transform)
 import Common.Array(map, foldMap)
-import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef)
+import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 
 
 alias Points = Array (Array Numeral)
@@ -26,7 +26,7 @@ constant a _ = a
 
 modifyState f = unsafeRun (modifyRef gameState f)
 
-onState f = modifyState (fun st -> constant st (f st))
+onState f = f (unsafeUnpackRef gameState)
 
 pi = 3.141592653589793
 
@@ -83,6 +83,6 @@ transformFace rotation scale face =
         modelview = multiply t (multiply r (scaleMatrix scale))
     in map (transformPoint modelview rotation >> getPoint) face
 
-draw _ = onState (fun (MkGameState ps _ _) -> map polygon ps)
+draw _ = onState (fun (MkGameState ps _ _) -> map (polygon "line") ps)
 
 tuplesToArray = foldMap (fun (Tuple a b) -> [a, b])

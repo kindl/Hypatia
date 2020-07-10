@@ -1,14 +1,14 @@
 module Spheres
 
 import Native((+), (*), (%), (-),
-    write, toString, geti, uncurry4, uncurry5, modifyRef, Array)
+    write, toString, geti, uncurry4, uncurry5, Array)
 import Native.Love(random, setColor, circle, getWidth, getHeight)
 import Common.Base(Unit, Numeral,
     (<),
     sqrt, repeatN)
-import Common.Stateful(unsafeMakeRef, unsafeRun,
+import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef,
     writeRef, readRef, Ref)
-import Common.Array(map, insert)
+import Common.Array(map, unsafeInsert)
 
 
 gameState : Ref (Array Sphere)
@@ -45,7 +45,7 @@ addSphere spheres =
         vel = Vec2 (random (-100) 100) (random (-100) 100)
         col = Vec3 (random 0 255) (random 0 255) (random 0 255)
         rad = random 30 100
-    in insert spheres (Sphere pos vel col rad)
+    in unsafeInsert spheres (Sphere pos vel col rad)
 
 load _ =
     let

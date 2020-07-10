@@ -1,7 +1,9 @@
 local Native_Love = {}
 
-function Native_Love.polygon(line)
-    love.graphics.polygon("line", line)
+function Native_Love.polygon(mode)
+    return function (line)
+        love.graphics.polygon(mode, line)
+    end
 end
 
 function Native_Love.draw(img)

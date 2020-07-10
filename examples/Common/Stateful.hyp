@@ -1,31 +1,35 @@
 module Common.Stateful
 
-import Native(coerce, modifyRef, Stateful)
+import Native(unsafeCoerce, unsafeSet, Array)
 import Common.Base(Unit, compose, flip)
+
+
+type Stateful s
 
 # Similar to purescript-effect the computation is modeled
 # after a function of type Unit -> s
 unsafeStateful : (Unit -> s) -> Stateful s
-unsafeStateful = coerce
+unsafeStateful = unsafeCoerce
 
 unsafeRun : Stateful s -> s
-unsafeRun f = coerce f Unit
+unsafeRun f = unsafeCoerce f Unit
 
-# Returns a function.
-# bind f g = unsafeRun (f (unsafeRun g))
+# Sequential composition
+# andThen f g = unsafeRun (f (unsafeRun g))
 # Would run the computation directly
-bind f g = unsafeStateful (fun _ ->
+# The following version returns a function
+andThen f g = unsafeStateful (fun _ ->
     unsafeRun (f (unsafeRun g)))
 
-andThen = flip bind
+bind = flip andThen
 
-map f = bind (compose point f)
+map f = andThen (compose point f)
 
 # Usually called return, but renamed
 # because return is a reserved word in Lua
 point x = unsafeStateful (fun _ -> x)
 
-#Refs
+# Refs
 # Objects in JS and tables in Lua are passed by reference
 # meaning, if different functions receive an object in JS
 # then both modify the same object
@@ -42,4 +46,9 @@ newRef x = point (unsafeMakeRef x)
 
 readRef r = point (unsafeUnpackRef r)
 
-writeRef r x = modifyRef r (fun _ -> x)
+writeRef r x = unsafeStateful (fun _ -> unsafeSet (toArray r) 1 x)
+    where
+        toArray : Ref t -> Array t
+        toArray = unsafeCoerce
+
+modifyRef r f = writeRef r (f (unsafeUnpackRef r))

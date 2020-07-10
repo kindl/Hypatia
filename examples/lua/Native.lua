@@ -89,21 +89,22 @@ function Native.geti(i)
     end
 end
 
-function Native.coerce(x)
+function Native.unsafeCoerce(x)
     return x
 end
 
-function Native.insert(a)
+function Native.unsafeInsert(a)
     return function(e)
         table.insert(a, e)
         return a
     end
 end
 
-function Native.modifyRef(ref)
-    return function(f)
-        return function(s)
-            ref[2] = f(ref[2])
+function Native.unsafeSet(a)
+    return function(i)
+        return function(v)
+            a[i + 1] = v
+            return a
         end
     end
 end

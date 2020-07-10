@@ -2,7 +2,7 @@ module Common.Base
 
 import Native(Numeral, Text, Array,
     (^), (-), (+),
-    geti, size, isArray, coerce,
+    geti, size, isArray, unsafeCoerce,
     eq, lt,
     True, False)
 
@@ -30,8 +30,11 @@ genComp comp l r =
 
 trySeqComp comp l r =
     if bothArray l r
-        then seqComp comp (coerce l) (coerce r)
+        then seqComp comp (toArray l) (toArray r)
         else False
+    where
+        toArray : a -> Array b
+        toArray = unsafeCoerce
 
 bothArray l r =
     if isArray l

@@ -1,6 +1,7 @@
 module Native.Love
 
-import Native(Numeral, Stateful, Array, Void, Text)
+import Native(Numeral, Array, Void, Text)
+import Common.Stateful(Stateful)
 
 #      Path -> Content
 file : Text -> Text
@@ -12,7 +13,7 @@ getWidth : Stateful Numeral
 getHeight : Stateful Numeral
 
 # Drawing
-polygon : Array Numeral -> Void
+polygon : Text -> Array Numeral -> Void
 
 setColor : Numeral -> Numeral -> Numeral -> Void
 

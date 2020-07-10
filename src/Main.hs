@@ -16,7 +16,7 @@ writeResult modDecl =
     let
         name = renderFlatModName (getName modDecl)
         compiled = compile modDecl
-    in if name == "Native" || isPrefixOf "Native_" name
+    in if name == "Native" || name == "Main" || isPrefixOf "Native_" name
 -- NOTE the Native module is not written
 -- If there are more than one Native module
 -- then others could be added with a flag

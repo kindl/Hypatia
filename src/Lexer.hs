@@ -6,6 +6,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
 import Control.Applicative((<|>))
+import Data.Functor(($>))
 import Data.Char(isSpace, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
@@ -235,5 +236,6 @@ verbatim = fmap (String . Text.pack)
 stringChar = satisfy (\x -> x /='"' && x /= '\\')
 {-# INLINE stringChar #-}
 
-escapeSeq = char '\\' *> oneOf "\\\""
+escapeSeq = char '\\' *> (char '\\' <|> char '\"' <|>
+    char 'n' $> '\n' <|> char 'r' $> '\r' <|> char 't' $> '\t')
 {-# INLINE escapeSeq #-}

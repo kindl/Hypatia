@@ -6,12 +6,7 @@ import Native((&), (+),
 import Common.Base(identity, Unit, (==))
 
 
-words a = split "%s" a
-
-lines a = split newline a
-
-newline = "
-"
+lines a = split "\n" a
 
 filter p a = foldMap (fun e -> if p e then [e] else []) a
 

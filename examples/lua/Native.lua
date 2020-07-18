@@ -75,6 +75,8 @@ function Native.split(seperator)
     end
 end
 
+Native.words = Native.split("%s")
+
 function Native.size(a)
     return #a
 end

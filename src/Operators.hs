@@ -1,7 +1,7 @@
 module Operators where
 
 import Syntax
-import Data.Generics.Uniplate.Data(transformBi, rewrite)
+import Data.Generics.Uniplate.Data(rewriteBi)
 import Data.HashMap.Strict(fromList)
 
 
@@ -15,10 +15,10 @@ http://qfpl.io/posts/quick-and-easy-user-defined-operators/
 -}
 fixAssoc operatorTable =
     let
-        f = rewrite (fixAssocE operatorTable)
-        g = rewrite (fixAssocP operatorTable)
-        h = rewrite (fixAssocT operatorTable)
-    in transformBi f . transformBi g . transformBi h
+        f = fixAssocE operatorTable
+        g = fixAssocP operatorTable
+        h = fixAssocT operatorTable
+    in rewriteBi f . rewriteBi g . rewriteBi h
 
 {- Read the fixity declarations -}
 captureAssocs (ModuleDeclaration modName decls) =

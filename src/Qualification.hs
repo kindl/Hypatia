@@ -4,14 +4,21 @@ import Syntax
 import Data.Generics.Uniplate.Data(transform, descend, transformBi)
 
 
-{-
-Values
-split into value level and type level
-otherwise type Unit = Unit is problematic
--}
+-- TODO Are IDs in form of Int etc. easier to look up?
+-- so instead of passing a function "qual"
+-- insert and lookup the number in an IntMap
+-- Could a hash of the location info be used for that purpose?
+-- what happens with built-in names?
+
+
+-- Qualification is split into value level and type level
+-- otherwise type Unit = Unit would be problematic
+
+-- Value Level
 qualifyNames quals (ModuleDeclaration name decls) =
     ModuleDeclaration name (fmap (qualifyD quals) decls)
 
+-- Qualify the expressions appearing in declarations
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
 qualifyD _ decl@(TypeDeclaration _ _ _) = decl
@@ -76,7 +83,8 @@ captureTopName (AliasDeclaration identifier _) = [identifier]
 captureTopName (FixityDeclaration _ _ op _) = [op]
 captureTopName _ = []
 
-{- Types -}
+
+-- Type Level
 qualifyTypeNames quals m =
     let
         f (TypeInfixOperator ta op tb) =
@@ -102,39 +110,41 @@ toLocals ids = fmap fromId (toMap ids)
 toQualifieds modName ids = fmap (qualifyId modName) (toMap ids)
 toMap ids = fromListUnique (fmap (\i -> (i, i)) ids)
 
-{- Resolve qualified imports -}
-resolveQualifiedImports (ModuleDeclaration modName decls) =
-    let quals = captureQualifiedImportDeclarations decls
-    in ModuleDeclaration modName (renameQualifiedNames quals decls)
+-- Change qualified imports
+-- e.g. import Viewer.Obj as Obj
+-- Obj.load is changed to Viewer.Obj.Load
+changeQualifiedImportsMod (ModuleDeclaration modName decls) =
+    let quals = captureQualifiedImports decls
+    in ModuleDeclaration modName (changeQualifiedImports quals decls)
 
-renameQualifiedNames quals =
+changeQualifiedImports quals =
     let
         f (Variable n) =
-            Variable (renameQualified n quals)
+            Variable (changeQualifier n quals)
         f (ConstructorExpression c) =
-            ConstructorExpression (renameQualified c quals)
+            ConstructorExpression (changeQualifier c quals)
         f (InfixOperator ea name eb) =
-            InfixOperator ea (renameQualified name quals) eb
+            InfixOperator ea (changeQualifier name quals) eb
         f e = e
 
         g (ConstructorPattern c ps) =
-            ConstructorPattern (renameQualified c quals) ps
+            ConstructorPattern (changeQualifier c quals) ps
         g (PatternInfixOperator p1 op p2) =
-            PatternInfixOperator p1 (renameQualified op quals) p2
+            PatternInfixOperator p1 (changeQualifier op quals) p2
         g p = p
 
         h (TypeInfixOperator ta op tb) =
-            TypeInfixOperator ta (renameQualified op quals) tb
+            TypeInfixOperator ta (changeQualifier op quals) tb
         h (TypeConstructor c) =
-            TypeConstructor (renameQualified c quals)
+            TypeConstructor (changeQualifier c quals)
         h t = t
     in transformBi f . transformBi g . transformBi h
 
-captureQualifiedImportDeclarations decls =
+captureQualifiedImports decls =
     [(nameToList renamedModName, nameToList modName) |
         ImportDeclaration modName Nothing (Just renamedModName) <- decls]
 
-renameQualified n@(Name modNames identifier) quals =
+changeQualifier n@(Name modNames identifier) quals =
     case lookup modNames quals of
         Nothing -> n
         Just renamedModNames -> Name renamedModNames identifier

@@ -29,11 +29,11 @@ pipeline = sortDeclsMod
     . fixAssocProgram
     . qualifyProgram
     . qualifyTypesProgram
-    . fmap resolveQualifiedImports
+    . fmap changeQualifiedImportsMod
     . splitLambdas
     . removeAwaitDeclaration
     . removeFunctionDeclaration
-    . fmap aliasDecls
+    . fmap aliasDeclsMod
     . sortModules
 
 loadModule modName = do
@@ -73,15 +73,14 @@ qualifyProgram =
 qualifyTypesProgram =
     feedback qualifyTypeNames (captureSimple filterIds captureTypeNames)
 
-fixAssocProgram = feedbackSimple fixAssoc captureAssocs
+fixAssocProgram =
+    feedback fixAssoc (captureSimple filterNames captureAssocs)
 
 aliasOperatorsProgram =
-    feedbackSimple aliasOperators captureOperatorAliases
+    feedback aliasOperators (captureSimple filterNames captureOperatorAliases)
 
-aliasProgram = feedbackSimple aliasTypes captureAliases
-
-feedbackSimple action capture =
-    feedback action (captureSimple filterNames capture)
+aliasProgram =
+    feedback aliasTypes (captureSimple filterNames captureAliases)
 
 captureSimple filterEnvs capture envs m =
     capture m `mappend` filterEnvs (gatherSpecs m) envs

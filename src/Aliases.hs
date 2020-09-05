@@ -45,7 +45,7 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j
         TypeConstructor (find c aliases)
     j t = t
 
-aliasDecls (ModuleDeclaration modName decls) =
+aliasDeclsMod (ModuleDeclaration modName decls) =
     let
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]

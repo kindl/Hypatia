@@ -2,7 +2,6 @@
 module Simplifier where
 
 import Syntax
-import Data.Either(either)
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
 

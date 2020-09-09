@@ -184,7 +184,7 @@ typecheckPattern (AliasPattern x p) ty =
   do
     binds <- typecheckPattern p ty
     return ((x, ty):binds)
-typecheckPattern Wildcard _ =
+typecheckPattern (Wildcard _) _ =
     return mempty
 typecheckPattern (LiteralPattern l) ty =
   do

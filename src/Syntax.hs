@@ -89,7 +89,7 @@ data Type
 data Pattern
     = VariablePattern Id
     | LiteralPattern Literal
-    | Wildcard
+    | Wildcard Id
     | ConstructorPattern Name [Pattern]
     | ParenthesizedPattern Pattern
     | ArrayPattern [Pattern]
@@ -170,7 +170,7 @@ instance Pretty Literal where
 instance Pretty Pattern where
     pPrint (VariablePattern identifier) = prettyId identifier
     pPrint (LiteralPattern l) = pPrint l
-    pPrint Wildcard = text "_"
+    pPrint (Wildcard _) = text "_"
     pPrint (ConstructorPattern name []) =
         pPrint name
     pPrint (ConstructorPattern name ps) =

@@ -210,10 +210,10 @@ reserved = ["alias", "enum", "type", "forall", "await",
         ":", "=", "->", "|"]
 
 ident = takeWhile1 (\x -> isAlphaNum x || x == '_')
-{-# INLINE varsym #-}
+{-# INLINE ident #-}
 
 varsym = takeWhile1 isSym
-{-# INLINE ident #-}
+{-# INLINE varsym #-}
 
 {- Literal -}
 literal = number <|> hexdecimal <|> verbatim

@@ -200,7 +200,7 @@ compileImports decls = fmap Imp (nub [modName |
 
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
-compileD (ExpressionDeclaration Wildcard e) =
+compileD (ExpressionDeclaration (Wildcard _) e) =
     [Assign (prefixedId "w") (compileE e)]
 {-
 Compile pattern matches in let expressions like
@@ -288,7 +288,7 @@ getConditions v i (ArrayPattern ps) =
     ++ descendAccess (getConditions v) i 0 ps
 getConditions v i (LiteralPattern l) =
     [mkEq (Access v i) (compileL l)]
-getConditions _ _ Wildcard = []
+getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ pretty p)
 
@@ -301,7 +301,7 @@ getAssignments v i (ConstructorPattern _ ps) =
 getAssignments v i (ArrayPattern ps) =
     descendAccess (getAssignments v) i 0 ps
 getAssignments _ _ (LiteralPattern _) = []
-getAssignments _ _ Wildcard = []
+getAssignments _ _ (Wildcard _) = []
 getAssignments _ _ p = error ("getAssignments on " ++ pretty p)
 
 descendAccess _ _ _ [] = []

@@ -378,9 +378,6 @@ constructorPattern = do
 literalPattern = LiteralPattern <$!> literal
 {-# INLINE literalPattern #-}
 
-wildcard = token "_" $> Wildcard
-{-# INLINE wildcard #-}
-
 parenthesizedPattern = ParenthesizedPattern <$!> parenthesized pat
 {-# INLINE parenthesizedPattern #-}
 
@@ -437,6 +434,10 @@ fromQConid (Conid qs v) l = return (Name qs (Id v l))
 fromQConid _ _ = Nothing
 {-# INLINE fromQConid #-}
 
+fromWildcard (Reserved "_") l = return (Wildcard (Id "_" l))
+fromWildcard _ _ = Nothing
+{-# INLINE fromWildcard #-}
+
 parseLocated f = do
     n <- next
     maybe empty return (f (extractLexeme n) (extractLocation n))
@@ -459,6 +460,9 @@ conid = parseLocated fromConid
 
 qconid = parseLocated fromQConid
 {-# INLINE qconid #-}
+
+wildcard = parseLocated fromWildcard
+{-# INLINE wildcard #-}
 
 modid = qconid
 {-# INLINE modid #-}

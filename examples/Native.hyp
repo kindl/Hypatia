@@ -66,6 +66,8 @@ unsafeSet : Array a -> Numeral -> a -> Array a
 
 split : Text -> Text -> Array Text
 
+words : Text -> Array Text
+
 # Comparing Numerals, Strings and Constructors
 eq : e -> e -> Boolean
 

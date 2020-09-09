@@ -12,6 +12,24 @@ function Native.lt(v1)
     end
 end
 
+function Native.gt(v1)
+    return function(v2)
+        return v1 > v2
+    end
+end
+
+function Native.le(v1)
+    return function(v2)
+        return v1 <= v2
+    end
+end
+
+function Native.ge(v1)
+    return function(v2)
+        return v1 >= v2
+    end
+end
+
 function Native.times(v1)
     return function(v2)
         return v1 * v2

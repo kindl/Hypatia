@@ -73,6 +73,12 @@ eq : e -> e -> Boolean
 
 lt : e -> e -> Boolean
 
+gt : e -> e -> Boolean
+
+le : e -> e -> Boolean
+
+ge : e -> e -> Boolean
+
 # IO
 write : Text -> Void
 

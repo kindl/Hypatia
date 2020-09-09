@@ -3,7 +3,7 @@ module Common.Base
 import Native(Numeral, Text, Array,
     (^), (-), (+),
     geti, size, isArray, unsafeCoerce,
-    eq, lt,
+    eq, lt, gt, le, ge,
     True, False)
 
 sqrt x = x ^ 0.5
@@ -21,6 +21,12 @@ infixl 4 >= greaterOrEqal
 equals l r = genComp eq l r
 
 lessThan l r = genComp lt l r
+
+greaterThan l r = genComp gt l r
+
+lessThanOrEqual l r = genComp le l r
+
+greaterThanOrEqual l r = genComp ge l r
 
 # Generic comparison
 genComp comp l r =

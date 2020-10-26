@@ -7,7 +7,7 @@ import Data.HashMap.Strict(fromList)
 import Control.Arrow(first)
 
 
-aliasTypes aliasTable = rewriteBi f . rewriteBi g . rewriteBi j
+aliasConstructors aliasTable = rewriteBi f . rewriteBi g . rewriteBi j
   where
     f (ConstructorExpression c) =
         fmap toConstructor (mfind c aliasTable)
@@ -45,7 +45,7 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j
         TypeConstructor (find c aliases)
     j t = t
 
-aliasDeclsMod (ModuleDeclaration modName decls) =
+aliasOperatorsMod (ModuleDeclaration modName decls) =
     let
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]

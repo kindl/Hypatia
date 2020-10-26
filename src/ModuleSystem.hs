@@ -13,17 +13,16 @@ import Data.HashMap.Strict(insert)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
 loadProgram path = do
-    loadedModule <- loadPath path
+    loadedModule <- loadFromFile path
     mods <- growModuleEnv [loadedModule]
-    let simplified = pipeline mods
+    let simplified = transformations mods
     _ <- typecheckProgram simplified
     return simplified
 
--- This uses normal function composition
--- So the lowest in this list is the first step of the pipeline
-pipeline :: [ModuleDeclaration] -> [ModuleDeclaration]
-pipeline = sortDeclsMod
-    . aliasProgram
+-- The lowest function in this list is the first step of the transformations
+transformations :: [ModuleDeclaration] -> [ModuleDeclaration]
+transformations = sortDeclsMod
+    . aliasConstructorsProgram
     . aliasOperatorsProgram
     . removeParens
     . fixAssocProgram
@@ -33,15 +32,15 @@ pipeline = sortDeclsMod
     . splitLambdas
     . removeAwaitDeclaration
     . removeFunctionDeclaration
-    . fmap aliasDeclsMod
+    . fmap aliasOperatorsMod
     . sortModules
 
 loadModule modName = do
-    m <- loadPath (toPath modName)
+    m <- loadFromFile (toPath modName)
     if getName m == modName then return m else
         fail ("The file name did not match the name of the module " ++ pretty (getName m))
 
-loadPath path = do
+loadFromFile path = do
     putStrLn ("Loading module from " ++ path)
     parseFile path
 
@@ -79,8 +78,8 @@ fixAssocProgram =
 aliasOperatorsProgram =
     feedback aliasOperators (captureSimple filterNames captureOperatorAliases)
 
-aliasProgram =
-    feedback aliasTypes (captureSimple filterNames captureAliases)
+aliasConstructorsProgram =
+    feedback aliasConstructors (captureSimple filterNames captureAliases)
 
 captureSimple filterEnvs capture envs m =
     capture m `mappend` filterEnvs (gatherSpecs m) envs

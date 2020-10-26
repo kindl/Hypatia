@@ -43,11 +43,6 @@ resolve getDefs getDeps done rest =
 
 sortModules = resolve (return . getName) gatherImports []
 
-gatherImports modDecl = fmap fst (gatherSpecs modDecl)
-
-gatherSpecs modDecl = 
-    [(name, spec) | ImportDeclaration name spec _ <- getDecls modDecl]
-
 
 --Gather variables used in an expression
 --The second argument of f contains

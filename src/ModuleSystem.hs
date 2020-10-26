@@ -4,7 +4,6 @@ import Syntax
 import Aliases
 import Simplifier
 import Sorting
-import Parser
 import TypeChecker
 import Operators
 import Qualification
@@ -12,12 +11,6 @@ import Data.Functor.Identity(runIdentity)
 import Data.HashMap.Strict(insert)
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
-loadProgram path = do
-    loadedModule <- loadFromFile path
-    mods <- growModuleEnv [loadedModule]
-    let simplified = transformations mods
-    _ <- typecheckProgram simplified
-    return simplified
 
 -- The lowest function in this list is the first step of the transformations
 transformations :: [ModuleDeclaration] -> [ModuleDeclaration]
@@ -35,29 +28,9 @@ transformations = sortDeclsMod
     . fmap aliasOperatorsMod
     . sortModules
 
-loadModule modName = do
-    m <- loadFromFile (toPath modName)
-    if getName m == modName then return m else
-        fail ("The file name did not match the name of the module " ++ pretty (getName m))
-
-loadFromFile path = do
-    putStrLn ("Loading module from " ++ path)
-    parseFile path
-
-{- Load all imported modules -}
-growModuleEnv env =
-  let
-    imported = fmap getName env
-    imports = foldMap gatherImports env
-  in case excluding imported imports of
-        [] -> return env
-        needed -> do
-            mods <- traverse loadModule needed
-            growModuleEnv (mods ++ env)
-
 {- Typechecking -}
-typecheckProgram = feedbackM logEnv (\envs m ->
-    typecheckModule (filterNames (gatherSpecs m) envs) m)
+typecheckProgram p = feedbackM logEnv (\envs m ->
+    typecheckModule (filterNames (gatherSpecs m) envs) m) p
 
 logEnv env m =
     let

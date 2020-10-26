@@ -49,6 +49,12 @@ data ModuleDeclaration =
 getDecls (ModuleDeclaration _ decls) = decls
 getName (ModuleDeclaration name _) = name
 
+gatherImports modDecl =
+    fmap fst (gatherSpecs modDecl)
+
+gatherSpecs modDecl = 
+    [(name, spec) | ImportDeclaration name spec _ <- getDecls modDecl]
+
 
 data Literal
     = Numeral Double
@@ -144,7 +150,7 @@ instance Pretty Position where
 instance Pretty Location where
     pPrint (Location s e f) =
         pPrint s <> text "," <+> indication s e
-        <+> text "in" <+> pPrint f
+        <+> text "in" <+> text "\"" <> text f <> text "\""
 
 indication (Position sl sc) (Position el ec) =
     if sl == el then text "len" <+> pPrint (ec - sc) else text "..."

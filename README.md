@@ -46,18 +46,6 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 * Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` instead of `type`, because it can be used for pattern- and type aliases and `fun` instead of `\` to be a little less cryptic.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
 
-### My Stages
-Let me tell you about my daily routine:
-
-* Lexer: While I am dreaming, the Lexer turns all the strings I have read into tokens.
-* Parser: In the Parser, token seeds grow into syntax trees.
-* Operators: Yawn! Time to wake up and I already have my first chores to do. Sigh... I shake out my blanket, rename my operator symbols to plain names and change their associativity and precedence.
-* Simplifier: I can't think before I had my coffee. A sip from the Simplifier and my world looks much clearer.
-* Aliases: Time to brush my teeth. Aliases brushes out all the bacteria and renames complicated patterns and types to simpler ones.
-* Typechecker: Now I start with the actual work and check if my types are correct.
-* Compiler: In the evening, my creativity awakes. I compile my syntax tree into an imperative dynamic language and write the results down in lua, so that I don't forget anything.
-* ModuleSystem: Is it bedtime already? Again? Tomorrow will be a good day, good that I have everything planned in my ModuleSystem.
-
 It was nice to talk with you stranger.
 
 

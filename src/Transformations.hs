@@ -1,4 +1,4 @@
-module ModuleSystem where
+module Transformations where
 
 import Syntax
 import Aliases

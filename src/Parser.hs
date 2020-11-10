@@ -6,12 +6,12 @@ import qualified Data.Text.IO as Text
 import Data.List(uncons, foldl1')
 import Data.Maybe(fromMaybe)
 import Data.Functor(($>))
-import Control.Applicative((<|>), optional, empty)
+import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), lexlex, prettyLocated,
     extractLexeme, extractLocation)
-import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1')
+import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP)
 
 
 {-
@@ -168,9 +168,6 @@ fixity = token "infixl" $> LeftAssociative
 qtype = forAll <|> otype
 {-# INLINE qtype #-}
 
-otype = typeArrow <|> typeOperator <|> btype
-{-# INLINE otype #-}
-
 forAll = do
     token "forall"
     ids <- many1' varid
@@ -179,19 +176,22 @@ forAll = do
     return (ForAll ids t)
 {-# INLINE forAll #-}
 
-typeArrow = do
+{-
+otype could be defined as
+otype = typeArrow <|> typeOperator <|> btype
+but because all options would start with a btype 
+a lot of backtracking might be necessary
+Better: first parse a btype and then decide
+what to parse on the following token "->" or qvarsym
+-}
+otype = do
     b <- btype
-    token "->"
-    t <- otype
-    return (TypeArrow b t)
-{-# INLINE typeArrow #-}
-
-typeOperator = do
-    b <- btype
-    o <- qvarsym
-    t <- otype
-    return (TypeInfixOperator b o t)
-{-# INLINE typeOperator #-}
+    n <- optional (liftA2 (,) (eitherP (token "->") qvarsym) otype)
+    return (case n of
+        Just (Left _, t) -> TypeArrow b t
+        Just (Right o, t) -> TypeInfixOperator b o t
+        Nothing -> b)
+{-# INLINE otype #-}
 
 -- NOTE The left fold handles left recursion
 btype = foldl1' TypeApplication <$!> many1' atype
@@ -219,26 +219,36 @@ constr = do
 {-# INLINE constr #-}
 
 {- Expressions -}
-expr = typeAnnotation <|> infixexpr
+expr = {- typeAnnotation <|> -} infixexpr
 {-# INLINE expr #-}
 
-typeAnnotation = do
-    _ <- infixexpr
-    token ":"
-    _ <- qtype
-    fail "Parsed type annotation which is not supported yet"
---  return (TypeAnnotation e t)
-{-# INLINE typeAnnotation #-}
+{-
+-- in the same way as infixOperatorOrLexpr
+typeAnnotationOrInfixExpr = do
+    e <- infixexpr
+    ot <- optional (token ":" *> qtype)
+    return (case ot of
+        Just t -> TypeAnnotation e t
+        Nothing -> e)
+{-# INLINE typeAnnotationOrInfixExpr #-}
+-}
 
-infixexpr = infixOperator <|> prefixNegation <|> lexpr
+infixexpr = prefixNegation <|> infixOperatorOrLexpr
 {-# INLINE infixexpr #-}
 
-infixOperator = do
+{-
+the same as infixOperator <|> lexpr
+because infixOperator would start with an lexpr
+and fail if it is not an infixOperator
+lexpr would be parsed twice
+-}
+infixOperatorOrLexpr = do
     l <- lexpr
-    o <- qvarsym
-    r <- infixexpr
-    return (InfixOperator l o r)
-{-# INLINE infixOperator #-}
+    mo <- optional (liftA2 (,) qvarsym infixexpr)
+    return (case mo of
+        Just (o, r) -> InfixOperator l o r
+        Nothing -> l)
+{-# INLINE infixOperatorOrLexpr #-}
 
 prefixNegation = do
     Varsym [] "-" <- nextLexeme

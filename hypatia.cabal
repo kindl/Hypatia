@@ -17,7 +17,18 @@ cabal-version:       >=1.10
 
 executable hypatia
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules:
+    Aliases,
+    Compiler,
+    Lexer,
+    Operators,
+    Parser,
+    Qualification,
+    Simplifier,
+    Sorting,
+    Syntax,
+    Transformations,
+    TypeChecker
   other-extensions:
     DeriveDataTypeable,
     OverloadedStrings

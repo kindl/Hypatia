@@ -52,9 +52,15 @@ writeResult modDecl =
         name = renderFlatModName (getName modDecl)
         compiled = compile modDecl
     in if name == "Native" || name == "Main" || isPrefixOf "Native_" name
--- NOTE the Native module is not written
--- If there are more than one Native module
--- then others could be added with a flag
+-- A module which name starts with "Native" is a native module by convention
+-- meaning it is a module where the corresponding lua file is created by hand
+-- Writing the compiled output is skipped to not override these files
+
+-- Native modules can be used to call functions from Love 2D,
+-- see examples/lua/Native.lua or Native_Love.lua
+
+-- Main is also excluded to not override the file main.lua
+-- which is used as an entry point by Love 2D
         then putStrLn ("Skipped writing native module " ++ name ++ "(.lua)")
         else writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
 -- NOTE disabled javascript output

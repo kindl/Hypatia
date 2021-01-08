@@ -44,11 +44,13 @@ inferModule (ModuleDeclaration modName decls) =
     sanitySkolemCheck binds
     return (mappend constructors (mappend signatures binds))
 
--- TODO skolems should be caught earlier
+-- Skolem variables are caught earlier,
+-- so this check is redundant, but makes sure
+-- that no skolem variables make it to the top level
 sanitySkolemCheck = traverseWithKey_ (\k v ->
     let s = skolems v
     in unless (null s)
-        (fail (pretty k ++ " leaked skolems " ++ pretty s)))
+        (fail ("Bug: " ++ pretty k ++ " leaked skolems " ++ pretty s)))
 
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
@@ -60,6 +62,10 @@ typecheck (Variable x) ty =
     typecheckVar x ty
 typecheck (ConstructorExpression c) ty =
     typecheckVar c ty
+-- A possible shortcut that avoids generating new type variables
+-- because the type of x does not have to be inferred but can be read of
+-- similar to typecheckPattern (ConstructorPattern c ps)
+-- typecheck (FunctionApplication (Variable x) e) ty =
 typecheck (FunctionApplication e1 e2) ty =
   do
     alpha <- newTyVar
@@ -70,8 +76,11 @@ typecheck (CaseExpression expr alts) ty =
     matchTy <- newTyVar
     traverse_ (typecheckAlt matchTy ty) alts
     typecheck expr matchTy
+-- A common shortcut that avoids generating new type variables
 typecheck (LambdaExpression [p] e) (TypeArrow alpha beta) =
     typecheckAlt alpha beta (p, e)
+-- Another possible shortcut that avoids generating new type variables
+-- typecheck (LambdaExpression [p] e) (ForAll _ (TypeArrow _ _)) =
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
@@ -154,7 +163,7 @@ inferDecls qual gen signatures =
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
 -- If a signature is given, check against it
--- if not, create a new type variable and infer a type
+-- otherwise create a new type variable and infer a type
 findTypePattern qual signatures (VariablePattern v) =
     maybe newTyVar return (mfind (qual v) signatures)
 findTypePattern _ _ _ = newTyVar
@@ -165,12 +174,14 @@ inferDecl qual gen signatures (ExpressionDeclaration p e) next =
     binds <- fmap (fromList' qual) (typecheckPattern p ty)
 
     -- Overwrite the binds with the more precise signatures
+    -- If an error occurs, show in which declaration it happened
     onException' (with (mappend signatures binds) (typecheck e ty))
         (putStrLn ("When typechecking declaration " ++ pretty p
             ++ " at " ++ locationInfo p))
 
     -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
-    -- Don't generalize signatures
+    -- Exclude signatures
+    -- In LetExpressions gen does nothing
     generalized <- traverse gen (difference binds signatures)
 
     nextTys <- with generalized next
@@ -230,6 +241,11 @@ unify x y =
 unify' (SkolemConstant x) (SkolemConstant y) | x == y = return ()
 unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
 unify' (TypeConstructor a) (TypeConstructor b) | a == b = return ()
+-- When unifying, no higher rank type should appear
+unify' s@(ForAll _ _) ty =
+    fail ("Cannot unify scheme " ++ pretty s ++ " and " ++ pretty ty)
+unify' ty s@(ForAll _ _) =
+    fail ("Cannot unify " ++ pretty ty ++ " and scheme " ++ pretty s)
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
 unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
@@ -320,23 +336,38 @@ subsume x y =
     subst <- getSubst
     subsume' (apply subst x) (apply subst y)
 
+{-
+This typechecker roughly follows the tutorial of
+"Practical type inference for arbitrary-rank types"
+However, subsumption was kept simple with the intention to
+complete it when needed.
+Meanwhile, the ghc proposal "Simplify subsumption" proposed
+to keep subsumption simple anyway
+-}
 subsume' scheme1 scheme2@(ForAll _ _) =
   do
     (skolVars, ty) <- skolemise scheme2
-    subsume scheme1 ty
-    let escVars = skolems scheme1 ++ skolems scheme2
+    subsume' scheme1 ty
+    subst <- getSubst
+    let escVars = skolems (apply subst scheme1) ++ skolems (apply subst ty)
     let escaped = including escVars skolVars
-    unless (null escaped) (fail ("Escape check: " ++ pretty escaped))
+    unless (null escaped) (fail ("Escape check: " ++ pretty escaped
+        ++ " escaped when subsuming " ++ pretty scheme1
+        ++ " and " ++ pretty scheme2))
 subsume' scheme@(ForAll _ _) t2 =
   do
     t1 <- instantiate scheme
-    subsume t1 t2
+    subsume' t1 t2
+{-
 subsume' (TypeArrow s1 s2) (TypeArrow s3 s4) =
   do
-    subsume s3 s1
+    subsume' s3 s1
     subsume s2 s4
+-}
 subsume' t1 t2 = unify' t1 t2
 
+-- constructs forall a b. t instead of forall a. forall b. t
+-- constructs forall a. t instead of forall a a. t
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 ++ tvs2) ty
 makeForAll tvs ty =

@@ -108,13 +108,12 @@ groupBindsStep other acc = Left other:acc
 transAlt (name, [(ps, e)]) =
     ExpressionDeclaration (VariablePattern name) (LambdaExpression ps e)
 transAlt (name, alts) =
-  let
-      n = length (fst (head alts))
-      vs = nNewVars n
-      nalts = fmap (first toTuplesP1) alts
-      e = toTuplesE1 (fmap (Variable . fromId) vs)
-  in
-    ExpressionDeclaration (VariablePattern name)
+    let
+        n = length (fst (head alts))
+        vs = nNewVars n
+        nalts = fmap (first toTuplesP1) alts
+        e = toTuplesE1 (fmap (Variable . fromId) vs)
+    in ExpressionDeclaration (VariablePattern name)
         (LambdaExpression (fmap VariablePattern vs)
             (CaseExpression e nalts))
 

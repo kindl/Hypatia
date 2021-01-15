@@ -67,11 +67,10 @@ envs: a map of the module name and its captured environment
 feedbackM action capture mods =
     fmap fst (mapAccumM (step action capture) mempty mods)
 
-step action capture envs m =
-    do
-        captured <- capture envs m
-        result <- action captured m
-        return (result, insert (getName m) captured envs)
+step action capture envs m = do
+    captured <- capture envs m
+    result <- action captured m
+    return (result, insert (getName m) captured envs)
 
 feedback action capture mods =
     runIdentity (feedbackM (ret action) (ret capture) mods)

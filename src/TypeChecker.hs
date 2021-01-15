@@ -25,14 +25,12 @@ data TypecheckerState =
 
 type Typechecker a = ReaderT TypecheckerState IO a
 
-typecheckModule env m =
-  do
+typecheckModule env m = do
     r <- newIORef 0
     s <- newIORef mempty
     runReaderT (inferModule m) (TypecheckerState env r s)
 
-inferModule (ModuleDeclaration modName decls) =
-  do
+inferModule (ModuleDeclaration modName decls) = do
     info ("Typechecking Module " ++ renderName modName)
     
     -- Qualify means rename Ty to AnyModuleName.Ty
@@ -66,13 +64,11 @@ typecheck (ConstructorExpression c) ty =
 -- because the type of x does not have to be inferred but can be read of
 -- similar to typecheckPattern (ConstructorPattern c ps)
 -- typecheck (FunctionApplication (Variable x) e) ty =
-typecheck (FunctionApplication e1 e2) ty =
-  do
+typecheck (FunctionApplication e1 e2) ty = do
     alpha <- newTyVar
     typecheck e1 (TypeArrow alpha ty)
     typecheck e2 alpha
-typecheck (CaseExpression expr alts) ty =
-  do
+typecheck (CaseExpression expr alts) ty = do
     pty <- newTyVar
     traverse_ (uncurry (typecheckAlt pty ty)) alts
     typecheck expr pty
@@ -81,37 +77,31 @@ typecheck (LambdaExpression [p] e) (TypeArrow pty ety) =
     typecheckAlt pty ety p e
 -- Another possible shortcut that avoids generating new type variables
 -- typecheck (LambdaExpression [p] e) (ForAll _ (TypeArrow _ _)) =
-typecheck (LambdaExpression [p] e) ty =
-  do
+typecheck (LambdaExpression [p] e) ty = do
     alpha <- newTyVar
     beta <- newTyVar
     typecheckAlt alpha beta p e
     subsume (TypeArrow alpha beta) ty
-typecheck (LetExpression decls e) ty =
-  do
+typecheck (LetExpression decls e) ty = do
     let signatures = fromList' fromId (foldMap gatherTypeSig decls)
     binds <- inferDecls fromId return signatures decls
     with (mappend signatures binds) (typecheck e ty)
-typecheck (IfExpression c th el) ty =
-  do
+typecheck (IfExpression c th el) ty = do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))
     typecheck th ty
     typecheck el ty
-typecheck (ArrayExpression es) ty =
-  do
+typecheck (ArrayExpression es) ty = do
     alpha <- newTyVar
     traverse_ (flip typecheck alpha) es
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
 typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 
-typecheckVar x ty =
-  do
+typecheckVar x ty = do
     env <- getEnv
     scheme <- mfind x env
     subsume scheme ty
 
-typecheckAlt pty ety pat expr =
-  do
+typecheckAlt pty ety pat expr = do
     binds <- typecheckPattern pat pty
     with (fromList' fromId binds) (typecheck expr ety)
 
@@ -168,8 +158,7 @@ findTypePattern qual signatures (VariablePattern v) =
     maybe newTyVar return (mfind (qual v) signatures)
 findTypePattern _ _ _ = newTyVar
 
-inferDecl qual gen signatures (ExpressionDeclaration p e) next = 
-  do
+inferDecl qual gen signatures (ExpressionDeclaration p e) next = do
     ty <- findTypePattern qual signatures p
     binds <- fmap (fromList' qual) (typecheckPattern p ty)
 
@@ -191,18 +180,15 @@ inferDecl _ _ _ _ next = next
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty =
     return [(x, ty)]
-typecheckPattern (AliasPattern x p) ty =
-  do
+typecheckPattern (AliasPattern x p) ty = do
     binds <- typecheckPattern p ty
     return ((x, ty):binds)
 typecheckPattern (Wildcard _) _ =
     return mempty
-typecheckPattern (LiteralPattern l) ty =
-  do
+typecheckPattern (LiteralPattern l) ty = do
     typecheckLiteral l ty
     return mempty
-typecheckPattern (ConstructorPattern c ps) ty =
-  do
+typecheckPattern (ConstructorPattern c ps) ty = do
     env <- getEnv
     scheme <- mfind c env
     consTy <- instantiate scheme
@@ -217,8 +203,7 @@ typecheckPattern (ConstructorPattern c ps) ty =
     binds <- zipWithM typecheckPattern ps consTys
     unify resultTy ty
     return (mconcat binds)
-typecheckPattern (ArrayPattern ps) ty =
-  do
+typecheckPattern (ArrayPattern ps) ty = do
     alpha <- newTyVar
     binds <- traverse (\p -> typecheckPattern p alpha) ps
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
@@ -233,8 +218,7 @@ typecheckLiteral (Text _) ty =
     unify (TypeConstructor (fromText "Native.Text")) ty
 
 -- Unification
-unify x y =
-  do
+unify x y = do
     subst <- getSubst
     unify' (apply subst x) (apply subst y)
 
@@ -278,13 +262,11 @@ apply subst ty = descend (apply subst) ty
 -- Environment
 getEnv = asks (\(TypecheckerState env _ _) -> env)
 
-insertSubst k v =
-  do
+insertSubst k v = do
     r <- asks (\(TypecheckerState _ _ s) -> s)
     modifyRef r (insert k v)
 
-getSubst =
-  do
+getSubst = do
     r <- asks (\(TypecheckerState _ _ s) -> s)
     readRef r
 
@@ -292,8 +274,7 @@ with binds = local (\(TypecheckerState env r s) ->
     TypecheckerState (mappend binds env) r s)
 
 -- Type Variables
-newUnique =
-  do
+newUnique = do
     r <- asks (\(TypecheckerState _ u _) -> u)
     modifyRef r succ
     readRef r
@@ -321,14 +302,12 @@ generalize ty = do
     let qualVars = excluding envVars (freeVars ty')
     return (makeForAll qualVars ty')
 
-instantiate (ForAll vars ty) =
-  do
+instantiate (ForAll vars ty) = do
     subst <- traverse (\x -> fmap (\t -> (x, t)) newTyVar) vars
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 
-subsume x y =
-  do
+subsume x y = do
     subst <- getSubst
     subsume' (apply subst x) (apply subst y)
 
@@ -340,8 +319,7 @@ complete it when needed.
 Meanwhile, the ghc proposal "Simplify subsumption" proposed
 to keep subsumption simple anyway
 -}
-subsume' scheme1 scheme2@(ForAll _ _) =
-  do
+subsume' scheme1 scheme2@(ForAll _ _) = do
     (skolVars, ty) <- skolemise scheme2
     subsume' scheme1 ty
     subst <- getSubst
@@ -350,13 +328,11 @@ subsume' scheme1 scheme2@(ForAll _ _) =
     unless (null escaped) (fail ("Escape check: " ++ pretty escaped
         ++ " escaped when subsuming " ++ pretty scheme1
         ++ " and " ++ pretty scheme2))
-subsume' scheme@(ForAll _ _) t2 =
-  do
+subsume' scheme@(ForAll _ _) t2 = do
     t1 <- instantiate scheme
     subsume' t1 t2
 {-
-subsume' (TypeArrow s1 s2) (TypeArrow s3 s4) =
-  do
+subsume' (TypeArrow s1 s2) (TypeArrow s3 s4) = do
     subsume' s3 s1
     subsume s2 s4
 -}
@@ -371,8 +347,7 @@ makeForAll tvs ty =
         [] -> ty
         is -> ForAll is ty
 
-skolemise (ForAll vars ty) =
-  do
+skolemise (ForAll vars ty) = do
     skolVars <- traverse (const newUniqueName) vars
     let subs = fromList (zip vars (fmap SkolemConstant skolVars))
     return (skolVars, apply subs ty)

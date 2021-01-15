@@ -73,19 +73,19 @@ typecheck (FunctionApplication e1 e2) ty =
     typecheck e2 alpha
 typecheck (CaseExpression expr alts) ty =
   do
-    matchTy <- newTyVar
-    traverse_ (typecheckAlt matchTy ty) alts
-    typecheck expr matchTy
+    pty <- newTyVar
+    traverse_ (uncurry (typecheckAlt pty ty)) alts
+    typecheck expr pty
 -- A common shortcut that avoids generating new type variables
-typecheck (LambdaExpression [p] e) (TypeArrow alpha beta) =
-    typecheckAlt alpha beta (p, e)
+typecheck (LambdaExpression [p] e) (TypeArrow pty ety) =
+    typecheckAlt pty ety p e
 -- Another possible shortcut that avoids generating new type variables
 -- typecheck (LambdaExpression [p] e) (ForAll _ (TypeArrow _ _)) =
 typecheck (LambdaExpression [p] e) ty =
   do
     alpha <- newTyVar
     beta <- newTyVar
-    typecheckAlt alpha beta (p, e)
+    typecheckAlt alpha beta p e
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty =
   do
@@ -110,7 +110,7 @@ typecheckVar x ty =
     scheme <- mfind x env
     subsume scheme ty
 
-typecheckAlt pty ety (pat, expr)  =
+typecheckAlt pty ety pat expr =
   do
     binds <- typecheckPattern pat pty
     with (fromList' fromId binds) (typecheck expr ety)
@@ -248,22 +248,18 @@ unify' ty s@(ForAll _ _) =
     fail ("Cannot unify " ++ pretty ty ++ " and scheme " ++ pretty s)
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
+-- After unifying f1 and f2 the substitution might have changed
+-- and therefore needs to be reapplied to e1 and e2
 unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
-  do
-    unify f1 f2
-    unify e1 e2
+    unify' f1 f2 *> unify e1 e2
 unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
-  do
-    unify a1 a2
-    unify b1 b2
+    unify' a1 a2 *> unify b1 b2
 unify' a b =
     fail ("Cannot unify " ++ pretty a ++ " and " ++ pretty b)
 
-unifyVar x ty =
-  do
-    when (occurs x ty) (fail ("Occurs check: " ++ pretty x
-        ++ " occurs in " ++ pretty ty))
-    insertSubst x ty
+unifyVar x ty = if occurs x ty
+    then fail ("Occurs check: " ++ pretty x ++ " occurs in " ++ pretty ty)
+    else insertSubst x ty
 
 -- Does a type variable occur in a type?
 occurs x ty = elem x (freeVars ty)

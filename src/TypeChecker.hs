@@ -85,8 +85,17 @@ typecheck (CaseExpression expr alts) ty = do
 -- A common shortcut that avoids generating new type variables
 typecheck (LambdaExpression [p] e) (TypeArrow pty ety) =
     typecheckAlt pty ety p e
--- Another possible shortcut that avoids generating new type variables
--- typecheck (LambdaExpression [p] e) (ForAll _ (TypeArrow _ _)) =
+-- A shortcut that avoids generating new type variables
+typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
+    (skolVars, TypeArrow alpha beta) <- skolemise s
+    typecheckAlt alpha beta p e
+    subst <- getSubst
+    env <- getEnv
+    let escVars = skolems s ++ concatMap (skolems . apply subst) env
+    let escaped = including escVars skolVars
+    unless (null escaped) (fail ("Escape check lambda: "
+        ++ pretty escaped ++ " escaped when checking fun "
+        ++ pretty p ++ " -> ... against " ++ pretty s))
 typecheck (LambdaExpression [p] e) ty = do
     alpha <- newTyVar
     beta <- newTyVar
@@ -354,11 +363,6 @@ subsume' scheme1 scheme2@(ForAll _ _) = do
 subsume' scheme@(ForAll _ _) t2 = do
     t1 <- instantiate scheme
     subsume' t1 t2
-{-
-subsume' (TypeArrow s1 s2) (TypeArrow s3 s4) = do
-    subsume' s3 s1
-    subsume s2 s4
--}
 subsume' t1 t2 = unify' t1 t2
 
 -- constructs forall a b. t instead of forall a. forall b. t

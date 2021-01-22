@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module TypeChecker where
 
-import Prelude hiding (lookup)
+import Prelude
 import Syntax
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey,
-    lookup, difference)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
+import Data.Maybe(isNothing)
 import Control.Monad(when, unless, zipWithM)
 import Control.Arrow(first)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
@@ -36,11 +36,16 @@ inferModule (ModuleDeclaration modName decls) = do
     -- Qualify means rename Ty to AnyModuleName.Ty
     let qual = qualifyId modName
     let constructors = foldMap (gatherConstructor qual) decls
-    let signatures = fromList' qual (foldMap gatherTypeSig decls)
+    let signatures = foldMap gatherTypeSig decls
+
+    let types = mappend constructors (fromList' qual signatures)
+    -- The signatures are also passed as a plain argument for lookups
+    binds <- with types (inferDecls qual generalize signatures decls)
     
-    binds <- with constructors (inferDecls qual generalize signatures decls)
     sanitySkolemCheck binds
-    return (mappend constructors (mappend signatures binds))
+    sanityFreeVariableCheck binds
+    
+    return (mappend types binds)
 
 -- Skolem variables are caught earlier,
 -- so this check is redundant, but makes sure
@@ -49,6 +54,11 @@ sanitySkolemCheck = traverseWithKey_ (\k v ->
     let s = skolems v
     in unless (null s)
         (fail ("Bug: " ++ pretty k ++ " leaked skolems " ++ pretty s)))
+
+sanityFreeVariableCheck = traverseWithKey_ (\k v ->
+    let vs = freeVars v
+    in unless (null vs)
+        (fail ("Bug: " ++ pretty k ++ " leaked free variable " ++ pretty vs)))
 
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
@@ -83,9 +93,10 @@ typecheck (LambdaExpression [p] e) ty = do
     typecheckAlt alpha beta p e
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty = do
-    let signatures = fromList' fromId (foldMap gatherTypeSig decls)
-    binds <- inferDecls fromId return signatures decls
-    with (mappend signatures binds) (typecheck e ty)
+    let signatures = foldMap gatherTypeSig decls
+    let signatures' = fromList' fromId signatures
+    binds <- with signatures' (inferDecls fromId return signatures decls)
+    with (mappend signatures' binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty = do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))
     typecheck th ty
@@ -154,24 +165,31 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
 -- If a signature is given, check against it
 -- otherwise create a new type variable and infer a type
-findTypePattern qual signatures (VariablePattern v) =
-    maybe newTyVar return (mfind (qual v) signatures)
-findTypePattern _ _ _ = newTyVar
+-- TODO here for example x would not be matched against its signature
+-- x : Int
+-- List x _ = List 1 Empty
+findSignature signatures (VariablePattern v) =
+    maybe newTyVar return (lookup v signatures)
+findSignature _ _ = newTyVar
+
+bindsWithoutSignatures signatures binds =
+    filter (\x -> isNothing (lookup (fst x) signatures)) binds
 
 inferDecl qual gen signatures (ExpressionDeclaration p e) next = do
-    ty <- findTypePattern qual signatures p
-    binds <- fmap (fromList' qual) (typecheckPattern p ty)
+    ty <- findSignature signatures p
+    binds <- typecheckPattern p ty
+    let binds' = fromList' qual (bindsWithoutSignatures signatures binds)
 
-    -- Overwrite the binds with the more precise signatures
     -- If an error occurs, show in which declaration it happened
-    onException' (with (mappend signatures binds) (typecheck e ty))
+    onException' (with binds' (typecheck e ty))
         (putStrLn ("When typechecking declaration " ++ pretty p
             ++ " at " ++ locationInfo p))
 
     -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
-    -- Exclude signatures
-    -- In LetExpressions gen does nothing
-    generalized <- traverse gen (difference binds signatures)
+    -- NOTE if binds contain signatures then those are not generalized
+    -- because they are already in the form forall x1 ... xn . t
+    -- also in LetExpressions gen is just 'return' and does nothing
+    generalized <- traverse gen binds'
 
     nextTys <- with generalized next
     return (mappend generalized nextTys)
@@ -253,10 +271,15 @@ apply subst (ForAll vs ty) =
     let filteredSubst = excludingKeys vs subst
     in ForAll vs (apply filteredSubst ty)
 -- TODO solve infintie loop
--- sometimes the typechecker loops infinitely
--- Presumably here when a variable gets substituted again and again
+-- sometimes the typechecker looped infinitely
+-- substituting a variable again and again
+-- it is not clear why this happens
+-- as this should be caught in the occurs check
 apply subst ty@(TypeVariable x) =
-    maybe ty (apply subst) (lookup x subst)
+    --maybe ty (apply subst) (mfind x subst)
+    maybe ty (\ty2 -> case ty2 of
+            TypeVariable y | x == y -> ty2
+            _ -> apply subst ty2) (mfind x subst)
 apply subst ty = descend (apply subst) ty
 
 -- Environment
@@ -298,7 +321,7 @@ generalize ty = do
     subst <- getSubst
     let ty' = apply subst ty
     env <- getEnv
-    let envVars = concatMap freeVars env
+    let envVars = concatMap (freeVars . apply subst) env
     let qualVars = excluding envVars (freeVars ty')
     return (makeForAll qualVars ty')
 
@@ -323,7 +346,7 @@ subsume' scheme1 scheme2@(ForAll _ _) = do
     (skolVars, ty) <- skolemise scheme2
     subsume' scheme1 ty
     subst <- getSubst
-    let escVars = skolems (apply subst scheme1) ++ skolems (apply subst ty)
+    let escVars = skolems (apply subst scheme1) ++ skolems (apply subst scheme2)
     let escaped = including escVars skolVars
     unless (null escaped) (fail ("Escape check: " ++ pretty escaped
         ++ " escaped when subsuming " ++ pretty scheme1

@@ -34,7 +34,11 @@ inferModule (ModuleDeclaration modName decls) = do
     info ("Typechecking Module " ++ renderName modName)
     
     -- Qualify means rename Ty to AnyModuleName.Ty
+    -- TODO should VariablePattern etc. contain
+    -- names instead of identifiers, so that a qual function
+    -- is not needed after qualification?
     let qual = qualifyId modName
+
     let constructors = foldMap (gatherConstructor qual) decls
     let signatures = foldMap gatherTypeSig decls
 
@@ -125,9 +129,9 @@ typecheckAlt pty ety pat expr = do
     binds <- typecheckPattern pat pty
     with (fromList' fromId binds) (typecheck expr ety)
 
--- Typecheck Constructors
-
 {-
+Typecheck Constructors
+
 capture the signature of all constructors from a type declaration
 
 for example
@@ -174,9 +178,10 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
 -- If a signature is given, check against it
 -- otherwise create a new type variable and infer a type
--- TODO here for example x would not be matched against its signature
+-- TODO match variable against its signature in cases like this:
 -- x : Int
--- List x _ = List 1 Empty
+-- Tuple x _ = Tuple "hi" "ho"
+-- Should be a type error
 findSignature signatures (VariablePattern v) =
     maybe newTyVar return (lookup v signatures)
 findSignature _ _ = newTyVar
@@ -279,14 +284,15 @@ occurs x ty = elem x (freeVars ty)
 apply subst (ForAll vs ty) =
     let filteredSubst = excludingKeys vs subst
     in ForAll vs (apply filteredSubst ty)
--- TODO solve infintie loop
+-- TODO investigate infinite loop
 -- sometimes the typechecker looped infinitely
 -- substituting a variable again and again
 -- it is not clear why this happens
 -- as this should be caught in the occurs check
 apply subst ty@(TypeVariable x) =
-    --maybe ty (apply subst) (mfind x subst)
     maybe ty (\ty2 -> case ty2 of
+            -- do not substitute if the variable
+            -- would be substituted with itself
             TypeVariable y | x == y -> ty2
             _ -> apply subst ty2) (mfind x subst)
 apply subst ty = descend (apply subst) ty

@@ -28,7 +28,7 @@ executable hypatia
     Sorting,
     Syntax,
     Transformations,
-    TypeChecker
+    Typechecker
   other-extensions:
     DeriveDataTypeable,
     OverloadedStrings

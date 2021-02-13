@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module TypeChecker where
+module Typechecker where
 
 import Prelude
 import Syntax

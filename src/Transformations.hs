@@ -4,7 +4,7 @@ import Syntax
 import Aliases
 import Simplifier
 import Sorting
-import TypeChecker
+import Typechecker
 import Operators
 import Qualification
 import Data.Functor.Identity(runIdentity)
@@ -15,17 +15,24 @@ import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 -- The lowest function in this list is the first step of the transformations
 transformations :: [ModuleDeclaration] -> [ModuleDeclaration]
 transformations = sortDeclsMod
+    -- Aliases
     . aliasConstructorsProgram
     . aliasOperatorsProgram
+    -- Simplifier
     . removeParens
+    -- Operators
     . fixAssocProgram
+    -- Qualification
     . qualifyProgram
     . qualifyTypesProgram
     . fmap changeQualifiedImportsMod
+    -- Simplifier
     . splitLambdas
     . removeAwaitDeclaration
     . removeFunctionDeclaration
+    -- Aliases
     . fmap aliasOperatorsMod
+    -- Sorting
     . sortModules
 
 {- Typechecking -}

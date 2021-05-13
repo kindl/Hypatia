@@ -1,6 +1,6 @@
 module Common.Array
 
-import Native((&), (+),
+import Native((++), (+),
     Text, isArray, unsafeCoerce, toString,
     split, unsafeInsert, size, geti)
 import Common.Base(identity, Unit, (==))
@@ -8,22 +8,29 @@ import Common.Base(identity, Unit, (==))
 
 lines a = split "\n" a
 
-filter p a = foldMap (fun e -> if p e then [e] else []) a
+filterWithIndex p a = foldlWithIndex (fun i z e ->
+    if p i e then unsafeInsert z e else z) [] a
 
+filter p a = foldl (fun z e -> if p e then unsafeInsert z e else z) [] a
+
+// Insert all elements into a fresh array
 copy a = foldl unsafeInsert [] a
 
-# The first array is copied to avoid inserting the elements into a
+// The first array is copied to avoid inserting the elements into a
 append a b = foldl unsafeInsert (copy a) b
 
 map f a = foldl (fun z e -> unsafeInsert z (f e)) [] a
 
 foldMap f a = foldl (fun z e -> append z (f e)) [] a
 
-foldl f z a = foldlAux 0 (size a) f z a
+foldl f z a = foldlWithIndex (fun _ x y -> f x y) z a
 
-foldlAux i maxN f z a =
-    if i == maxN then z else foldlAux (i + 1) maxN f (f z (geti i a)) a
+foldlWithIndex f z a = foldlWithRangeAndIndex 0 (size a) f z a
+
+foldlWithRangeAndIndex i maxN f z a =
+    if i == maxN then z else
+        foldlWithRangeAndIndex (i + 1) maxN f (f i z (geti i a)) a
 
 inspect x = if isArray x
-    then "{" & foldl (fun z i -> z & " " & inspect i) "" (unsafeCoerce x) & "}"
+    then "{" ++ foldl (fun z i -> z ++ " " ++ inspect i) "" (unsafeCoerce x) ++ "}"
     else toString x 

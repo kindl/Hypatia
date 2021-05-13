@@ -76,7 +76,7 @@ boolToString False = "False"
 boolToString True = "True"
 
 
-type Option a = None | A a
+type Option a = None | Some a
 
 type Unit = Unit
 
@@ -105,3 +105,5 @@ compose f g x = f (g x)
 infixr 9 << reverseCompose
 
 reverseCompose = flip compose
+
+always x _ = x

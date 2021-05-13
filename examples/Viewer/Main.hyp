@@ -22,8 +22,6 @@ type GameState = MkGameState Points Rotation Scale
 
 gameState = unsafeMakeRef (MkGameState [] (scaleMatrix 1) (screenHeight / 2))
 
-constant a _ = a
-
 modifyState f = unsafeRun (modifyRef gameState f)
 
 onState f = f (unsafeUnpackRef gameState)

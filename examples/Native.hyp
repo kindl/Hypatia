@@ -1,5 +1,8 @@
 module Native
 
+// this is a native module
+// meaning the corresponding lua file is created by hand
+
 type Numeral
 
 type Array
@@ -19,8 +22,11 @@ infixl 7 % modulo
 
 infixr 8 ^ power
 
-infixr 5 & concat
-infixr 5 ++ append
+// combining arrays
+infixr 5 <> append
+
+// combining strings
+infixr 5 ++ concat
 
 infixr 3 && and
 infixr 2 || or

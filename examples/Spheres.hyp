@@ -1,8 +1,8 @@
 module Spheres
 
 import Native((+), (*), (%), (-),
-    write, toString, geti, uncurry4, uncurry5, Array)
-import Native.Love(random, setColor, circle, getWidth, getHeight)
+    toString, geti, uncurry4, uncurry5, Array)
+import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
 import Common.Base(Unit, Numeral,
     (<),
     sqrt, repeatN)
@@ -41,10 +41,10 @@ radius (Sphere _ _ _ r) = r
 
 addSphere spheres =
     let
-        pos = Vec2 (random 0 500) (random 0 500)
-        vel = Vec2 (random (-100) 100) (random (-100) 100)
-        col = Vec3 (random 0 255) (random 0 255) (random 0 255)
-        rad = random 30 100
+        pos = Vec2 (unsafeRandom 0 500) (unsafeRandom 0 500)
+        vel = Vec2 (unsafeRandom (-100) 100) (unsafeRandom (-100) 100)
+        col = Vec3 (unsafeRandom 0 255) (unsafeRandom 0 255) (unsafeRandom 0 255)
+        rad = unsafeRandom 30 100
     in unsafeInsert spheres (Sphere pos vel col rad)
 
 load _ =

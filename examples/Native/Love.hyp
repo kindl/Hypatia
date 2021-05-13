@@ -6,7 +6,7 @@ import Common.Stateful(Stateful)
 #      Path -> Content
 file : Text -> Text
 
-random : Numeral -> Numeral -> Numeral
+unsafeRandom : Numeral -> Numeral -> Numeral
 
 getWidth : Stateful Numeral
 

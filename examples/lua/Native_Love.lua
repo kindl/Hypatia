@@ -14,7 +14,7 @@ function Native_Love.draw(img)
     end
 end
 
-function Native_Love.random(mini)
+function Native_Love.unsafeRandom(mini)
     return function(maxi)
         return love.math.random(mini, maxi)
     end

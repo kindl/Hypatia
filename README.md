@@ -2,7 +2,7 @@
 Hello stranger,
 
 
-How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML family. As it is tradition, my name was given to honour a [dead mathematician](https://en.wikipedia.org/wiki/Hypatia). Who I am? Well isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, Purescript and Elm, but I compile to Lua. I am walking in the footsteps of my ancestors, but I want to be different: I want to make games. So let me tell you about me.
+How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML family. As it is tradition, my name was given to honour a [deceased mathematician](https://en.wikipedia.org/wiki/Hypatia). Who I am? Well isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, Purescript and Elm, but I compile to Lua. I am walking in the footsteps of my ancestors, but I want to be different: I want to make games. So let me tell you about me.
 
 ### My Appearance
 ```
@@ -57,8 +57,10 @@ Hypatia is a prototype of a functional language of the ML-family that compiles t
 People are writing game engines in functional languages, however functional scripting languages are rarely seen.
 Hypatia could fill this gap and it could reuse parts of the existing lua ecosystem.
 
-Install the game engine [love](https://love2d.org) then run
+Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/) then run
 ```
+cabal install hypatia
+cd examples
 hypatia compile Spheres.hyp
 love lua
 ```

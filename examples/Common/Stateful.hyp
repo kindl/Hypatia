@@ -13,7 +13,7 @@ unsafeStateful = unsafeCoerce
 
 unsafeRun : Stateful s -> s
 unsafeRun f = unsafeCoerce f Unit
-
+        
 # Sequential composition
 # andThen f g = unsafeRun (f (unsafeRun g))
 # Would run the computation directly
@@ -30,11 +30,13 @@ map f = andThen (compose point f)
 point x = unsafeStateful (fun _ -> x)
 
 # Refs
-# Objects in JS and tables in Lua are passed by reference
-# meaning, if different functions receive an object in JS
-# then both modify the same object
-# Therefore in purescript-refs references are JS objects
-# Here references are realised with a type
+# Objects and arrays in JS, as well as tables in Lua are passed by reference,
+# meaning if different functions receive an object in JS
+# then both modify the same object.
+# Here, a Ref is a type constructor with one value
+# which is represented as the array [Mkref, t]
+# and will therefore be passed by reference.
+# (In purescript-refs references are JS objects.)
 type Ref t = MkRef t
 
 # The constructor MkRef is opaque and should not be imported
@@ -46,9 +48,14 @@ newRef x = point (unsafeMakeRef x)
 
 readRef r = point (unsafeUnpackRef r)
 
-writeRef r x = unsafeStateful (fun _ -> unsafeSet (toArray r) 1 x)
-    where
+# Because the type constructor (Mkref t) is represented as the array [Mkref, t],
+# writing a reference means reinterpreting it as an array
+# and setting the inner value 
+writeRef r x = unsafeStateful (fun _ -> 
+    let
         toArray : Ref t -> Array t
         toArray = unsafeCoerce
+        _ = unsafeSet (toArray r) 1 x
+    in Unit)
 
 modifyRef r f = writeRef r (f (unsafeUnpackRef r))

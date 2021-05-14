@@ -7,7 +7,7 @@ import Common.Base(Unit, Numeral,
     (<),
     sqrt, repeatN)
 import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef,
-    writeRef, readRef, Ref)
+    readRef, Ref)
 import Common.Array(map, unsafeInsert)
 
 

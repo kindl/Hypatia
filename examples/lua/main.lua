@@ -1,5 +1,5 @@
 local loadtime = 0
-local filename = "Viewer_Main.lua"
+local filename = "Spheres.lua"
 local game
 
 local watch = function(dt)

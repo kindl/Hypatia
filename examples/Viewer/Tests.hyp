@@ -1,15 +1,15 @@
-module Common.Tests
+module Viewer.Tests
 
-import Native((+), (-), (*), (^), (&), write)
+import Native((+), (-), (*), (^), (++), write, words)
 import Common.Base((==), boolToString, Unit, Tuple)
 import Common.Geometry(Vec4, Mat4, transpose, multiply, dot)
-import Common.Array(inspect, words, size)
+import Common.Array(inspect, size)
 import Viewer.Obj
 
 
 testLoad = test "Viewer.Obj.load" (Viewer.Obj.load "cube.obj")
 
-test name result = write (name & " " & inspect result)
+test name result = write (name ++ " " ++ inspect result)
 
 m1 = Mat4
     (Vec4 2 3 5 7)

@@ -1,14 +1,11 @@
 module Spheres
 
 import Native((+), (*), (%), (-),
-    toString, geti, uncurry4, uncurry5, Array)
+    uncurry4, uncurry5, Array, unsafeInsert, Numeral)
 import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
-import Common.Base(Unit, Numeral,
-    (<),
-    sqrt, repeatN)
-import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef,
-    readRef, Ref)
-import Common.Array(map, unsafeInsert)
+import Common.Base((<), sqrt, repeatN)
+import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef, Ref)
+import Common.Array(map)
 
 
 gameState : Ref (Array Sphere)

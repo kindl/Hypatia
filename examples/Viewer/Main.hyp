@@ -1,8 +1,8 @@
 module Viewer.Main
 
-import Native((/), (*), (+), uncurry2, uncurry5)
+import Native((/), (*), (+), uncurry2, uncurry5, Numeral, Array)
 import Native.Love(polygon)
-import Common.Base((>>), Tuple, Numeral, Array, getn)
+import Common.Base((>>), Tuple, getn)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
 import Viewer.Obj as Obj

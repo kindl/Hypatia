@@ -1,7 +1,7 @@
 module Common.List
 
-import Common.Base((&), (-), (+), Tuple, Unit, getn, size, empty)
-import Common.Array(insert)
+import Native((+), (-), unsafeInsert)
+import Common.Base(Tuple)
 
 
 type List a = Empty | Element a (List a)
@@ -27,7 +27,7 @@ foldl f z (Element x xs) = foldl f (f z x) xs
 
 foldMap f = foldl (fun z e -> append z (f e)) Empty
 
-listToArray = foldl insert []
+listToArray = foldl unsafeInsert []
 
 nth 1 (Element e _) = e
 nth n (Element _ es) = nth (n - 1) es

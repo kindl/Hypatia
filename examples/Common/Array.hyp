@@ -1,9 +1,9 @@
 module Common.Array
 
 import Native((++), (+),
-    Text, isArray, unsafeCoerce, toString,
+    isArray, unsafeCoerce, toString,
     split, unsafeInsert, size, geti)
-import Common.Base(identity, Unit, (==))
+import Common.Base((==))
 
 
 lines a = split "\n" a

@@ -1,9 +1,9 @@
 module Viewer.Tests
 
-import Native((+), (-), (*), (^), (++), write, words)
-import Common.Base((==), boolToString, Unit, Tuple)
+import Native((+), (-), (*), (^), (++), write, words, size)
+import Common.Base((==), boolToString, Tuple)
 import Common.Geometry(Vec4, Mat4, transpose, multiply, dot)
-import Common.Array(inspect, size)
+import Common.Array(inspect)
 import Viewer.Obj
 
 

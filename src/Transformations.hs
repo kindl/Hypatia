@@ -36,54 +36,51 @@ transformations = sortDeclsMod
     . sortModules
 
 {- Typechecking -}
-typecheckProgram p = feedbackM logEnv (\envs m ->
-    typecheckModule (filterNames (gatherSpecs m) envs) m) p
-
-logEnv env m =
-    let
-        modName = getName m
-        path = "logs/" ++ renderName modName ++ ".log"
-    in writeFile path (renderEnv env)
+typecheckProgram p = feedbackM typecheckAction p
+    where typecheckAction envs m = do
+            let filtered = filterNames (gatherSpecs m) envs
+            captured <- typecheckModule filtered m
+            let path = "logs/" ++ renderName (getName m) ++ ".log"
+            writeFile path (renderEnv captured)
+            return ((), captured)
 
 {- Operators and Aliasing -}
 qualifyProgram =
-    feedback qualifyNames (captureSimple filterIds captureNames)
+    feedback (simpleAction qualifyNames filterIds captureNames)
 
 qualifyTypesProgram =
-    feedback qualifyTypeNames (captureSimple filterIds captureTypeNames)
+    feedback (simpleAction qualifyTypeNames filterIds captureTypeNames)
 
 fixAssocProgram =
-    feedback fixAssoc (captureSimple filterNames captureAssocs)
+    feedback (simpleAction fixAssoc filterNames captureAssocs)
 
 aliasOperatorsProgram =
-    feedback aliasOperators (captureSimple filterNames captureOperatorAliases)
+    feedback (simpleAction aliasOperators filterNames captureOperatorAliases)
 
 aliasConstructorsProgram =
-    feedback aliasConstructors (captureSimple filterNames captureAliases)
+    feedback (simpleAction aliasConstructors filterNames captureAliases)
 
-captureSimple filterEnvs capture envs m =
-    capture m `mappend` filterEnvs (gatherSpecs m) envs
+-- Run action with captured local env and imported envs
+-- but return only the local environment
+simpleAction action filterEnvs capture envs m =
+    let
+        captured = capture m
+        combined = captured `mappend` filterEnvs (gatherSpecs m) envs
+        result = action combined m
+    in (result, captured)
 
-{-
-Incrementally grow an environment
-and perform an action on all modules
+-- Incrementally grow an environment and perform an action on all modules.
+-- An action is a function that returns captured information e.g. operators and their aliases
+-- and a changed module e.g. where operators have been changed to function application.
+feedbackM action mods = fmap fst (mapAccumM step mempty mods)
+    -- step could also be written without do-notation:
+    --fmap (fmap (flip (insert (getName m)) envs)) (action envs m)
+    where step envs m = do
+            (result, captured) <- action envs m
+            return (result, insert (getName m) captured envs)
 
-capture: captures the environment e.g. operators and their aliases
-envs: a map of the module name and its captured environment
--}
-feedbackM action capture mods =
-    fmap fst (mapAccumM (step action capture) mempty mods)
-
-step action capture envs m = do
-    captured <- capture envs m
-    result <- action captured m
-    return (result, insert (getName m) captured envs)
-
-feedback action capture mods =
-    runIdentity (feedbackM (ret action) (ret capture) mods)
-
--- Convenience function to make a regular function monadic
-ret f a b = return (f a b)
+feedback action mods =
+    runIdentity (feedbackM (\envs m -> return (action envs m)) mods)
 
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 

@@ -6,7 +6,6 @@ import Data.Data
 import Data.Text(Text, unpack, pack, split)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
-import Data.Functor.Identity(runIdentity)
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey,
     filterWithKey, fromListWith, unionWith)
@@ -306,11 +305,14 @@ makeOpPat op a b =
 makeOpTyp op a b =
     TypeApplication (TypeApplication (TypeConstructor op) a) b
 
-find o m = runIdentity (mfind o m)
+find o m = maybe (error (notFoundMessage o m)) id (lookup o m)
 
-mfind o m = maybe (fail ("Unknown " ++ pretty o ++ " in "
-    ++ pretty (keys m))) return (lookup o m)
+mfind o m = maybe (fail (notFoundMessage o m)) return (lookup o m)
 {-# INLINE mfind #-}
+
+notFoundMessage o m = "Unknown " ++ pretty o ++ " in "
+    ++ pretty (keys m)
+{-# INLINE notFoundMessage #-}
 
 locationInfo other = pretty [l | Id _ l <- universeBi other]
 {-# INLINE locationInfo #-}

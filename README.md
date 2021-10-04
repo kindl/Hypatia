@@ -49,7 +49,7 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 It was nice to talk with you stranger.
 
 
-xoxo  
+xoxo
 Hypatia
 
 ## How to get started
@@ -57,9 +57,16 @@ Hypatia is a prototype of a functional language of the ML-family that compiles t
 People are writing game engines in functional languages, however functional scripting languages are rarely seen.
 Hypatia could fill this gap and it could reuse parts of the existing lua ecosystem.
 
-Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/) then run
+- Install [Stack](https://docs.haskellstack.org/en/stable/install_and_upgrade/)
+- Install the game engine [love](https://love2d.org)
+- Build Hypatia with Stack:
 ```
-cabal install hypatia
+stack init
+stack build
+stack install
+```
+- Build and run examples
+```
 cd examples
 hypatia compile Spheres.hyp
 love lua

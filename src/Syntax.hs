@@ -148,12 +148,10 @@ instance Pretty Position where
         text "line" <+> text (show l) <> text ", column" <+> text (show c)
 
 instance Pretty Location where
-    pPrint (Location s e f) =
-        pPrint s <> text "," <+> indication s e
-        <+> text "in" <+> text "\"" <> text f <> text "\""
-
-indication (Position sl sc) (Position el ec) =
-    if sl == el then text "len" <+> pPrint (ec - sc) else text "..."
+    pPrint (Location (Position line column) _ filePath) =
+        text filePath
+        <> text ":" <> text (show line)
+        <> text ":" <> text (show column)
 
 instance Pretty Type where
     pPrint (TypeArrow a b) =

@@ -371,14 +371,13 @@ subsume' scheme@(ForAll _ _) t2 = do
     subsume' t1 t2
 subsume' t1 t2 = unify' t1 t2
 
--- constructs forall a b. t instead of forall a. forall b. t
--- constructs forall a. t instead of forall a a. t
+-- Normalizes foralls
+-- forall a. forall b. t becomes forall a b. t 
+-- forall a a. t becomes forall a. t 
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 ++ tvs2) ty
-makeForAll tvs ty =
-    case nub tvs of
-        [] -> ty
-        is -> ForAll is ty
+makeForAll [] ty = ty
+makeForAll tvs ty = ForAll (nub tvs) ty
 
 skolemise (ForAll vars ty) = do
     skolVars <- traverse (const newUniqueName) vars

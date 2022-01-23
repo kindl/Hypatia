@@ -2,7 +2,8 @@
 module Syntax where
 
 import Prelude hiding (lookup, (<>))
-import Data.Data
+import Data.Word(Word64)
+import Data.Data(Data, Typeable)
 import Data.Text(Text, unpack, pack, split)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
@@ -15,8 +16,8 @@ import Text.PrettyPrint(text, (<+>), ($$), (<>),
 import Data.Generics.Uniplate.Data(universe, universeBi)
 
 
-type Line = Integer
-type Column = Integer
+type Line = Word64
+type Column = Word64
 data Position = Position Line Column
     deriving (Show, Data, Typeable)
 
@@ -144,7 +145,7 @@ pretty p = render (pPrint p)
 
 instance Pretty Position where
     pPrint (Position l c) =
-        text "line" <+> pPrint l <> text ", column" <+> pPrint c
+        text "line" <+> text (show l) <> text ", column" <+> text (show c)
 
 instance Pretty Location where
     pPrint (Location s e f) =

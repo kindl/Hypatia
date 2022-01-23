@@ -141,7 +141,7 @@ data Lexeme
     = Reserved Text
     | Whitespace Text
     | Double Double
-    | Integer Integer
+    | Integer Int
     | String Text
     | Varid [Text] Text
     | Varsym [Text] Text

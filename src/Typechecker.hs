@@ -3,6 +3,7 @@ module Typechecker where
 
 import Prelude
 import Syntax
+import Data.Word(Word64)
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
@@ -21,7 +22,7 @@ type Environment = HashMap Name Type
 type Substitution = HashMap Id Type
 
 data TypecheckerState =
-    TypecheckerState Environment (IORef Integer) (IORef Substitution)
+    TypecheckerState Environment (IORef Word64) (IORef Substitution)
 
 type Typechecker a = ReaderT TypecheckerState IO a
 

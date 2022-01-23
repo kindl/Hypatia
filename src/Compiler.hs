@@ -21,6 +21,7 @@ data Statement
 
 data Expr
     = Var Name
+    | LitI Int
     | LitD Double
     | LitT Text
     | Func [Id] [Statement]
@@ -67,6 +68,7 @@ toLuaS (If e th el) =
         $$ vcatMap toLuaS el $$ text "end"
 
 toLuaE (Var x) = flatVar x
+toLuaE (LitI i) = int i
 toLuaE (LitD d) = double d
 toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
@@ -115,6 +117,7 @@ toJavaScriptS (If e th el) =
         $$ text "else" $$ block (vcatMap toJavaScriptS el)
 
 toJavaScriptE (Var x) = flatVar x
+toJavaScriptE (LitI i) = int i
 toJavaScriptE (LitD d) = double d
 toJavaScriptE (LitT t) = text (show t)
 toJavaScriptE (Func vs sts) =
@@ -279,12 +282,12 @@ getConditions v i (ConstructorPattern c []) =
     [mkEq (Access v i) (Var c)]
 getConditions v i (ConstructorPattern c ps) =
     [mkIsArray (Access v i),
-    mkEq (mkSize (Access v i)) (LitD (fromIntegral (length ps + 1))),
+    mkEq (mkSize (Access v i)) (LitI (length ps + 1)),
     mkEq (Access v (i ++ [0])) (Var c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
     [mkIsArray (Access v i),
-    mkEq (mkSize (Access v i)) (LitD (fromIntegral (length ps)))]
+    mkEq (mkSize (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 getConditions v i (LiteralPattern l) =
     [mkEq (Access v i) (compileL l)]

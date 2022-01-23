@@ -33,7 +33,7 @@ data Expr
         deriving (Show)
 
 
--- Simplified language to Lua
+-- Render simplified language as Lua
 renderLua sts = render (toLuaM sts)
 
 toLuaM (Mod modName sts) = vcat [
@@ -100,8 +100,12 @@ toLuaFun prefix vs sts = vcat [
     nest 4 (vcatMap toLuaS sts),
     text "end"]
 
+-- e.g. A module A.B is saved in the file A_B.lua
+-- local A_B = require("A_B")
+toLuaPath modName = text (show (renderFlatModName modName))
 
-{- JavaScript -}
+
+-- Render simplified language as JavaScript
 renderJavaScript sts = render (toJavaScriptM sts)
 
 toJavaScriptM (Mod modName sts) = vcat [
@@ -163,7 +167,9 @@ toJavaScriptFun prefix vs sts = vcat [
     nest 4 (vcatMap toJavaScriptS sts),
     text "}"]
 
-vcatMap f x = vcat (fmap f x)
+-- js needs the leading dot for local modules
+toJsPath modName = text (show ("./" ++ renderFlatModName modName))
+
 
 -- Compile to simplified language
 compile (ModuleDeclaration modName decls) =
@@ -347,9 +353,5 @@ mkError s = Call (Var (fromText "Native.error")) [LitT (pack s)]
 mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
 mkSize a = Call (Var (fromText "Native.size")) [a]
 
--- e.g. A module A.B is saved in the file A_B.lua
--- local A_B = require("A_B")
-toLuaPath modName = text (show (renderFlatModName modName))
 
--- js needs the leading dot for local modules
-toJsPath modName = text (show ("./" ++ renderFlatModName modName))
+vcatMap f x = vcat (fmap f x)

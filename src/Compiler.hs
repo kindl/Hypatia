@@ -29,6 +29,7 @@ data Expr
     | Call Expr [Expr]
     | Arr [Expr]
     | And Expr Expr
+    | Eq Expr Expr
         deriving (Show)
 
 
@@ -92,6 +93,7 @@ toLuaE (Call e@(Func _ _) es) =
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
+toLuaE (Eq e1 e2) = toLuaE e1 <+> text "==" <+> toLuaE e2
 
 toLuaFun prefix vs sts = vcat [
     prefix <+> text "function" <> parens (commas (fmap prettyId vs)),
@@ -153,6 +155,8 @@ toJavaScriptE (Call e es) =
 toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
 toJavaScriptE (And e1 e2) =
     toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
+toJavaScriptE (Eq e1 e2) =
+    toJavaScriptE e1 <+> text "===" <+> toJavaScriptE e2
 
 toJavaScriptFun prefix vs sts = vcat [
     prefix <+> text "function" <> parens (commas (fmap prettyId vs)) <+> text "{",
@@ -303,18 +307,18 @@ compileAlts v = foldr (\(p, e) rest ->
 getConditions v i (AliasPattern _ p) =
     getConditions v i p
 getConditions v i (ConstructorPattern c []) =
-    [mkEq (Access v i) (Var c)]
+    [Eq (Access v i) (Var c)]
 getConditions v i (ConstructorPattern c ps) =
     [mkIsArray (Access v i),
-    mkEq (mkSize (Access v i)) (LitI (length ps + 1)),
-    mkEq (Access v (i ++ [0])) (Var c)]
+    Eq (mkSize (Access v i)) (LitI (length ps + 1)),
+    Eq (Access v (i ++ [0])) (Var c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
     [mkIsArray (Access v i),
-    mkEq (mkSize (Access v i)) (LitI (length ps))]
+    Eq (mkSize (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 getConditions v i (LiteralPattern l) =
-    [mkEq (Access v i) (compileL l)]
+    [Eq (Access v i) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ pretty p)
@@ -341,7 +345,6 @@ immediate sts = Call (Func [] sts) []
 
 mkError s = Call (Var (fromText "Native.error")) [LitT (pack s)]
 mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
-mkEq a b = Call (Call (Var (fromText "Native.eq")) [a]) [b]
 mkSize a = Call (Var (fromText "Native.size")) [a]
 
 -- e.g. A module A.B is saved in the file A_B.lua

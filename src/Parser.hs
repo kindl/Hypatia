@@ -91,7 +91,7 @@ typeDeclaration = do
     name <- con
     variables <- many' var
     constructors <- optional (token "=" *> constrs)
-    return (TypeDeclaration name variables (concat constructors))
+    return (TypeDeclaration (fromId name) variables (concat constructors))
 {-# INLINE typeDeclaration #-}
 
 aliasDeclaration = do
@@ -99,7 +99,7 @@ aliasDeclaration = do
     alias <- conid
     token "="
     val <- otype
-    return (AliasDeclaration alias val)
+    return (AliasDeclaration (fromId alias) val)
 {-# INLINE aliasDeclaration #-}
 
 decls = curlyBraces (sepBy' decl (token ";"))
@@ -114,7 +114,7 @@ typeSignature = do
     v <- var
     token ":"
     t <- qtype
-    return (TypeSignature v t)
+    return (TypeSignature (fromId v) t)
 {-# INLINE typeSignature #-}
 
 fixityDeclaration = do
@@ -122,14 +122,14 @@ fixityDeclaration = do
     i <- float
     o <- varsym
     a <- varid <|> conid
-    return (FixityDeclaration f i o a)
+    return (FixityDeclaration f i (fromId o) (fromId a))
 {-# INLINE fixityDeclaration #-}
 
 functionDeclaration = do
     v <- var
     ps <- many1' apat
     r <- rhs
-    return (FunctionDeclaration v ps r)
+    return (FunctionDeclaration (fromId v) ps r)
 {-# INLINE functionDeclaration #-}
 
 operatorDeclaration = do
@@ -137,7 +137,7 @@ operatorDeclaration = do
     o <- varsym
     p2 <- lpat
     r <- rhs
-    return (FunctionDeclaration o [p1, p2] r)
+    return (FunctionDeclaration (fromId o) [p1, p2] r)
 {-# INLINE operatorDeclaration #-}
 
 expressionDeclaration = do
@@ -215,7 +215,7 @@ constrs = sepBy1' constr (token "|")
 constr = do
     c <- con
     ts <- many' atype
-    return (c, ts)
+    return (fromId c, ts)
 {-# INLINE constr #-}
 
 {- Expressions -}
@@ -374,10 +374,10 @@ aliasPattern = parenthesized (do
     v <- var
     token "alias"
     p <- pat
-    return (AliasPattern v p))
+    return (AliasPattern (fromId v) p))
 {-# INLINE aliasPattern #-}
 
-variablePattern = VariablePattern <$!> var
+variablePattern = (VariablePattern . fromId) <$!> var
 {-# INLINE variablePattern #-}
 
 constructorPattern = do
@@ -493,7 +493,7 @@ string = do
 {-# INLINE string #-}
 
 literal =
-    Numeral . fromIntegral <$!> integer
+    Numeral . intToDouble <$!> integer
     <|> Numeral <$!> float
     <|> Text <$!> string
 {-# INLINE literal #-}

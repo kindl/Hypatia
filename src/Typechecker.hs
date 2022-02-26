@@ -10,7 +10,6 @@ import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
 import Data.Maybe(isNothing)
 import Control.Monad(when, unless, zipWithM)
-import Control.Arrow(first)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_, foldMap')
@@ -33,19 +32,13 @@ typecheckModule env m = do
 
 inferModule (ModuleDeclaration modName decls) = do
     info ("Typechecking Module " ++ renderName modName)
-    
-    -- Qualify means rename Ty to AnyModuleName.Ty
-    -- TODO should VariablePattern etc. contain
-    -- names instead of identifiers, so that a qual function
-    -- is not needed after qualification?
-    let qual = qualifyId modName
 
-    let constructors = foldMap (gatherConstructor qual) decls
-    let signatures = foldMap gatherTypeSig decls
+    let constructors = foldMap' gatherConstructor decls
+    let signatures = foldMap' gatherTypeSig decls
 
-    let types = mappend constructors (fromList' qual signatures)
+    let types = mappend constructors (fromList signatures)
     -- The signatures are also passed as a plain argument for lookups
-    binds <- with types (inferDecls qual generalize signatures decls)
+    binds <- with types (inferDecls generalize signatures decls)
     
     sanitySkolemCheck binds
     sanityFreeVariableCheck binds
@@ -107,9 +100,9 @@ typecheck (LambdaExpression [p] e) ty = do
     typecheckAlt alpha beta p e
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty = do
-    let signatures = foldMap gatherTypeSig decls
-    let signatures' = fromList' fromId signatures
-    binds <- with signatures' (inferDecls fromId return signatures decls)
+    let signatures = foldMap' gatherTypeSig decls
+    let signatures' = fromList signatures
+    binds <- with signatures' (inferDecls return signatures decls)
     with (mappend signatures' binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty = do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))
@@ -128,7 +121,7 @@ typecheckVar x ty = do
 
 typecheckAlt pty ety pat expr = do
     binds <- typecheckPattern pat pty
-    with (fromList' fromId binds) (typecheck expr ety)
+    with (fromList binds) (typecheck expr ety)
 
 {-
 Typecheck Constructors
@@ -143,12 +136,12 @@ Vec3 : forall a. a -> a -> a -> Vector a
 
 Vec2 is a constructor and Vector a type constructor
 -}
-gatherConstructor qual (TypeDeclaration tyIdent vars constructors) =
+gatherConstructor (TypeDeclaration tyIdent vars constructors) =
     let
-        qualTy = TypeConstructor (qual tyIdent)
-        tyCon = foldl' TypeApplication qualTy (fmap TypeVariable vars)
-    in fromList' qual (fmap (fmap (constructorToType tyCon vars)) constructors)
-gatherConstructor _ _ = mempty
+        resTy = TypeConstructor tyIdent
+        tyCon = foldl' TypeApplication resTy (fmap TypeVariable vars)
+    in fromList (fmap (fmap (constructorToType tyCon vars)) constructors)
+gatherConstructor _ = mempty
 
 -- convert a constructor declaration to a type
 constructorToType tyCon vars tys =
@@ -171,8 +164,8 @@ gatherTypeSig _ = mempty
 
 -- Assumes that the let bindings are already sorted
 -- Let bindings have to be sorted for the translation anyway
-inferDecls qual gen signatures =
-    foldr (inferDecl qual gen signatures) (return mempty)
+inferDecls gen signatures =
+    foldr (inferDecl gen signatures) (return mempty)
 
 -- A version of onException that works with ReaderT
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
@@ -190,10 +183,10 @@ findSignature _ _ = newTyVar
 bindsWithoutSignatures signatures binds =
     filter (\x -> isNothing (lookup (fst x) signatures)) binds
 
-inferDecl qual gen signatures (ExpressionDeclaration p e) next = do
+inferDecl gen signatures (ExpressionDeclaration p e) next = do
     ty <- findSignature signatures p
     binds <- typecheckPattern p ty
-    let binds' = fromList' qual (bindsWithoutSignatures signatures binds)
+    let binds' = fromList (bindsWithoutSignatures signatures binds)
 
     -- If an error occurs, show in which declaration it happened
     onException' (with binds' (typecheck e ty))
@@ -208,7 +201,7 @@ inferDecl qual gen signatures (ExpressionDeclaration p e) next = do
 
     nextTys <- with generalized next
     return (mappend generalized nextTys)
-inferDecl _ _ _ _ next = next
+inferDecl _ _ _ next = next
 
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty =
@@ -391,5 +384,3 @@ info s = lift (putStrLn s)
 readRef s = lift (readIORef s)
 
 modifyRef s f = lift (modifyIORef' s f)
-
-fromList' qual l = fromList (fmap (first qual) l)

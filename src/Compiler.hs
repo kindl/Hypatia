@@ -15,7 +15,7 @@ data Mod = Mod Name [Statement]
 
 data Statement
     = Ret Expr
-    | Assign Id Expr
+    | Assign Binding Expr
     | If Expr [Statement] [Statement]
     | Imp Name
         deriving (Show)
@@ -39,23 +39,24 @@ renderLua sts = render (toLuaM sts)
 
 toLuaM (Mod modName sts) = vcat [
     text "local" <+> flatModName modName <+> equals <+> text "{}",
-    vcatMap (toLuaT modName) sts,
+    vcatMap toLuaT sts,
     text "return" <+> flatModName modName]
 
-toLuaT modName (Assign x (Func vs sts)) =
-    toLuaFun (flatVar (qualifyId modName x) <+> equals) vs sts
-toLuaT modName (Assign x e) =
-    flatVar (qualifyId modName x) <+> equals <+> toLuaE e
-toLuaT _ s = toLuaS s
+-- Top level without "local"
+toLuaT (Assign x (Func vs sts)) =
+    toLuaFun (flatVar x <+> equals) vs sts
+toLuaT (Assign x e) =
+    flatVar x <+> equals <+> toLuaE e
+toLuaT s = toLuaS s
 
 -- local functions need to be declared beforehand for recursion
 --local fix = function(f) return f(fix(f)) end
 -- would result in an error because "fix" is undefined
 toLuaS (Assign x (Func vs sts)) = vcat [
-    text "local" <+> prettyId x,
-    toLuaFun (prettyId x <+> equals) vs sts]
+    text "local" <+> prettyName x,
+    toLuaFun (prettyName x <+> equals) vs sts]
 toLuaS (Assign x e) =
-    text "local" <+> prettyId x <+> equals <+> toLuaE e
+    text "local" <+> prettyName x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
@@ -114,17 +115,17 @@ renderJavaScript sts = render (toJavaScriptM sts)
 
 toJavaScriptM (Mod modName sts) = vcat [
     text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
-    vcatMap (toJavaScriptT modName) sts,
+    vcatMap toJavaScriptT sts,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
 
-toJavaScriptT modName (Assign x (Func vs sts)) =
-    toJavaScriptFun (flatVar (qualifyId modName x) <+> equals) vs sts <> semi
-toJavaScriptT modName (Assign x e) =
-    flatVar (qualifyId modName x) <+> equals <+> toJavaScriptE e <> semi
-toJavaScriptT _ s = toJavaScriptS s
+toJavaScriptT (Assign x (Func vs sts)) =
+    toJavaScriptFun (flatVar x <+> equals) vs sts <> semi
+toJavaScriptT (Assign x e) =
+    flatVar x <+> equals <+> toJavaScriptE e <> semi
+toJavaScriptT s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
-    text "const" <+> prettyId x <+> equals <+> toJavaScriptE e <> semi
+    text "const" <+> prettyName x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (toJsPath modName) <> semi
@@ -178,7 +179,7 @@ toJsPath modName = text (show ("./" ++ renderFlatModName modName))
 -- Compile to simplified language
 compile (ModuleDeclaration modName decls) =
     let
-        compiledDecls = foldMap (compileTop modName) decls
+        compiledDecls = foldMap' compileTop decls
         imports = compileImports decls
     in Mod modName (imports ++ compiledDecls)
 
@@ -186,7 +187,7 @@ compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c
 compileE (FunctionApplication f e) = Call (compileE f) [compileE e]
 compileE (LambdaExpression [VariablePattern v] e) =
-    Func [v] (compileEtoS e)
+    Func [toId v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     let
         v = prefixedId "l"
@@ -214,7 +215,7 @@ compileEtoS (CaseExpression e alts) =
     let
         v = prefixedId "c"
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
-    in Assign v (compileE e) : compileAlts v [err] alts
+    in Assign (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
     foldMap' compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
@@ -225,11 +226,11 @@ compileL (Numeral n) = LitD n
 compileL (Text t) = LitT t
 
 -- Compile top level declarations
-compileTop modName (TypeDeclaration _ _ cs) =
-    fmap (compileConstructor modName) cs
-compileTop _ (ImportDeclaration _ _ _) = []
-compileTop _ (FixityDeclaration _ _ _ _) = []
-compileTop _ other = compileD other
+compileTop (TypeDeclaration _ _ cs) =
+    fmap compileConstructor cs
+compileTop (ImportDeclaration _ _ _) = []
+compileTop (FixityDeclaration _ _ _ _) = []
+compileTop other = compileD other
 
 {-
 Only import a module once in cases as for example
@@ -242,14 +243,12 @@ compileImports decls = fmap Imp (nub [modName |
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration (Wildcard _) e) =
-    [Assign (prefixedId "w") (compileE e)]
+    [Assign (fromId (prefixedId "w")) (compileE e)]
 {-
 Compile pattern matches in let expressions like
 let
     Tuple a b = Tuple 2 3
 in write (toString a)
-
-To work on the top level, v would need to have the module name included
 -}
 compileD (ExpressionDeclaration p pe) =
     let
@@ -257,18 +256,17 @@ compileD (ExpressionDeclaration p pe) =
         err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
         s = getAssignments v [] p
         cs = getConditions v [] p
-    in Assign v (compileE pe) : If (foldr1 And cs) [] [err] : s
+    in Assign (fromId v) (compileE pe) : If (foldr1 And cs) [] [err] : s
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
-compileConstructor _ (c, []) =
+compileConstructor (c, []) =
     Assign c (Func [] [])
-compileConstructor modName (c, vs) =
+compileConstructor (c, vs) =
     let
-        name = qualifyId modName c
         vars = nNewVars (length vs)
-        body = Arr (fmap Var (name:fmap fromId vars))
+        body = Arr (fmap Var (c:fmap fromId vars))
     in Assign c (curryFunc body vars)
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])

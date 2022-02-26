@@ -10,25 +10,21 @@ import Data.Foldable(foldMap')
 sortDeclsMod x = (transformBi f . transformBi k) x
   where
     f (LetExpression decls e) =
-        LetExpression (sortDecls fromId decls) e
+        LetExpression (sortDecls decls) e
     f e = e
 
     k (ModuleDeclaration modName decls) =
-        ModuleDeclaration modName
-            (sortDecls (qualifyId modName) decls)
+        ModuleDeclaration modName (sortDecls decls)
 
-sortDecls qual decls =
+sortDecls decls =
     let
-        -- Top-level definitions are qualified with the module name
-        getDefs = fmap qual . getDefsD
-
         -- Only look at the dependency on local variables
-        localDefs = foldMap getDefs decls
+        localDefs = foldMap' getDefsD decls
         getLocalDeps = including localDefs . getDepsD
 
         -- Remove recursive dependency on itself
-        getDeps decl = excluding (getDefs decl) (getLocalDeps decl)
-    in resolve getDefs getDeps [] decls
+        getDeps decl = excluding (getDefsD decl) (getLocalDeps decl)
+    in resolve getDefsD getDeps [] decls
 
 resolve getDefs getDeps done rest =
     case partition (null . excluding done . getDeps) rest of
@@ -54,12 +50,12 @@ getDepsE e =
         f (ConstructorExpression c) _ = [c]
         f (CaseExpression _ alts) (deps:cs) =
             concat (deps : zipWith (\(p, _) c ->
-                excluding (fmap fromId (getDefsP p)) c) alts cs)
+                excluding (getDefsP p) c) alts cs)
         f (LambdaExpression ps _) cs =
-            excluding (foldMap (fmap fromId . getDefsP) ps)
+            excluding (foldMap' getDefsP ps)
                 (concat cs)
         f (LetExpression decls _) cs =
-            excluding (foldMap (fmap fromId . getDefsD) decls)
+            excluding (foldMap' getDefsD decls)
                 (concat cs)
         f _ cs = concat cs
     in para f e

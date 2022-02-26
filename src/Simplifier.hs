@@ -33,7 +33,7 @@ Transform declarations with await into bind expressions
 
 f = let
         filePath = "Test"
-        fileEnding ".txt"
+        fileEnding = ".txt"
         fileName = await readFile (filePath & fileEnding)
         content = await readFile fileName
     in printText content
@@ -97,7 +97,6 @@ transBinds decls =
 
 
 -- Groups function declarations with the same name
-groupBinds :: [Declaration] -> [Either Declaration (Id, [([Pattern], Expression)])]
 groupBinds = foldr groupBindsStep []
 
 groupBindsStep (FunctionDeclaration id1 ps e) (Right (id2, xs):rest) | id1 == id2 =
@@ -110,9 +109,9 @@ transAlt (name, [(ps, e)]) =
 transAlt (name, alts) =
     let
         n = length (fst (head alts))
-        vs = nNewVars n
+        vs = fmap fromId (nNewVars n)
         nalts = fmap (first toTuplesP1) alts
-        e = toTuplesE1 (fmap (Variable . fromId) vs)
+        e = toTuplesE1 (fmap Variable vs)
     in ExpressionDeclaration (VariablePattern name)
         (LambdaExpression (fmap VariablePattern vs)
             (CaseExpression e nalts))

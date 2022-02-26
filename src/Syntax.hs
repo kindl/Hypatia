@@ -67,17 +67,20 @@ data Associativity = None | LeftAssociative | RightAssociative
     deriving (Show, Data, Typeable)
 
 type Precedence = Double
-type Alias = Id
+
+type OperatorAlias = Name
+
+type Binding = Name
 
 data Declaration
     = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
-    | TypeDeclaration Id [Id] [(Id, [Type])]
-    | AliasDeclaration Id Type
-    | FixityDeclaration Associativity Precedence Id Alias
-    | TypeSignature Id Type
+    | TypeDeclaration Binding [Id] [(Binding, [Type])]
+    | AliasDeclaration Binding Type
+    | FixityDeclaration Associativity Precedence Binding OperatorAlias
+    | TypeSignature Binding Type
     | ExpressionDeclaration Pattern Expression
     -- simplified to an expression declaration
-    | FunctionDeclaration Id [Pattern] Expression
+    | FunctionDeclaration Binding [Pattern] Expression
         deriving (Show, Data, Typeable)
 
 
@@ -94,14 +97,14 @@ data Type
 
 
 data Pattern
-    = VariablePattern Id
+    = VariablePattern Binding
     | LiteralPattern Literal
     | Wildcard Id
     | ConstructorPattern Name [Pattern]
     | ParenthesizedPattern Pattern
     | ArrayPattern [Pattern]
     | PatternInfixOperator Pattern Name Pattern
-    | AliasPattern Id Pattern
+    | AliasPattern Binding Pattern
         deriving (Show, Data, Typeable)
 
 
@@ -139,8 +142,6 @@ qualify (Name modQs modName) (Name [] name) =
     Name (modQs ++ [getText modName]) name
 qualify _ n = n
 
-qualifyId q n = qualify q (fromId n)
-
 pretty p = render (pPrint p)
 {-# INLINE pretty #-}
 
@@ -173,7 +174,7 @@ instance Pretty Literal where
     pPrint (Text t) = text (show t)
 
 instance Pretty Pattern where
-    pPrint (VariablePattern identifier) = prettyId identifier
+    pPrint (VariablePattern v) = prettyName v
     pPrint (LiteralPattern l) = pPrint l
     pPrint (Wildcard _) = text "_"
     pPrint (ConstructorPattern name []) =
@@ -185,14 +186,14 @@ instance Pretty Pattern where
         parens (pPrint a <+> prettyName op <+> pPrint b)
     pPrint (ParenthesizedPattern p) =
         parens (pPrint p)
-    pPrint (AliasPattern i p) =
-        prettyId i <+> text "as" <+> pPrint p
+    pPrint (AliasPattern v p) =
+        prettyName v <+> text "as" <+> pPrint p
     pPrint (ArrayPattern ps) =
         brackets (commas (fmap pPrint ps))
 
 instance Pretty Name where
-    pPrint modName = prettyName modName
-        <+> pPrint (getLocation (getId modName))
+    pPrint modName@(Name _ identifier) =
+        prettyName modName <+> pPrint (getLocation identifier)
 
 instance Pretty Id where
     pPrint (Id s l) = text (unpack s) <+> text "at" <+> pPrint l
@@ -237,9 +238,12 @@ fromText s =
 
 fromId = Name []
 
-isConstructor i = firstIs isUpper (getText i)
+toId (Name [] identifier) = identifier
+toId n = error ("Name " ++ pretty n ++ " has qualifiers")
 
-isOperator i = firstIs isSym (getText i)
+isConstructor (Name _ i) = firstIs isUpper (getText i)
+
+isOperator (Name _ i) = firstIs isSym (getText i)
 
 firstIs f = Text.foldr (const . f) False
 {-# INLINE firstIs #-}
@@ -258,8 +262,6 @@ prefixedId x = Id (pack ("_v" ++ x)) builtinLocation
 {-# INLINE prefixedId #-}
 
 getQualifiers (Name q _) = q
-
-getId (Name _ i) = i
 
 getText (Id t _) = t
 
@@ -296,7 +298,7 @@ nNewVars n = fmap (prefixedId . show) [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication
-        (if isConstructor (getId op) then
+        (if isConstructor op then
             ConstructorExpression op else Variable op) a) b
 
 makeOpPat op a b =

@@ -21,8 +21,8 @@ fixAssoc operatorTable =
     in rewriteBi f . rewriteBi g . rewriteBi h
 
 {- Read the fixity declarations -}
-captureAssocs (ModuleDeclaration modName decls) =
-    fromList [(qualifyId modName op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
+captureAssocs (ModuleDeclaration _ decls) =
+    fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
 
 fixAssocE operatorTable (InfixOperator (InfixOperator e1 child e2) root e3) =
     fixAssocAux operatorTable LeftAssociative InfixOperator e1 child e2 root e3

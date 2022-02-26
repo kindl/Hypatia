@@ -3,50 +3,54 @@ module Qualification where
 import Syntax
 import Data.Generics.Uniplate.Data(transform, descend, transformBi)
 import Data.Foldable(foldMap')
-
-
--- TODO Are IDs in form of Int etc. easier to look up?
--- so instead of passing a function "qual"
--- insert and lookup the number in an IntMap
--- Could a hash of the location info be used for that purpose?
--- what happens with built-in names?
+import Control.Arrow(first)
 
 
 -- Qualification is split into value level and type level
--- otherwise type Unit = Unit would be problematic
+-- otherwise type Unit = Unit would be ambiguous
 
 -- Value Level
 qualifyNames quals (ModuleDeclaration name decls) =
     ModuleDeclaration name (fmap (qualifyD quals) decls)
 
--- Qualify the expressions appearing in declarations
+-- Qualify the bindings and expressions appearing in declarations
 qualifyD quals (ExpressionDeclaration p e) =
     ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
-qualifyD _ decl@(TypeDeclaration _ _ _) = decl
-qualifyD _ decl@(TypeSignature _ _) = decl
+qualifyD quals (TypeDeclaration v vars cs) =
+    TypeDeclaration v vars (fmap (first (findName quals)) cs)
+qualifyD quals (TypeSignature v t) =
+    TypeSignature (findName quals v) t
+qualifyD quals (AliasDeclaration v t) =
+    AliasDeclaration (findName quals v) t
+-- TODO make the following also work on type level
+-- For example, `infixl 7 * Tuple` Tuple will not be in quals
+qualifyD quals (FixityDeclaration a p op alias) =
+    FixityDeclaration a p (findName quals op) (findName quals alias)
 qualifyD _ decl@(ImportDeclaration _ _ _) = decl
-qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
-qualifyD _ decl@(AliasDeclaration _ _) = decl
-qualifyD _ decl@(FunctionDeclaration _ _ _) = decl
+qualifyD _ decl = error ("Bug: Unexpected declaration " ++ show decl)
 
 
 qualifyP quals pat =
     let
+        f (VariablePattern v) =
+            VariablePattern (findName quals v)
+        f (AliasPattern v p) =
+            AliasPattern (findName quals v) p
         f (ConstructorPattern c ps) =
-            ConstructorPattern (findName c quals) ps
+            ConstructorPattern (findName quals c) ps
         f (PatternInfixOperator p1 op p2) =
-            PatternInfixOperator p1 (findName op quals) p2
+            PatternInfixOperator p1 (findName quals op) p2
         f p = p
     in transform f pat
 
 
 qualifyE quals (Variable n) =
-    Variable (findName n quals)
+    Variable (findName quals n)
 qualifyE quals (ConstructorExpression c) =
-    ConstructorExpression (findName c quals)
+    ConstructorExpression (findName quals c)
 qualifyE quals (LetExpression decls e) =
     let
-        locals = toLocals (foldMap captureNameD decls)
+        locals = toLocals (foldMap' captureNameD decls)
         newQuals = unionUnique locals quals
     in LetExpression (fmap (qualifyD newQuals) decls)
         (qualifyE newQuals e)
@@ -57,7 +61,7 @@ qualifyE quals (LambdaExpression [p] e) =
     in LambdaExpression [qp] qe
 qualifyE quals (InfixOperator ea name eb) =
     InfixOperator (qualifyE quals ea)
-        (findName name quals) (qualifyE quals eb)
+        (findName quals name) (qualifyE quals eb)
 qualifyE quals e =
     descend (qualifyE quals) e
 
@@ -86,14 +90,17 @@ captureTopName _ = []
 
 
 -- Type Level
-qualifyTypeNames quals m =
+qualifyTypeNames quals (ModuleDeclaration name decls) =
     let
         f (TypeInfixOperator ta op tb) =
-            TypeInfixOperator ta (findName op quals) tb
+            TypeInfixOperator ta (findName quals op) tb
         f (TypeConstructor c) =
-            TypeConstructor (findName c quals)
+            TypeConstructor (findName quals c)
         f t = t
-    in transformBi f m
+    in transformBi f (ModuleDeclaration name (fmap (qualifyTypesD quals) decls))
+
+qualifyTypesD quals (TypeDeclaration v vs cs) = TypeDeclaration (findName quals v) vs cs
+qualifyTypesD _ decl = decl
 
 captureTypeNames (ModuleDeclaration modName decls) =
     toQualifieds modName (foldMap' captureTypeNameD decls)
@@ -102,14 +109,13 @@ captureTypeNameD (AliasDeclaration identifier _) = [identifier]
 captureTypeNameD (TypeDeclaration identifier _ _) = [identifier]
 captureTypeNameD _ = []
 
-
-findName (Name [] identifier) quals =
+findName quals (Name [] identifier) =
     Name (getQualifiers (find identifier quals)) identifier
-findName n _ = n
+findName _ n = n
 
-toLocals ids = fmap fromId (toMap ids)
-toQualifieds modName ids = fmap (qualifyId modName) (toMap ids)
-toMap ids = fromListUnique (fmap (\i -> (i, i)) ids)
+toLocals = toMap
+toQualifieds modName ids = fmap (qualify modName) (toMap ids)
+toMap ids = fromListUnique (fmap (\i -> (toId i, i)) ids)
 
 -- Change qualified imports
 -- e.g. import Viewer.Obj as Obj

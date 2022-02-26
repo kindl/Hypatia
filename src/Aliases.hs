@@ -27,21 +27,21 @@ aliasOperators aliases = transformBi f . transformBi g . transformBi j
         FunctionApplication (Variable (fromText "Native.negate")) e  
     f (InfixOperator a n b) =
         makeOp (find n aliases) a b
-    f (Variable x) | isOperator (getId x) =
+    f (Variable x) | isOperator x =
         Variable (find x aliases)
-    f (ConstructorExpression c) | isOperator (getId c) =
+    f (ConstructorExpression c) | isOperator c =
         ConstructorExpression (find c aliases)
     f e = e
 
     g (PatternInfixOperator a n b) =
         makeOpPat (find n aliases) a b
-    g (ConstructorPattern c ps) | isOperator (getId c) =
+    g (ConstructorPattern c ps) | isOperator c =
         ConstructorPattern (find c aliases) ps
     g p = p
 
     j (TypeInfixOperator a n b) =
         makeOpTyp (find n aliases) a b
-    j (TypeConstructor c) | isOperator (getId c) =
+    j (TypeConstructor c) | isOperator c =
         TypeConstructor (find c aliases)
     j t = t
 
@@ -69,13 +69,11 @@ findConstructor aliases op | isOperator op =
                 ++  " is not a constructor")
 findConstructor _ op = op
 
-captureAliases (ModuleDeclaration modName decls) =
-    fromList [(qualifyId modName v, alias)
-        | AliasDeclaration v alias <- decls]
+captureAliases (ModuleDeclaration _ decls) =
+    fromList [(v, alias) | AliasDeclaration v alias <- decls]
 
-captureOperatorAliases (ModuleDeclaration modName decls) =
-    fromList [(qualifyId modName op, qualifyId modName alias)
-        | FixityDeclaration _ _ op alias <- decls]
+captureOperatorAliases (ModuleDeclaration _ decls) =
+    fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
 toConstructor (TypeConstructor c) = ConstructorExpression c
 toConstructor other =

@@ -324,3 +324,6 @@ shadowingError v1 v2 = error (pretty v1
     ++ " shadows " ++ pretty v2)
 
 unionUnique m = unionWith shadowingError m
+
+intToDouble :: Int -> Double
+intToDouble = fromIntegral

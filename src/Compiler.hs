@@ -80,7 +80,10 @@ toLuaS (If e th el) = vcat [
 
 toLuaE (Var x) = flatVar x
 toLuaE (LitI i) = int i
-toLuaE (LitD d) = double d
+toLuaE (LitD d) =
+    if not (isInfinite d) && d == intToDouble (round d)
+        then int (round d)
+        else double d
 toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
     toLuaFun mempty vs sts

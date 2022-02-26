@@ -1,6 +1,6 @@
 module Main(main) where
 
-import Data.Foldable(traverse_)
+import Data.Foldable(traverse_, foldMap')
 import Data.List(isPrefixOf)
 import Syntax
 import Compiler
@@ -40,7 +40,7 @@ parseFromName modName = do
 growModuleEnv env =
     let
         imported = fmap getName env
-        imports = foldMap gatherImports env
+        imports = foldMap' gatherImports env
     in case excluding imported imports of
             [] -> return env
             needed -> do

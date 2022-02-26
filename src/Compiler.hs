@@ -8,6 +8,7 @@ import Data.List(nub)
 import Data.Text(Text, pack)
 import Text.PrettyPrint(vcat, nest, render, (<+>), (<>),
     equals, text, int, braces, parens, brackets, double, semi)
+import Data.Foldable(foldMap')
 
 
 data Mod = Mod Name [Statement]
@@ -84,7 +85,7 @@ toLuaE (LitT t) = text (show t)
 toLuaE (Func vs sts) =
     toLuaFun mempty vs sts
 toLuaE (Access v indices) =
-    prettyId v <> foldMap (brackets . int . (+ 1)) indices
+    prettyId v <> foldMap' (brackets . int . (+ 1)) indices
 -- Add parantheses for immediate functions
 -- (function () print "Hi" end)() would be a syntax error
 -- without parentheses 
@@ -150,7 +151,7 @@ toJavaScriptE (LitT t) = text (show t)
 toJavaScriptE (Func vs sts) =
     toJavaScriptFun mempty vs sts
 toJavaScriptE (Access v indices) =
-    prettyId v <> foldMap (brackets . int) indices
+    prettyId v <> foldMap' (brackets . int) indices
 -- Add parantheses for immediate functions
 toJavaScriptE (Call e@(Func _ _) es) =
     parens (toJavaScriptE e) <> parens (commas (fmap toJavaScriptE es))
@@ -212,7 +213,7 @@ compileEtoS (CaseExpression e alts) =
         err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
     in Assign v (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
-    foldMap compileD decls ++ compileEtoS e
+    foldMap' compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
     [If (compileE c) (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]

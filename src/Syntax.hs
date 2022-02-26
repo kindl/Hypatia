@@ -14,6 +14,7 @@ import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
 import Text.PrettyPrint(text, (<+>), ($$), (<>),
     parens, brackets, render)
 import Data.Generics.Uniplate.Data(universe, universeBi)
+import Data.Foldable(foldMap')
 
 
 type Line = Word64
@@ -289,7 +290,7 @@ getDefsP p =
         f (VariablePattern v) = [v]
         f (AliasPattern i _) = [i]
         f _ = []
-    in concatMap f (universe p)
+    in foldMap' f (universe p)
 
 nNewVars n = fmap (prefixedId . show) [1..n]
 

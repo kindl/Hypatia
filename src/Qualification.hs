@@ -2,6 +2,7 @@ module Qualification where
 
 import Syntax
 import Data.Generics.Uniplate.Data(transform, descend, transformBi)
+import Data.Foldable(foldMap')
 
 
 -- TODO Are IDs in form of Int etc. easier to look up?
@@ -68,8 +69,8 @@ qualifyA quals (p, e) =
 
 
 captureNames (ModuleDeclaration modName decls) = mappend
-    (toQualifieds modName (foldMap captureNameD decls))
-    (toQualifieds modName (foldMap captureTopName decls))
+    (toQualifieds modName (foldMap' captureNameD decls))
+    (toQualifieds modName (foldMap' captureTopName decls))
 
 captureNameD (ExpressionDeclaration p _) = getDefsP p
 captureNameD _ = []
@@ -95,7 +96,7 @@ qualifyTypeNames quals m =
     in transformBi f m
 
 captureTypeNames (ModuleDeclaration modName decls) =
-    toQualifieds modName (foldMap captureTypeNameD decls)
+    toQualifieds modName (foldMap' captureTypeNameD decls)
 
 captureTypeNameD (AliasDeclaration identifier _) = [identifier]
 captureTypeNameD (TypeDeclaration identifier _ _) = [identifier]

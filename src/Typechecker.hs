@@ -13,7 +13,7 @@ import Control.Monad(when, unless, zipWithM)
 import Control.Arrow(first)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
-import Data.Foldable(traverse_)
+import Data.Foldable(traverse_, foldMap')
 import Control.Exception(onException)
 
 
@@ -96,7 +96,7 @@ typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
     typecheckAlt alpha beta p e
     subst <- getSubst
     env <- getEnv
-    let escVars = skolems s ++ concatMap (skolems . apply subst) env
+    let escVars = skolems s ++ foldMap' (skolems . apply subst) env
     let escaped = including escVars skolVars
     unless (null escaped) (fail ("Escape check lambda: "
         ++ pretty escaped ++ " escaped when checking fun "
@@ -337,7 +337,7 @@ generalize ty = do
     subst <- getSubst
     let ty' = apply subst ty
     env <- getEnv
-    let envVars = concatMap (freeVars . apply subst) env
+    let envVars = foldMap' (freeVars . apply subst) env
     let qualVars = excluding envVars (freeVars ty')
     return (makeForAll qualVars ty')
 

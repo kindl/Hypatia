@@ -3,6 +3,7 @@ module Sorting where
 import Syntax
 import Data.List(partition)
 import Data.Generics.Uniplate.Data(transformBi, para)
+import Data.Foldable(foldMap')
 
 
 -- Sorting of declarations in let bindings and modules
@@ -38,7 +39,7 @@ resolve getDefs getDeps done rest =
             -- in the first run, xs contains all type signatures
             -- they have no value dependencies but define an id
             -- here these ids get marked as done which allows cycles
-            let doneDefs = concatMap getDefs xs
+            let doneDefs = foldMap' getDefs xs
             in xs ++ resolve getDefs getDeps (doneDefs ++ done) ys
 
 sortModules = resolve (return . getName) gatherImports []

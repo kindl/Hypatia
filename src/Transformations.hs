@@ -9,6 +9,7 @@ import Operators
 import Qualification
 import Data.Functor.Identity(runIdentity)
 import Data.HashMap.Strict(insert)
+import Data.Foldable(foldMap')
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 
 
@@ -85,10 +86,10 @@ feedback action mods =
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =
-    foldMap (\(modName, importedIds) ->
+    foldMap' (\(modName, importedIds) ->
         case importedIds of
             Just ids -> includingKeys ids (find modName envs)
             Nothing -> mempty) imports
 
 filterNames imports envs =
-    foldMap (\(modName, _) -> find modName envs) imports
+    foldMap' (\(modName, _) -> find modName envs) imports

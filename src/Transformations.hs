@@ -24,6 +24,7 @@ transformations = sortDeclsMod
     -- Operators
     . fixAssocProgram
     -- Qualification
+    . fmap qualifyAliases
     . qualifyProgram
     . qualifyTypesProgram
     . fmap changeQualifiedImportsMod

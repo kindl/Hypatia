@@ -6,8 +6,21 @@ import Data.Foldable(foldMap')
 import Control.Arrow(first)
 
 
--- Qualification is split into value level and type level
--- otherwise type Unit = Unit would be ambiguous
+-- Qualification is split into value level and type level,
+-- otherwise type Unit = Unit would be ambiguous.
+
+-- Aliases are mixed:
+-- For example, in the declaration `infixl 7 * Tuple`
+-- Tuple might be a type or a value alias
+qualifyAliases (ModuleDeclaration modName decls) =
+    let
+        h (AliasDeclaration v t) =
+            AliasDeclaration (qualify modName v) t
+        h (FixityDeclaration a p op alias) =
+            FixityDeclaration a p (qualify modName op) (qualify modName alias)
+        h decl = decl
+    in ModuleDeclaration modName (fmap h decls)
+
 
 -- Value Level
 qualifyNames quals (ModuleDeclaration name decls) =
@@ -20,13 +33,9 @@ qualifyD quals (TypeDeclaration v vars cs) =
     TypeDeclaration v vars (fmap (first (findName quals)) cs)
 qualifyD quals (TypeSignature v t) =
     TypeSignature (findName quals v) t
-qualifyD quals (AliasDeclaration v t) =
-    AliasDeclaration (findName quals v) t
--- TODO make the following also work on type level
--- For example, `infixl 7 * Tuple` Tuple will not be in quals
-qualifyD quals (FixityDeclaration a p op alias) =
-    FixityDeclaration a p (findName quals op) (findName quals alias)
 qualifyD _ decl@(ImportDeclaration _ _ _) = decl
+qualifyD _ decl@(AliasDeclaration _ _) = decl
+qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
 qualifyD _ decl = error ("Bug: Unexpected declaration " ++ show decl)
 
 

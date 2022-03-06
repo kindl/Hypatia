@@ -2,72 +2,74 @@
 module Aliases where
 
 import Syntax
-import Data.Generics.Uniplate.Data(transformBi, rewriteBi)
+import Data.Generics.Uniplate.Data(rewriteBiM, transformBiM)
 import Data.HashMap.Strict(fromList)
-import Control.Arrow(first)
+import Control.Monad((>=>))
+import Control.Applicative(liftA2)
 
 
-aliasConstructors aliasTable = rewriteBi f . rewriteBi g . rewriteBi j
+aliasConstructors aliasTable = rewriteBiM f >=> rewriteBiM g >=> rewriteBiM j
   where
     f (ConstructorExpression c) =
-        fmap toConstructor (mfind c aliasTable)
-    f _ = Nothing
+        traverse toConstructor (mfind c aliasTable)
+    f _ = Right Nothing
 
     g (ConstructorPattern c ps) =
-        fmap (toConstructorPattern ps) (mfind c aliasTable)
-    g _ = Nothing
+        traverse (toConstructorPattern ps) (mfind c aliasTable)
+    g _ = Right Nothing
 
     j (TypeConstructor c) =
-        mfind c aliasTable
-    j _ = Nothing
+        traverse Right (mfind c aliasTable)
+    j _ = Right Nothing
 
-aliasOperators aliases = transformBi f . transformBi g . transformBi j
+aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM j
   where
     f (PrefixNegation e) =
-        FunctionApplication (Variable (fromText "Native.negate")) e  
-    f (InfixOperator a n b) =
-        makeOp (find n aliases) a b
+        Right (FunctionApplication (Variable (fromText "Native.negate")) e)
+    f (InfixOperator a op b) =
+        fmap (\al -> makeOp al a b) (findEither op aliases)
     f (Variable x) | isOperator x =
-        Variable (find x aliases)
+        fmap Variable (findEither x aliases)
     f (ConstructorExpression c) | isOperator c =
-        ConstructorExpression (find c aliases)
-    f e = e
+        fmap ConstructorExpression (findEither c aliases)
+    f e = Right e
 
-    g (PatternInfixOperator a n b) =
-        makeOpPat (find n aliases) a b
+    g (PatternInfixOperator a op b) =
+        fmap (\al -> makeOpPat al a b) (findEither op aliases)
     g (ConstructorPattern c ps) | isOperator c =
-        ConstructorPattern (find c aliases) ps
-    g p = p
+        fmap (flip ConstructorPattern ps) (findEither c aliases)
+    g p = Right p
 
-    j (TypeInfixOperator a n b) =
-        makeOpTyp (find n aliases) a b
+    j (TypeInfixOperator a op b) =
+        fmap (\al -> makeOpTyp al a b) (findEither op aliases)
     j (TypeConstructor c) | isOperator c =
-        TypeConstructor (find c aliases)
-    j t = t
+        fmap TypeConstructor (findEither c aliases)
+    j t = Right t
 
 aliasOperatorsMod (ModuleDeclaration modName decls) =
     let
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]
 
-        h (ExpressionDeclaration (VariablePattern op) e)
-            | isOperator op = ExpressionDeclaration
-                (VariablePattern (find op aliases)) e
+        h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
+            fmap (\al -> ExpressionDeclaration (VariablePattern al) e) (findEither op aliases)
         h (TypeSignature op t) | isOperator op =
-            TypeSignature (find op aliases) t
+            fmap (flip TypeSignature t) (findEither op aliases)
         h (TypeDeclaration op vars constructors) =
-            TypeDeclaration (findConstructor aliases op) vars
-                (fmap (first (findConstructor aliases)) constructors)
-        h d = d
-    in ModuleDeclaration modName (fmap h decls)
+            liftA2 (\aliases' constructors' -> TypeDeclaration aliases' vars constructors')
+                (findConstructor aliases op)
+                (traverse (firstA (findConstructor aliases)) constructors)
+        h d = Right d
+    in fmap (ModuleDeclaration modName) (traverse h decls)
 
-findConstructor aliases op | isOperator op =
-    let alias = find op aliases in
-        if isConstructor alias then alias else
-            error (pretty op
-                ++ " with alias " ++ pretty alias
-                ++  " is not a constructor")
-findConstructor _ op = op
+findConstructor aliases op | isOperator op = do
+    alias <- findEither op aliases
+    if isConstructor alias
+        then Right alias
+        else Left (pretty op
+            ++ " with alias " ++ pretty alias
+            ++  " is not a constructor")
+findConstructor _ op = Right op
 
 captureAliases (ModuleDeclaration _ decls) =
     fromList [(v, alias) | AliasDeclaration v alias <- decls]
@@ -75,10 +77,12 @@ captureAliases (ModuleDeclaration _ decls) =
 captureOperatorAliases (ModuleDeclaration _ decls) =
     fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
-toConstructor (TypeConstructor c) = ConstructorExpression c
+toConstructor (TypeConstructor c) =
+    Right (ConstructorExpression c)
 toConstructor other =
-    error ("Cannot convert " ++ pretty other ++ " to a constructor")
+    Left ("Cannot convert " ++ pretty other ++ " to a constructor")
 
-toConstructorPattern ps (TypeConstructor c) = ConstructorPattern c ps
+toConstructorPattern ps (TypeConstructor c) =
+    Right (ConstructorPattern c ps)
 toConstructorPattern _ other =
-    error ("Cannot convert " ++ pretty other ++ " to pattern")
+    Left ("Cannot convert " ++ pretty other ++ " to pattern")

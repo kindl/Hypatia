@@ -2,20 +2,18 @@ module Sorting where
 
 import Syntax
 import Data.List(partition)
-import Data.Generics.Uniplate.Data(transformBi, para)
+import Data.Generics.Uniplate.Data(transformBiM, para)
 import Data.Foldable(foldMap')
 
 
 -- Sorting of declarations in let bindings and modules
-sortDeclsMod x = (transformBi f . transformBi k) x
-  where
-    f (LetExpression decls e) =
-        LetExpression (sortDecls decls) e
-    f e = e
-
-    k (ModuleDeclaration modName decls) =
-        ModuleDeclaration modName (sortDecls decls)
-
+sortDeclsMod (ModuleDeclaration modName decls) =
+    let
+        f (LetExpression ds e) =
+            fmap (flip LetExpression e) (sortDecls ds)
+        f e = Right e
+    in transformBiM f =<< fmap (ModuleDeclaration modName) (sortDecls decls)
+        
 sortDecls decls =
     let
         -- Only look at the dependency on local variables
@@ -28,15 +26,17 @@ sortDecls decls =
 
 resolve getDefs getDeps done rest =
     case partition (null . excluding done . getDeps) rest of
-        ([], []) -> []
+        ([], []) ->
+            Right []
         ([], ys) ->
-            error ("Cyclic dependency in " ++ pretty (fmap getDeps ys))
-        (xs, ys) ->
+            Left ("Cyclic dependency in " ++ pretty (fmap getDeps ys))
+        (xs, ys) -> do
             -- in the first run, xs contains all type signatures
             -- they have no value dependencies but define an id
             -- here these ids get marked as done which allows cycles
             let doneDefs = foldMap' getDefs xs
-            in xs ++ resolve getDefs getDeps (doneDefs ++ done) ys
+            next <- resolve getDefs getDeps (doneDefs ++ done) ys
+            Right (xs ++ next)
 
 sortModules = resolve (return . getName) gatherImports []
 

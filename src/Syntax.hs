@@ -307,10 +307,12 @@ makeOpPat op a b =
 makeOpTyp op a b =
     TypeApplication (TypeApplication (TypeConstructor op) a) b
 
-find o m = maybe (error (notFoundMessage o m)) id (lookup o m)
+findEither o m = maybe (Left (notFoundMessage o m)) Right (lookup o m)
 
 mfind o m = maybe (fail (notFoundMessage o m)) return (lookup o m)
 {-# INLINE mfind #-}
+
+firstA f (a, b) = fmap (\a' -> (a', b)) (f a)
 
 notFoundMessage o m = "Unknown " ++ pretty o ++ " in "
     ++ pretty (keys m)

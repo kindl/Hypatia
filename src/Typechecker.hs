@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Typechecker where
 
-import Prelude
+import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup)
+import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(nub, foldl')
@@ -33,10 +34,10 @@ typecheckModule env m = do
 inferModule (ModuleDeclaration modName decls) = do
     info ("Typechecking Module " ++ renderName modName)
 
-    let constructors = foldMap' gatherConstructor decls
-    let signatures = foldMap' gatherTypeSig decls
+    constructors <- getAp (foldMap' gatherConstructor decls)
+    let signatures = fromList (foldMap' gatherTypeSig decls)
 
-    let types = mappend constructors (fromList signatures)
+    let types = mappend constructors signatures
     -- The signatures are also passed as a plain argument for lookups
     binds <- with types (inferDecls generalize signatures decls)
     
@@ -100,10 +101,9 @@ typecheck (LambdaExpression [p] e) ty = do
     typecheckAlt alpha beta p e
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty = do
-    let signatures = foldMap' gatherTypeSig decls
-    let signatures' = fromList signatures
-    binds <- with signatures' (inferDecls return signatures decls)
-    with (mappend signatures' binds) (typecheck e ty)
+    let signatures = fromList (foldMap' gatherTypeSig decls)
+    binds <- with signatures (inferDecls return signatures decls)
+    with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty = do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))
     typecheck th ty
@@ -140,8 +140,8 @@ gatherConstructor (TypeDeclaration tyIdent vars constructors) =
     let
         resTy = TypeConstructor tyIdent
         tyCon = foldl' TypeApplication resTy (fmap TypeVariable vars)
-    in fromList (fmap (fmap (constructorToType tyCon vars)) constructors)
-gatherConstructor _ = mempty
+    in fmap fromList (traverse (traverse (constructorToType tyCon vars)) constructors)
+gatherConstructor _ = pure mempty
 
 -- convert a constructor declaration to a type
 constructorToType tyCon vars tys =
@@ -151,8 +151,8 @@ constructorToType tyCon vars tys =
 -- works type W a = Wrapped (a -> a)
 -- works type W = Wrapped (forall a. a -> a)
 scopeCheck ty = case freeVars ty of
-    [] -> ty
-    frees -> error ("Type variables " ++ pretty frees ++ " have no definition")
+    [] -> pure ty
+    frees -> fail ("Type variables " ++ pretty frees ++ " have no definition")
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]
@@ -288,7 +288,7 @@ apply subst ty@(TypeVariable x) =
             -- do not substitute if the variable
             -- would be substituted with itself
             TypeVariable y | x == y -> ty2
-            _ -> apply subst ty2) (mfind x subst)
+            _ -> apply subst ty2) (lookup x subst)
 apply subst ty = descend (apply subst) ty
 
 -- Environment

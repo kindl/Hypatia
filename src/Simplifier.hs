@@ -5,10 +5,15 @@ import Syntax
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
 
-{-
-This module translates complicated expressions
-to simpler equivalent expressions
--}
+
+-- This module translates complicated expressions
+-- to simpler equivalent expressions
+
+-- Note that the simplifications run right to left and the order matters.
+-- For example removeFunctionDeclaration creates lambdas that are split in splitLambdas
+simplifications m =
+    (splitLambdas . removeAwaitDeclaration . removeFunctionDeclaration) m
+
 splitLambdas m = transformBi f m
   where
     f (LambdaExpression ps e) =

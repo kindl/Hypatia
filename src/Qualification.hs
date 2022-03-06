@@ -1,9 +1,9 @@
 module Qualification where
 
 import Syntax
-import Data.Generics.Uniplate.Data(transform, descend, transformBi)
+import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
-import Control.Arrow(first)
+import Control.Applicative(liftA2, liftA3)
 
 
 -- Qualification is split into value level and type level,
@@ -24,61 +24,61 @@ qualifyAliases (ModuleDeclaration modName decls) =
 
 -- Value Level
 qualifyNames quals (ModuleDeclaration name decls) =
-    ModuleDeclaration name (fmap (qualifyD quals) decls)
+    fmap (ModuleDeclaration name) (traverse (qualifyD quals) decls)
 
 -- Qualify the bindings and expressions appearing in declarations
 qualifyD quals (ExpressionDeclaration p e) =
-    ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
+    liftA2 ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
 qualifyD quals (TypeDeclaration v vars cs) =
-    TypeDeclaration v vars (fmap (first (findName quals)) cs)
+    fmap (TypeDeclaration v vars) (traverse (firstA (findName quals)) cs)
 qualifyD quals (TypeSignature v t) =
-    TypeSignature (findName quals v) t
-qualifyD _ decl@(ImportDeclaration _ _ _) = decl
-qualifyD _ decl@(AliasDeclaration _ _) = decl
-qualifyD _ decl@(FixityDeclaration _ _ _ _) = decl
-qualifyD _ decl = error ("Bug: Unexpected declaration " ++ show decl)
+    fmap (flip TypeSignature t) (findName quals v)
+qualifyD _ decl@(ImportDeclaration _ _ _) = Right decl
+qualifyD _ decl@(AliasDeclaration _ _) = Right decl
+qualifyD _ decl@(FixityDeclaration _ _ _ _) = Right decl
+qualifyD _ decl = Left ("Bug: Unexpected declaration " ++ show decl)
 
 
 qualifyP quals pat =
     let
         f (VariablePattern v) =
-            VariablePattern (findName quals v)
+            fmap VariablePattern (findName quals v)
         f (AliasPattern v p) =
-            AliasPattern (findName quals v) p
+            fmap (flip AliasPattern p) (findName quals v)
         f (ConstructorPattern c ps) =
-            ConstructorPattern (findName quals c) ps
+            fmap (flip ConstructorPattern ps) (findName quals c)
         f (PatternInfixOperator p1 op p2) =
-            PatternInfixOperator p1 (findName quals op) p2
-        f p = p
-    in transform f pat
+            fmap (\q -> PatternInfixOperator p1 q p2) (findName quals op)
+        f p = Right p
+    in transformM f pat
 
 
 qualifyE quals (Variable n) =
-    Variable (findName quals n)
+    fmap Variable (findName quals n)
 qualifyE quals (ConstructorExpression c) =
-    ConstructorExpression (findName quals c)
+    fmap ConstructorExpression (findName quals c)
 qualifyE quals (LetExpression decls e) =
     let
         locals = toLocals (foldMap' captureNameD decls)
         newQuals = unionUnique locals quals
-    in LetExpression (fmap (qualifyD newQuals) decls)
+    in liftA2 LetExpression (traverse (qualifyD newQuals) decls)
         (qualifyE newQuals e)
 qualifyE quals (CaseExpression e alts) =
-    CaseExpression (qualifyE quals e) (fmap (qualifyA quals) alts)
-qualifyE quals (LambdaExpression [p] e) =
-    let (qp, qe) = qualifyA quals (p, e)
-    in LambdaExpression [qp] qe
+    liftA2 CaseExpression (qualifyE quals e) (traverse (qualifyAlt quals) alts)
+qualifyE quals (LambdaExpression [p] e) = do
+    (qp, qe) <- qualifyAlt quals (p, e)
+    pure (LambdaExpression [qp] qe)
 qualifyE quals (InfixOperator ea name eb) =
-    InfixOperator (qualifyE quals ea)
-        (findName quals name) (qualifyE quals eb)
+    liftA3 InfixOperator (qualifyE quals ea) (findName quals name) (qualifyE quals eb)
 qualifyE quals e =
-    descend (qualifyE quals) e
+    descendM (qualifyE quals) e
 
-qualifyA quals (p, e) =
+
+qualifyAlt quals (p, e) =
     let
         locals = toLocals (getDefsP p)
         newQuals = unionUnique locals quals
-    in (qualifyP newQuals p, qualifyE newQuals e)
+    in liftA2 (,) (qualifyP newQuals p) (qualifyE newQuals e)
 
 
 captureNames (ModuleDeclaration modName decls) = mappend
@@ -102,14 +102,16 @@ captureTopName _ = []
 qualifyTypeNames quals (ModuleDeclaration name decls) =
     let
         f (TypeInfixOperator ta op tb) =
-            TypeInfixOperator ta (findName quals op) tb
+            fmap (\q -> TypeInfixOperator ta q tb) (findName quals op)
         f (TypeConstructor c) =
-            TypeConstructor (findName quals c)
-        f t = t
-    in transformBi f (ModuleDeclaration name (fmap (qualifyTypesD quals) decls))
+            fmap TypeConstructor (findName quals c)
+        f t = Right t
+    in transformBiM f =<< fmap (ModuleDeclaration name) (traverse (qualifyTypesD quals) decls)
 
-qualifyTypesD quals (TypeDeclaration v vs cs) = TypeDeclaration (findName quals v) vs cs
-qualifyTypesD _ decl = decl
+-- The constructors itself are on value level
+qualifyTypesD quals (TypeDeclaration v vs cs) =
+    fmap (\q -> TypeDeclaration q vs cs) (findName quals v)
+qualifyTypesD _ decl = Right decl
 
 captureTypeNames (ModuleDeclaration modName decls) =
     toQualifieds modName (foldMap' captureTypeNameD decls)
@@ -118,9 +120,10 @@ captureTypeNameD (AliasDeclaration identifier _) = [identifier]
 captureTypeNameD (TypeDeclaration identifier _ _) = [identifier]
 captureTypeNameD _ = []
 
-findName quals (Name [] identifier) =
-    Name (getQualifiers (find identifier quals)) identifier
-findName _ n = n
+findName quals (Name [] identifier) = do
+    q <- findEither identifier quals
+    pure (Name (getQualifiers q) identifier)
+findName _ n = Right n
 
 toLocals = toMap
 toQualifieds modName ids = fmap (qualify modName) (toMap ids)

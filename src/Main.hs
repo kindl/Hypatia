@@ -25,7 +25,7 @@ loadProgram path = do
     putStrLn ("Compiling module from " ++ path)
     loadedModule <- parseFile path
     mods <- growModuleEnv [loadedModule]
-    let simplified = transformations mods
+    simplified <- transformProgram mods
     _ <- typecheckProgram simplified
     return simplified
 

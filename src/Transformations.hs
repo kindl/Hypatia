@@ -7,35 +7,34 @@ import Sorting
 import Typechecker
 import Operators
 import Qualification
-import Data.Functor.Identity(runIdentity)
-import Data.HashMap.Strict(insert)
+import Data.HashMap.Strict(insert, (!))
 import Data.Foldable(foldMap')
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
+import Control.Monad((<=<))
 
+
+transformProgram ms = either fail return (transformations ms)
 
 -- The lowest function in this list is the first step of the transformations
-transformations :: [ModuleDeclaration] -> [ModuleDeclaration]
-transformations = sortDeclsMod
+transformations = traverse sortDeclsMod
     -- Aliases
-    . aliasConstructorsProgram
-    . aliasOperatorsProgram
+    <=< aliasConstructorsProgram
+    <=< aliasOperatorsProgram
     -- Simplifier
-    . removeParens
+    <$> fmap removeParens
     -- Operators
-    . fixAssocProgram
+    <=< fixAssocProgram
     -- Qualification
-    . fmap qualifyAliases
-    . qualifyProgram
-    . qualifyTypesProgram
-    . fmap changeQualifiedImportsMod
+    <$> fmap qualifyAliases
+    <=< qualifyProgram
+    <=< qualifyTypesProgram
+    <$> fmap changeQualifiedImportsMod
     -- Simplifier
-    . splitLambdas
-    . removeAwaitDeclaration
-    . removeFunctionDeclaration
+    <$> fmap simplifications
     -- Aliases
-    . fmap aliasOperatorsMod
+    <=< traverse aliasOperatorsMod
     -- Sorting
-    . sortModules
+    <=< sortModules
 
 {- Typechecking -}
 typecheckProgram p = feedbackM typecheckAction p
@@ -48,28 +47,27 @@ typecheckProgram p = feedbackM typecheckAction p
 
 {- Operators and Aliasing -}
 qualifyProgram =
-    feedback (simpleAction qualifyNames filterIds captureNames)
+    feedbackM (simpleActionA qualifyNames filterIds captureNames)
 
 qualifyTypesProgram =
-    feedback (simpleAction qualifyTypeNames filterIds captureTypeNames)
+    feedbackM (simpleActionA qualifyTypeNames filterIds captureTypeNames)
 
 fixAssocProgram =
-    feedback (simpleAction fixAssoc filterNames captureAssocs)
+    feedbackM (simpleActionA fixAssoc filterNames captureAssocs)
 
 aliasOperatorsProgram =
-    feedback (simpleAction aliasOperators filterNames captureOperatorAliases)
+    feedbackM (simpleActionA aliasOperators filterNames captureOperatorAliases)
 
 aliasConstructorsProgram =
-    feedback (simpleAction aliasConstructors filterNames captureAliases)
+    feedbackM (simpleActionA aliasConstructors filterNames captureAliases)
 
 -- Run action with captured local env and imported envs
 -- but return only the local environment
-simpleAction action filterEnvs capture envs m =
+simpleActionA action filterEnvs capture envs m =
     let
         captured = capture m
         combined = captured `mappend` filterEnvs (gatherSpecs m) envs
-        result = action combined m
-    in (result, captured)
+    in fmap (\result -> (result, captured)) (action combined m)
 
 -- Incrementally grow an environment and perform an action on all modules.
 -- An action is a function that returns captured information e.g. operators and their aliases
@@ -81,16 +79,13 @@ feedbackM action mods = fmap fst (mapAccumM step mempty mods)
             (result, captured) <- action envs m
             return (result, insert (getName m) captured envs)
 
-feedback action mods =
-    runIdentity (feedbackM (\envs m -> return (action envs m)) mods)
-
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =
     foldMap' (\(modName, importedIds) ->
         case importedIds of
-            Just ids -> includingKeys ids (find modName envs)
+            Just ids -> includingKeys ids (envs ! modName)
             Nothing -> mempty) imports
 
 filterNames imports envs =
-    foldMap' (\(modName, _) -> find modName envs) imports
+    foldMap' (\(modName, _) -> envs ! modName) imports

@@ -11,14 +11,18 @@ sqrt x = x ^ 0.5
 getn n = geti (n - 1)
 
 # Comparison
-infix 9 == equals
-
-infixl 4 < lessThan
-infixl 4 > greaterThan
-infixl 4 <= lessOrEqal
-infixl 4 >= greaterOrEqal
+infix 4 == equals
+// Is != the right choice?
+// Lua uses ~=, Haskell /= and F# <>
+infix 4 != notEquals
+infix 4 < lessThan
+infix 4 > greaterThan
+infix 4 <= lessOrEqal
+infix 4 >= greaterOrEqal
 
 equals l r = genComp eq l r
+
+notEquals a b = not_ (equals a b)
 
 lessThan l r = genComp lt l r
 
@@ -61,8 +65,6 @@ seqCompAux comp i maxN l r =
         else (if comp (geti i l) (geti i r)
             then seqCompAux comp (i + 1) maxN l r
             else False)
-
-notEq a b = not_ (equals a b)
 
 repeatN f n =
     if eq n 0 then Unit

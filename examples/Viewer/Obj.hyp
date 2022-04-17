@@ -4,7 +4,7 @@ module Viewer.Obj
 
 import Native(toNumber, Array, Numeral, Text, split, words)
 import Native.Love(file)
-import Common.Base(notEq, getn)
+import Common.Base(notEquals, getn)
 import Common.Geometry(Vector, Vec4)
 import Common.Array(filter, map, foldMap, lines)
 
@@ -40,7 +40,7 @@ getNormals = foldMap toNormal
 # splits into ["v", "-1.0", "-1.0", "-1.0", ""]
 # because of an invisible \r at the end. Ouch!
 # Therefore the "" is filtered out
-parseLine s = matchLine (filter (notEq "") (words s))
+parseLine s = matchLine (filter (notEquals "") (words s))
 
 load filePath = map parseLine (lines (file filePath))
 
@@ -49,7 +49,7 @@ matchLine es =
         "v" -> Vertex (readVector es)
         "vn" -> Normal (readVector es)
         "vt" -> TextureCoordinate (readVector es)
-        "f" -> Face (map readVI (filter (notEq "f") es))
+        "f" -> Face (map readVI (filter (notEquals "f") es))
         v -> Comment [v]
 
 readVector [_, v1, v2, v3, v4] =

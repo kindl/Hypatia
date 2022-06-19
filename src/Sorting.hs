@@ -29,7 +29,7 @@ resolve getDefs getDeps done rest =
         ([], []) ->
             Right []
         ([], ys) ->
-            Left ("Cyclic dependency in " ++ pretty (fmap getDeps ys))
+            Left ("Cyclic dependency in " ++ renderError (fmap getDeps ys))
         (xs, ys) -> do
             -- in the first run, xs contains all type signatures
             -- they have no value dependencies but define an id

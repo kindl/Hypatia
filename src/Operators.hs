@@ -58,4 +58,4 @@ fixAssocAux operatorTable prevAssoc constr e1 child e2 root e3 = do
         _ -> Right Nothing
 
 fixAssocError child root =
-    Left ("Cannot mix operator " ++ pretty child ++ " and " ++ pretty root)
+    Left ("Cannot mix operator " ++ renderError child ++ " and " ++ renderError root)

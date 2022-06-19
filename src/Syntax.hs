@@ -1,18 +1,17 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings #-}
 module Syntax where
 
-import Prelude hiding (lookup, (<>))
+import Prelude hiding (lookup)
 import Data.Word(Word64)
 import Data.Data(Data, Typeable)
-import Data.Text(Text, unpack, pack, split)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey,
     filterWithKey, fromListWith, unionWith)
-import Text.PrettyPrint.HughesPJClass(Pretty, pPrint)
-import Text.PrettyPrint(text, (<+>), ($$), (<>),
-    parens, brackets, render)
+import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
+    parens, brackets, layoutPretty, defaultLayoutOptions)
+import Prettyprinter.Render.Text(renderStrict)
 import Data.Generics.Uniplate.Data(universe, universeBi)
 import Data.Foldable(foldMap')
 
@@ -20,7 +19,7 @@ import Data.Foldable(foldMap')
 type Line = Word64
 type Column = Word64
 data Position = Position Line Column
-    deriving (Show, Data, Typeable)
+    deriving (Show, Eq, Ord, Data, Typeable)
 
 type StartPosition = Position
 type EndPosition = Position
@@ -142,104 +141,114 @@ qualify (Name modQs modName) (Name [] name) =
     Name (modQs ++ [getText modName]) name
 qualify _ n = n
 
-pretty p = render (pPrint p)
-{-# INLINE pretty #-}
-
-instance Pretty Position where
-    pPrint (Position l c) =
-        text "line" <+> text (show l) <> text ", column" <+> text (show c)
 
 instance Pretty Location where
-    pPrint (Location (Position line column) _ filePath) =
-        text filePath
-        <> text ":" <> text (show line)
-        <> text ":" <> text (show column)
+    pretty (Location (Position line column) _ filePath) =
+        pretty filePath
+        <> text ":" <> pretty line
+        <> text ":" <> pretty column
 
 instance Pretty Type where
-    pPrint (TypeArrow a b) =
-        parens (pPrint a <+> text "->" <+> pPrint b)
-    pPrint (TypeInfixOperator a op b) =
-        parens (pPrint a <+> prettyName op <+> pPrint b)
-    pPrint (TypeConstructor n) = prettyName n
-    pPrint (TypeVariable n) = prettyId n
-    pPrint (SkolemConstant s) = text "skolem." <> pPrint s
-    pPrint (TypeApplication a b) = parens (pPrint a <+> pPrint b)
-    pPrint (ParenthesizedType t) = parens (pPrint t)
-    pPrint (ForAll ts t) =
-        text "forall" <+> mintercalate (text " ") (fmap prettyId ts)
-            <> text "." <+> pPrint t
+    pretty (TypeArrow a b) =
+        parens (pretty a <+> text "->" <+> pretty b)
+    pretty (TypeInfixOperator a op b) =
+        parens (pretty a <+> pretty op <+> pretty b)
+    pretty (TypeConstructor n) = pretty n
+    pretty (TypeVariable n) = pretty n
+    pretty (SkolemConstant s) = text "skolem." <> pretty s
+    pretty (TypeApplication a b) = parens (pretty a <+> pretty b)
+    pretty (ParenthesizedType t) = parens (pretty t)
+    pretty (ForAll ts t) =
+        text "forall" <+> mintercalate (text " ") (fmap pretty ts)
+            <> text "." <+> pretty t
 
 instance Pretty Literal where
-    pPrint (Numeral n) = pPrint n
-    pPrint (Text t) = text (show t)
+    pretty (Numeral n) = pretty n
+    pretty (Text t) = prettyEscaped t
 
 instance Pretty Pattern where
-    pPrint (VariablePattern v) = prettyName v
-    pPrint (LiteralPattern l) = pPrint l
-    pPrint (Wildcard _) = text "_"
-    pPrint (ConstructorPattern name []) =
-        pPrint name
-    pPrint (ConstructorPattern name ps) =
-        parens (prettyName name
-            <+> mintercalate (text " ") (fmap pPrint ps))
-    pPrint (PatternInfixOperator a op b) =
-        parens (pPrint a <+> prettyName op <+> pPrint b)
-    pPrint (ParenthesizedPattern p) =
-        parens (pPrint p)
-    pPrint (AliasPattern v p) =
-        prettyName v <+> text "as" <+> pPrint p
-    pPrint (ArrayPattern ps) =
-        brackets (commas (fmap pPrint ps))
+    pretty (VariablePattern v) = pretty v
+    pretty (LiteralPattern l) = pretty l
+    pretty (Wildcard _) = text "_"
+    pretty (ConstructorPattern name []) =
+        pretty name
+    pretty (ConstructorPattern name ps) =
+        parens (pretty name
+            <+> mintercalate (text " ") (fmap pretty ps))
+    pretty (PatternInfixOperator a op b) =
+        parens (pretty a <+> pretty op <+> pretty b)
+    pretty (ParenthesizedPattern p) =
+        parens (pretty p)
+    pretty (AliasPattern v p) =
+        pretty v <+> text "as" <+> pretty p
+    pretty (ArrayPattern ps) =
+        brackets (commas (fmap pretty ps))
 
 instance Pretty Name where
-    pPrint modName@(Name _ identifier) =
-        prettyName modName <+> pPrint (getLocation identifier)
+    pretty = flatName (text ".") (text ".")
 
 instance Pretty Id where
-    pPrint (Id s l) = text (unpack s) <+> text "at" <+> pPrint l
+    pretty (Id i _) = text i
 
--- displays the module name joined with underscore
+{- Rendering Names -}
+renderName modName = show (pretty modName)
+
+toPath name =
+    show (flatName (text "/") (text "/") name <> text ".hyp")
+
+-- `flat` means displaying the module name joined with underscores instead of dots
+flatName _ _ (Name [] i) = pretty i
+flatName qualSep idSep (Name qs i) =
+    mintercalate qualSep (fmap text qs) <> idSep <> pretty i
+{-# INLINE flatName #-}
+
 flatVar = flatName (text "_") (text ".")
 {-# INLINE flatVar #-}
 
--- TODO what would be a good character for file names?
--- In Lua dots have a special meaning, so we use underscore instead
---local module = require "folder.file"
--- However, we would need to disallow module names with underscore in it
+-- TODO what would be a good escape character in file names?
+-- Dots cannot be used in Lua, because they have a special meaning:
+-- `local module = require "folder.file"`
+-- For now underscores are used. However, as a consequence underscore should be disallowed.
 flatModName = flatName (text "_") (text "_")
+{-# INLINE flatModName #-}
 
-prettyName = flatName (text ".") (text ".")
+renderError p = show (prettyError p)
 
-renderName modName = render (prettyName modName)
+prettyError p = pretty p <> " at " <> pretty (mergeLocationInfos (locationInfos p))
 
-renderFlatModName modName = render (flatModName modName)
+mergeLocationInfos locations@(Location _ _ filePath:_) =
+    let positions = mconcat [[startPosition, endPosition] | Location startPosition endPosition _ <- locations] in
+        Location (minimum positions) (maximum positions) filePath
+mergeLocationInfos _ = builtinLocation
 
-toPath name =
-    render (flatName (text "/") (text "/") name <> text ".hyp")
+text :: Text -> Doc a
+text = pretty
 
-flatName _ _ (Name [] i) = prettyId i
-flatName qualSep idSep (Name qs i) =
-    mintercalate qualSep (fmap (text . unpack) qs)
-        <> idSep <> prettyId i
-{-# INLINE flatName #-}
+prettyNumeral d =
+    if not (isInfinite d) && d == intToDouble (round d)
+        then pretty ((round d) :: Int)
+        else pretty d
 
-prettyId i = text (unpack (getText i))
-{-# INLINE prettyId #-}
+-- `show` escapes and creates double quotes
+prettyEscaped = text . Text.pack  . show
+
+render d = renderStrict (layoutPretty defaultLayoutOptions d)
+
 
 renderEnv m = render (foldrWithKey (\k v r ->
-    prettyName k <+> text ":" <+> pPrint v $$ r) mempty m)
+    pretty k <+> text ":" <+> pretty v <> hardline <> r) mempty m)
 {-# INLINE renderEnv #-}
 
 nameToList (Name is i) = is ++ [getText i]
 
 fromText s =
-    let is = split (== '.') s
+    let is = Text.split (== '.') s
     in Name (init is) (Id (last is) builtinLocation)
 
 fromId = Name []
 
 toId (Name [] identifier) = identifier
-toId n = error ("Name " ++ pretty n ++ " has qualifiers")
+toId n = error ("Name " <> renderError n <> " has qualifiers")
 
 isConstructor (Name _ i) = firstIs isUpper (getText i)
 
@@ -250,7 +259,7 @@ firstIs f = Text.foldr (const . f) False
 
 -- these are not symbols in unicode, but in the language
 -- otherwise e.g 2 - 2 would not be lexed as minus
-isSym x = isSymbol x || elem x "!%&*/?@-:"
+isSym x = isSymbol x || Text.elem x "!%&*/?@-:"
 {-# INLINE isSym #-}
 
 isUnqualified (Name [] _) = True
@@ -258,14 +267,12 @@ isUnqualified _ = False
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
-prefixedId x = Id (pack ("_v" ++ x)) builtinLocation
+prefixedId x = Id ("_v" <> x) builtinLocation
 {-# INLINE prefixedId #-}
 
 getQualifiers (Name q _) = q
 
 getText (Id t _) = t
-
-getLocation (Id _ l) = l
 
 -- A flipped version of intersect that works on foldables
 including xs = filter (flip elem xs)
@@ -294,7 +301,7 @@ getDefsP p =
         f _ = []
     in foldMap' f (universe p)
 
-nNewVars n = fmap (prefixedId . show) [1..n]
+nNewVars n = fmap (prefixedId . intToText) [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication
@@ -314,20 +321,26 @@ mfind o m = maybe (fail (notFoundMessage o m)) return (lookup o m)
 
 firstA f (a, b) = fmap (\a' -> (a', b)) (f a)
 
-notFoundMessage o m = "Unknown " ++ pretty o ++ " in "
-    ++ pretty (keys m)
+notFoundMessage o m =
+    "Unknown " <> renderError o <> " in " <> renderError (keys m)
 {-# INLINE notFoundMessage #-}
 
-locationInfo other = pretty [l | Id _ l <- universeBi other]
-{-# INLINE locationInfo #-}
+locationInfos other = [l | Id _ l <- universeBi other]
+{-# INLINE locationInfos #-}
 
 -- Functions for maps that error on overwriting a key
 fromListUnique xs = fromListWith shadowingError xs
 
-shadowingError v1 v2 = error (pretty v1
-    ++ " shadows " ++ pretty v2)
+shadowingError v1 v2 =
+    error (renderError v1 <> " shadows " <> renderError v2)
 
 unionUnique m = unionWith shadowingError m
 
 intToDouble :: Int -> Double
 intToDouble = fromIntegral
+
+intToText :: Int -> Text
+intToText = Text.pack . show
+
+uintToText :: Word64 -> Text
+uintToText = Text.pack . show

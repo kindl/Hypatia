@@ -66,8 +66,8 @@ findConstructor aliases op | isOperator op = do
     alias <- findEither op aliases
     if isConstructor alias
         then Right alias
-        else Left (pretty op
-            ++ " with alias " ++ pretty alias
+        else Left (renderError op
+            ++ " with alias " ++ renderError alias
             ++  " is not a constructor")
 findConstructor _ op = Right op
 
@@ -80,9 +80,9 @@ captureOperatorAliases (ModuleDeclaration _ decls) =
 toConstructor (TypeConstructor c) =
     Right (ConstructorExpression c)
 toConstructor other =
-    Left ("Cannot convert " ++ pretty other ++ " to a constructor")
+    Left ("Cannot convert " ++ renderError other ++ " to a constructor")
 
 toConstructorPattern ps (TypeConstructor c) =
     Right (ConstructorPattern c ps)
 toConstructorPattern _ other =
-    Left ("Cannot convert " ++ pretty other ++ " to pattern")
+    Left ("Cannot convert " ++ renderError other ++ " to pattern")

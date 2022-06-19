@@ -5,6 +5,7 @@ import Prelude hiding (takeWhile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
+import Prettyprinter(pretty)
 import Control.Applicative((<|>))
 import Data.Functor(($>))
 import Data.Char(isSpace, isUpper, isAlphaNum)
@@ -72,13 +73,13 @@ indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Block (indLength ws)) pos
-getBlock (LocatedLexeme _ pos) =
-    error ("getBlock impossible case at " ++ pretty pos)
+getBlock l =
+    error ("getBlock impossible case at " ++ prettyLocated l)
 
 getIndent (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Indent (indLength ws)) pos
-getIndent (LocatedLexeme _ pos) =
-    error ("getIndent impossible case at " ++ pretty pos)
+getIndent l =
+    error ("getIndent impossible case at " ++ prettyLocated l)
     
 
 followedByOpen rest = case dropWhile isWhite rest of
@@ -135,7 +136,8 @@ data LocatedLexeme = LocatedLexeme Lexeme Location
 extractLocation (LocatedLexeme _ p) = p
 extractLexeme (LocatedLexeme l _) = l
 
-prettyLocated (LocatedLexeme l p) = show l ++ " " ++ pretty p
+prettyLocated (LocatedLexeme l p) =
+    show l ++ " " ++ show (pretty p)
 
 data Lexeme
     = Reserved Text

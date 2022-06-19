@@ -37,7 +37,7 @@ executable hypatia
     text < 2.1,
     unordered-containers < 0.3,
     hashable < 1.5,
-    pretty < 1.2,
+    prettyprinter < 1.8,
     transformers < 0.7,
     uniplate < 1.7,
     attoparsec < 0.15

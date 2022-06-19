@@ -52,12 +52,12 @@ inferModule (ModuleDeclaration modName decls) = do
 sanitySkolemCheck = traverseWithKey_ (\k v ->
     let s = skolems v
     in unless (null s)
-        (fail ("Bug: " ++ pretty k ++ " leaked skolems " ++ pretty s)))
+        (fail ("Bug: " ++ renderError k ++ " leaked skolems " ++ renderError s)))
 
 sanityFreeVariableCheck = traverseWithKey_ (\k v ->
     let vs = freeVars v
     in unless (null vs)
-        (fail ("Bug: " ++ pretty k ++ " leaked free variable " ++ pretty vs)))
+        (fail ("Bug: " ++ renderError k ++ " leaked free variable " ++ renderError vs)))
 
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
@@ -93,8 +93,8 @@ typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
     let escVars = skolems s ++ foldMap' (skolems . apply subst) env
     let escaped = including escVars skolVars
     unless (null escaped) (fail ("Escape check lambda: "
-        ++ pretty escaped ++ " escaped when checking fun "
-        ++ pretty p ++ " -> ... against " ++ pretty s))
+        ++ renderError escaped ++ " escaped when checking fun "
+        ++ renderError p ++ " -> ... against " ++ renderError s))
 typecheck (LambdaExpression [p] e) ty = do
     alpha <- newTyVar
     beta <- newTyVar
@@ -152,7 +152,7 @@ constructorToType tyCon vars tys =
 -- works type W = Wrapped (forall a. a -> a)
 scopeCheck ty = case freeVars ty of
     [] -> pure ty
-    frees -> fail ("Type variables " ++ pretty frees ++ " have no definition")
+    frees -> fail ("Type variables " ++ renderError frees ++ " have no definition")
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]
@@ -190,8 +190,7 @@ inferDecl gen signatures (ExpressionDeclaration p e) next = do
 
     -- If an error occurs, show in which declaration it happened
     onException' (with binds' (typecheck e ty))
-        (putStrLn ("When typechecking declaration " ++ pretty p
-            ++ " at " ++ locationInfo p))
+        (putStrLn ("When typechecking declaration " ++ renderError p))
 
     -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
     -- NOTE if binds contain signatures then those are not generalized
@@ -224,7 +223,7 @@ typecheckPattern (ConstructorPattern c ps) ty = do
     let consTys = init tys
 
     when (length ps /= length consTys)
-        (fail ("Constructor " ++ pretty c
+        (fail ("Constructor " ++ renderError c
             ++ " was given wrong number of arguments"))
     binds <- zipWithM typecheckPattern ps consTys
     unify resultTy ty
@@ -235,7 +234,7 @@ typecheckPattern (ArrayPattern ps) ty = do
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) alpha) ty
     return (mconcat binds)
 typecheckPattern other _ =
-    fail ("Cannot typecheck pattern " ++ pretty other)
+    fail ("Cannot typecheck pattern " ++ renderError other)
 
 -- Typecheck Literals
 typecheckLiteral (Numeral _) ty =
@@ -253,9 +252,9 @@ unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
 unify' (TypeConstructor a) (TypeConstructor b) | a == b = return ()
 -- When unifying, no higher rank type should appear
 unify' s@(ForAll _ _) ty =
-    fail ("Cannot unify scheme " ++ pretty s ++ " and " ++ pretty ty)
+    fail ("Cannot unify scheme " ++ renderError s ++ " and " ++ renderError ty)
 unify' ty s@(ForAll _ _) =
-    fail ("Cannot unify " ++ pretty ty ++ " and scheme " ++ pretty s)
+    fail ("Cannot unify " ++ renderError ty ++ " and scheme " ++ renderError s)
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
 -- After unifying f1 and f2 the substitution might have changed
@@ -265,10 +264,10 @@ unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
 unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
     unify' a1 a2 *> unify b1 b2
 unify' a b =
-    fail ("Cannot unify " ++ pretty a ++ " and " ++ pretty b)
+    fail ("Cannot unify " ++ renderError a ++ " and " ++ renderError b)
 
 unifyVar x ty = if occurs x ty
-    then fail ("Occurs check: " ++ pretty x ++ " occurs in " ++ pretty ty)
+    then fail ("Occurs check: " ++ renderError x ++ " occurs in " ++ renderError ty)
     else insertSubst x ty
 
 -- Does a type variable occur in a type?
@@ -313,7 +312,7 @@ newUnique = do
 
 newTyVar = fmap TypeVariable newUniqueName
 
-newUniqueName = fmap (prefixedId . show) newUnique
+newUniqueName = fmap (prefixedId . uintToText) newUnique
 
 -- extract skolem constants
 skolems ty = [c | SkolemConstant c <- universe ty]
@@ -357,9 +356,9 @@ subsume' scheme1 scheme2@(ForAll _ _) = do
     subst <- getSubst
     let escVars = skolems (apply subst scheme1) ++ skolems (apply subst scheme2)
     let escaped = including escVars skolVars
-    unless (null escaped) (fail ("Escape check: " ++ pretty escaped
-        ++ " escaped when subsuming " ++ pretty scheme1
-        ++ " and " ++ pretty scheme2))
+    unless (null escaped) (fail ("Escape check: " ++ renderError escaped
+        ++ " escaped when subsuming " ++ renderError scheme1
+        ++ " and " ++ renderError scheme2))
 subsume' scheme@(ForAll _ _) t2 = do
     t1 <- instantiate scheme
     subsume' t1 t2

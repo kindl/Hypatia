@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main(main) where
 
 import Data.Foldable(traverse_, foldMap')
@@ -7,7 +9,7 @@ import Compiler
 import Transformations
 import Parser hiding (modDecl)
 import System.Environment
-
+import qualified Data.Text.IO as Text
 
 main = do
     args <- getArgs
@@ -34,7 +36,7 @@ parseFromName modName = do
     putStrLn ("Loading module " ++ path)
     m <- parseFile path
     if getName m == modName then return m else
-        fail ("The file name did not match the name of the module " ++ pretty (getName m))
+        fail ("The file name did not match the name of the module " <> renderError (getName m))
 
 -- Load all imported modules step-by-step
 growModuleEnv env =
@@ -49,7 +51,7 @@ growModuleEnv env =
 
 writeResult modDecl =
     let
-        name = renderFlatModName (getName modDecl)
+        name = show (flatModName (getName modDecl))
         compiled = compile modDecl
     in if name == "Native" || name == "Main" || isPrefixOf "Native_" name
 -- A module which name starts with "Native" is a native module by convention
@@ -62,6 +64,6 @@ writeResult modDecl =
 -- Main is also excluded to not override the file main.lua
 -- which is used as an entry point by Love 2D
         then putStrLn ("Skipped writing native module " ++ name ++ "(.lua)")
-        else writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
+        else Text.writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
 -- NOTE disabled javascript output
--- *> writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)
+-- *> Text.writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)

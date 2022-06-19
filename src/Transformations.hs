@@ -11,6 +11,7 @@ import Data.HashMap.Strict(insert, (!))
 import Data.Foldable(foldMap')
 import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 import Control.Monad((<=<))
+import qualified Data.Text.IO as Text
 
 
 transformProgram ms = either fail return (transformations ms)
@@ -38,12 +39,13 @@ transformations = traverse sortDeclsMod
 
 {- Typechecking -}
 typecheckProgram p = feedbackM typecheckAction p
-    where typecheckAction envs m = do
-            let filtered = filterNames (gatherSpecs m) envs
-            captured <- typecheckModule filtered m
-            let path = "logs/" ++ renderName (getName m) ++ ".log"
-            writeFile path (renderEnv captured)
-            return ((), captured)
+
+typecheckAction envs m = do
+    let filtered = filterNames (gatherSpecs m) envs
+    captured <- typecheckModule filtered m
+    let path = "logs/" ++ renderName (getName m) ++ ".log"
+    Text.writeFile path (renderEnv captured)
+    return ((), captured)
 
 {- Operators and Aliasing -}
 qualifyProgram =

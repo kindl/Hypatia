@@ -2,12 +2,12 @@
 module Compiler where
 
 
-import Prelude hiding ((<>))
+import Prelude
 import Syntax
 import Data.List(nub)
-import Data.Text(Text, pack)
-import Text.PrettyPrint(vcat, nest, render, (<+>), (<>),
-    equals, text, int, braces, parens, brackets, double, semi)
+import Data.Text(Text)
+import Prettyprinter(vcat, indent, (<+>),
+    equals, braces, parens, brackets, semi, pretty, dquotes)
 import Data.Foldable(foldMap')
 
 
@@ -43,8 +43,6 @@ toLuaM (Mod modName sts) = vcat [
     text "return" <+> flatModName modName]
 
 -- Top level without "local"
-toLuaT (Assign x (Func vs sts)) =
-    toLuaFun (flatVar x <+> equals) vs sts
 toLuaT (Assign x e) =
     flatVar x <+> equals <+> toLuaE e
 toLuaT s = toLuaS s
@@ -52,44 +50,41 @@ toLuaT s = toLuaS s
 -- local functions need to be declared beforehand for recursion
 --local fix = function(f) return f(fix(f)) end
 -- would result in an error because "fix" is undefined
-toLuaS (Assign x (Func vs sts)) = vcat [
-    text "local" <+> prettyName x,
-    toLuaFun (prettyName x <+> equals) vs sts]
+toLuaS (Assign x e@(Func _ _)) = vcat [
+    text "local" <+> pretty x,
+    pretty x <+> equals <+> toLuaE e]
 toLuaS (Assign x e) =
-    text "local" <+> prettyName x <+> equals <+> toLuaE e
+    text "local" <+> pretty x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
-toLuaS (Ret (Func vs sts)) =
-    toLuaFun (text "return") vs sts
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) = vcat [
     text "if" <+> toLuaE e <+> text "then",
-    nest 4 (vcatMap toLuaS th),
+    indent 4 (vcatMap toLuaS th),
     text "end"]
 toLuaS (If e [] th) = vcat [
     text "if not" <+> parens (toLuaE e) <+> text "then",
-    nest 4 (vcatMap toLuaS th),
+    indent 4 (vcatMap toLuaS th),
     text "end"]
 toLuaS (If e th el) = vcat [
     text "if" <+> toLuaE e <+> text "then",
-    nest 4 (vcatMap toLuaS th),
+    indent 4 (vcatMap toLuaS th),
     text "else",
-    nest 4 (vcatMap toLuaS el),
+    indent 4 (vcatMap toLuaS el),
     text "end"]
 
 toLuaE (Var x) = flatVar x
-toLuaE (LitI i) = int i
-toLuaE (LitD d) =
-    if not (isInfinite d) && d == intToDouble (round d)
-        then int (round d)
-        else double d
-toLuaE (LitT t) = text (show t)
-toLuaE (Func vs sts) =
-    toLuaFun mempty vs sts
+toLuaE (LitI i) = pretty i
+toLuaE (LitD d) = prettyNumeral d
+toLuaE (LitT t) = prettyEscaped t
+toLuaE (Func vs sts) = vcat [
+    text "function" <> parens (commas (fmap pretty vs)),
+    indent 4 (vcatMap toLuaS sts),
+    text "end"]
 toLuaE (Access v indices) =
-    prettyId v <> foldMap' (brackets . int . (+ 1)) indices
+    pretty v <> foldMap' (brackets . pretty . (+ 1)) indices
 -- Add parantheses for immediate functions
 -- (function () print "Hi" end)() would be a syntax error
 -- without parentheses 
@@ -100,14 +95,9 @@ toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
 toLuaE (Eq e1 e2) = toLuaE e1 <+> text "==" <+> toLuaE e2
 
-toLuaFun prefix vs sts = vcat [
-    prefix <+> text "function" <> parens (commas (fmap prettyId vs)),
-    nest 4 (vcatMap toLuaS sts),
-    text "end"]
-
 -- e.g. A module A.B is saved in the file A_B.lua
 -- local A_B = require("A_B")
-toLuaPath modName = text (show (renderFlatModName modName))
+toLuaPath modName = dquotes (flatModName modName)
 
 
 -- Render simplified language as JavaScript
@@ -118,44 +108,42 @@ toJavaScriptM (Mod modName sts) = vcat [
     vcatMap toJavaScriptT sts,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
 
-toJavaScriptT (Assign x (Func vs sts)) =
-    toJavaScriptFun (flatVar x <+> equals) vs sts <> semi
 toJavaScriptT (Assign x e) =
     flatVar x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptT s = toJavaScriptS s
 
 toJavaScriptS (Assign x e) =
-    text "const" <+> prettyName x <+> equals <+> toJavaScriptE e <> semi
+    text "const" <+> pretty x <+> equals <+> toJavaScriptE e <> semi
 toJavaScriptS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (toJsPath modName) <> semi
-toJavaScriptS (Ret (Func vs sts)) =
-    toJavaScriptFun (text "return") vs sts <> semi
 toJavaScriptS (Ret e) =
     text "return" <+> toJavaScriptE e <> semi
 toJavaScriptS (If e th []) = vcat [
     text "if" <> parens (toJavaScriptE e) <+> text "{",
-    nest 4 (vcatMap toJavaScriptS th),
+    indent 4 (vcatMap toJavaScriptS th),
     text "}"]
 toJavaScriptS (If e [] th) = vcat [
     text "if" <> parens (text "!" <> parens (toJavaScriptE e)) <+> text "{",
-    nest 4 (vcatMap toJavaScriptS th),
+    indent 4 (vcatMap toJavaScriptS th),
     text "}"]
 toJavaScriptS (If e th el) = vcat [
     text "if" <> parens (toJavaScriptE e) <+> text "{",
-    nest 4 (vcatMap toJavaScriptS th),
+    indent 4 (vcatMap toJavaScriptS th),
     text "}" <+> text "else" <+> text "{",
-    nest 4 (vcatMap toJavaScriptS el),
+    indent 4 (vcatMap toJavaScriptS el),
     text "}"]
 
 toJavaScriptE (Var x) = flatVar x
-toJavaScriptE (LitI i) = int i
-toJavaScriptE (LitD d) = double d
-toJavaScriptE (LitT t) = text (show t)
-toJavaScriptE (Func vs sts) =
-    toJavaScriptFun mempty vs sts
+toJavaScriptE (LitI i) = pretty i
+toJavaScriptE (LitD d) = prettyNumeral d
+toJavaScriptE (LitT t) = prettyEscaped t
+toJavaScriptE (Func vs sts) = vcat [
+    text "function" <> parens (commas (fmap pretty vs)) <+> text "{",
+    indent 4 (vcatMap toJavaScriptS sts),
+    text "}"]
 toJavaScriptE (Access v indices) =
-    prettyId v <> foldMap' (brackets . int) indices
+    pretty v <> foldMap' (brackets . pretty) indices
 -- Add parantheses for immediate functions
 toJavaScriptE (Call e@(Func _ _) es) =
     parens (toJavaScriptE e) <> parens (commas (fmap toJavaScriptE es))
@@ -167,13 +155,8 @@ toJavaScriptE (And e1 e2) =
 toJavaScriptE (Eq e1 e2) =
     toJavaScriptE e1 <+> text "===" <+> toJavaScriptE e2
 
-toJavaScriptFun prefix vs sts = vcat [
-    prefix <+> text "function" <> parens (commas (fmap prettyId vs)) <+> text "{",
-    nest 4 (vcatMap toJavaScriptS sts),
-    text "}"]
-
 -- js needs the leading dot for local modules
-toJsPath modName = text (show ("./" ++ renderFlatModName modName))
+toJsPath modName = dquotes ("./" <> flatModName modName)
 
 
 -- Compile to simplified language
@@ -191,7 +174,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
 compileE (LambdaExpression [p] e) =
     let
         v = prefixedId "l"
-        err = Ret (mkError ("failed pattern match lambda at " ++ locationInfo p))
+        err = Ret (mkError ("No pattern match in lambda for " <> prettyError p))
     in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
@@ -214,7 +197,7 @@ however nested case expressions lead to problems e.g. multiple defined local _v
 compileEtoS (CaseExpression e alts) =
     let
         v = prefixedId "c"
-        err = Ret (mkError ("failed pattern match case at " ++ locationInfo (fmap fst alts)))
+        err = Ret (mkError ("No pattern match for " <> prettyError (fmap fst alts)))
     in Assign (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
     foldMap' compileD decls ++ compileEtoS e
@@ -242,8 +225,8 @@ compileImports decls = fmap Imp (nub [modName |
 
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
-compileD (ExpressionDeclaration (Wildcard _) e) =
-    [Assign (fromId (prefixedId "w")) (compileE e)]
+compileD (ExpressionDeclaration (Wildcard w) e) =
+    [Assign (fromId w) (compileE e)]
 {-
 Compile pattern matches in let expressions like
 let
@@ -253,7 +236,7 @@ in write (toString a)
 compileD (ExpressionDeclaration p pe) =
     let
         v = prefixedId "d"
-        err = Ret (mkError ("failed pattern match declaration at " ++ locationInfo p))
+        err = Ret (mkError ("No pattern match in declaration for " <> prettyError p))
         s = getAssignments v [] p
         cs = getConditions v [] p
     in Assign (fromId v) (compileE pe) : If (foldr1 And cs) [] [err] : s
@@ -329,7 +312,7 @@ getConditions v i (LiteralPattern l) =
     [Eq (Access v i) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
-getConditions _ _ p = error ("getConditions on " ++ pretty p)
+getConditions _ _ p = error ("getConditions on " ++ renderError p)
 
 getAssignments v i (VariablePattern x) =
     [Assign x (Access v i)]
@@ -341,7 +324,7 @@ getAssignments v i (ArrayPattern ps) =
     descendAccess (getAssignments v) i 0 ps
 getAssignments _ _ (LiteralPattern _) = []
 getAssignments _ _ (Wildcard _) = []
-getAssignments _ _ p = error ("getAssignments on " ++ pretty p)
+getAssignments _ _ p = error ("getAssignments on " ++ renderError p)
 
 descendAccess _ _ _ [] = []
 descendAccess f i j (p:ps) =
@@ -351,7 +334,7 @@ descendAccess f i j (p:ps) =
 immediate sts = Call (Func [] sts) []
 
 
-mkError s = Call (Var (fromText "Native.error")) [LitT (pack s)]
+mkError s = Call (Var (fromText "Native.error")) [LitT (render s)]
 mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
 mkSize a = Call (Var (fromText "Native.size")) [a]
 

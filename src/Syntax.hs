@@ -4,6 +4,7 @@ module Syntax where
 import Prelude hiding (lookup)
 import Data.Word(Word64)
 import Data.Data(Data, Typeable)
+import Data.Text(Text)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Hashable(Hashable, hashWithSalt)

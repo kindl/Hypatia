@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Compiler where
 
-
-import Prelude
 import Syntax
 import Data.List(nub)
 import Data.Text(Text)

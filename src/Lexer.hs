@@ -15,7 +15,7 @@ import Syntax
 -- however <$!> instead of fmap would decrease performance
 import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
     many', sepBy1', match, parse, endOfInput, parseOnly,
-    hexadecimal, double, Parser)
+    hexadecimal, double)
 
 {-
 This module converts text to a list of lexemes
@@ -115,7 +115,7 @@ isWhite (LocatedLexeme (Comment _) _) = True
 isWhite _ = False
 
 isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
-    Text.any (=='\n') ws
+    Text.elem '\n' ws
 isSignificantWhite _ = False
 
 {- Locations -}
@@ -126,8 +126,7 @@ advance (Position l c) _ =
 
 initialPosition = Position 1 1
 
-oneOf :: String -> Parser Char
-oneOf xs = satisfy (\x -> elem x xs)
+oneOf xs = satisfy (flip Text.elem xs)
 {-# INLINE oneOf #-}
 
 data LocatedLexeme = LocatedLexeme Lexeme Location

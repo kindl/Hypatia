@@ -2,25 +2,25 @@
 module Aliases where
 
 import Syntax
-import Data.Generics.Uniplate.Data(rewriteBiM, transformBiM)
+import Data.Generics.Uniplate.Data(transformBiM)
 import Data.HashMap.Strict(fromList)
 import Control.Monad((>=>))
 import Control.Applicative(liftA2)
 
 
-aliasConstructors aliasTable = rewriteBiM f >=> rewriteBiM g >=> rewriteBiM j
+aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBiM j
   where
-    f (ConstructorExpression c) =
-        traverse toConstructor (mfind c aliasTable)
-    f _ = Right Nothing
+    f e@(ConstructorExpression c) =
+        (findEither c aliasTable >>= toConstructor) <> Right e
+    f e = Right e
 
-    g (ConstructorPattern c ps) =
-        traverse (toConstructorPattern ps) (mfind c aliasTable)
-    g _ = Right Nothing
+    g e@(ConstructorPattern c ps) =
+        (findEither c aliasTable >>= toConstructorPattern ps) <> Right e
+    g e = Right e
 
-    j (TypeConstructor c) =
-        traverse Right (mfind c aliasTable)
-    j _ = Right Nothing
+    j e@(TypeConstructor c) =
+        findEither c aliasTable <> Right e
+    j e = Right e
 
 aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM j
   where

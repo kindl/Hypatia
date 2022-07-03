@@ -227,7 +227,7 @@ text = pretty
 
 prettyNumeral d =
     if not (isInfinite d) && d == intToDouble (round d)
-        then pretty ((round d) :: Int)
+        then pretty (round d :: Int)
         else pretty d
 
 -- `show` escapes and creates double quotes

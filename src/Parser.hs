@@ -42,9 +42,9 @@ next = StateT uncons
 nextLexeme = extractLexeme <$!> next
 {-# INLINE nextLexeme #-}
 
-token text = do
-    Reserved s <- nextLexeme
-    guard (text == s)
+token t = do
+    Reserved r <- nextLexeme
+    guard (t == r)
 {-# INLINE token #-}
 
 -- parens combinators for readability

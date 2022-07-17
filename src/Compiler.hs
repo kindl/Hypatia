@@ -98,60 +98,60 @@ toLuaE (Eq e1 e2) = toLuaE e1 <+> text "==" <+> toLuaE e2
 toLuaPath modName = dquotes (flatModName modName)
 
 
--- Render simplified language as JavaScript
-renderJavaScript sts = render (toJavaScriptM sts)
+-- Render simplified language as Js
+renderJs sts = render (toJsM sts)
 
-toJavaScriptM (Mod modName sts) = vcat [
+toJsM (Mod modName sts) = vcat [
     text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
-    vcatMap toJavaScriptT sts,
+    vcatMap toJsT sts,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
 
-toJavaScriptT (Assign x e) =
-    flatVar x <+> equals <+> toJavaScriptE e <> semi
-toJavaScriptT s = toJavaScriptS s
+toJsT (Assign x e) =
+    flatVar x <+> equals <+> toJsE e <> semi
+toJsT s = toJsS s
 
-toJavaScriptS (Assign x e) =
-    text "const" <+> pretty x <+> equals <+> toJavaScriptE e <> semi
-toJavaScriptS (Imp modName) =
+toJsS (Assign x e) =
+    text "const" <+> pretty x <+> equals <+> toJsE e <> semi
+toJsS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (toJsPath modName) <> semi
-toJavaScriptS (Ret e) =
-    text "return" <+> toJavaScriptE e <> semi
-toJavaScriptS (If e th []) = vcat [
-    text "if" <> parens (toJavaScriptE e) <+> text "{",
-    indent 4 (vcatMap toJavaScriptS th),
+toJsS (Ret e) =
+    text "return" <+> toJsE e <> semi
+toJsS (If e th []) = vcat [
+    text "if" <> parens (toJsE e) <+> text "{",
+    indent 4 (vcatMap toJsS th),
     text "}"]
-toJavaScriptS (If e [] th) = vcat [
-    text "if" <> parens (text "!" <> parens (toJavaScriptE e)) <+> text "{",
-    indent 4 (vcatMap toJavaScriptS th),
+toJsS (If e [] th) = vcat [
+    text "if" <> parens (text "!" <> parens (toJsE e)) <+> text "{",
+    indent 4 (vcatMap toJsS th),
     text "}"]
-toJavaScriptS (If e th el) = vcat [
-    text "if" <> parens (toJavaScriptE e) <+> text "{",
-    indent 4 (vcatMap toJavaScriptS th),
+toJsS (If e th el) = vcat [
+    text "if" <> parens (toJsE e) <+> text "{",
+    indent 4 (vcatMap toJsS th),
     text "}" <+> text "else" <+> text "{",
-    indent 4 (vcatMap toJavaScriptS el),
+    indent 4 (vcatMap toJsS el),
     text "}"]
 
-toJavaScriptE (Var x) = flatVar x
-toJavaScriptE (LitI i) = pretty i
-toJavaScriptE (LitD d) = prettyNumeral d
-toJavaScriptE (LitT t) = prettyEscaped t
-toJavaScriptE (Func vs sts) = vcat [
+toJsE (Var x) = flatVar x
+toJsE (LitI i) = pretty i
+toJsE (LitD d) = prettyNumeral d
+toJsE (LitT t) = prettyEscaped t
+toJsE (Func vs sts) = vcat [
     text "function" <> parens (commas (fmap pretty vs)) <+> text "{",
-    indent 4 (vcatMap toJavaScriptS sts),
+    indent 4 (vcatMap toJsS sts),
     text "}"]
-toJavaScriptE (Access v indices) =
+toJsE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty) indices
 -- Add parantheses for immediate functions
-toJavaScriptE (Call e@(Func _ _) es) =
-    parens (toJavaScriptE e) <> parens (commas (fmap toJavaScriptE es))
-toJavaScriptE (Call e es) =
-    toJavaScriptE e <> parens (commas (fmap toJavaScriptE es))
-toJavaScriptE (Arr es) = brackets (commas (fmap toJavaScriptE es))
-toJavaScriptE (And e1 e2) =
-    toJavaScriptE e1 <+> text "&&" <+> toJavaScriptE e2
-toJavaScriptE (Eq e1 e2) =
-    toJavaScriptE e1 <+> text "===" <+> toJavaScriptE e2
+toJsE (Call e@(Func _ _) es) =
+    parens (toJsE e) <> parens (commas (fmap toJsE es))
+toJsE (Call e es) =
+    toJsE e <> parens (commas (fmap toJsE es))
+toJsE (Arr es) = brackets (commas (fmap toJsE es))
+toJsE (And e1 e2) =
+    toJsE e1 <+> text "&&" <+> toJsE e2
+toJsE (Eq e1 e2) =
+    toJsE e1 <+> text "===" <+> toJsE e2
 
 -- js needs the leading dot for local modules
 toJsPath modName = dquotes ("./" <> flatModName modName)

@@ -14,13 +14,14 @@ import qualified Data.Text.IO as Text
 main = do
     args <- getArgs
     case args of
-        ["compile", path] -> compileFromPath path
+        ["compile", path] -> compileFromPath path "lua" renderLua
+        ["compiletojs", path] -> compileFromPath path "js" renderJs
         _ -> putStrLn "Usage: hypatia compile path"
 
 
-compileFromPath path = do
+compileFromPath path abbreviation renderLanguage = do
     program <- loadProgram path
-    traverse_ writeResult program
+    traverse_ (writeResult abbreviation renderLanguage) program
 
 -- Load a list of modules from a file path
 loadProgram path = do
@@ -49,7 +50,7 @@ growModuleEnv env =
                 mods <- traverse parseFromName needed
                 growModuleEnv (mods ++ env)
 
-writeResult modDecl =
+writeResult abbreviation renderLanguage modDecl =
     let
         name = show (flatModName (getName modDecl))
         compiled = compile modDecl
@@ -63,7 +64,5 @@ writeResult modDecl =
 
 -- Main is also excluded to not override the file main.lua
 -- which is used as an entry point by Love 2D
-        then putStrLn ("Skipped writing native module " ++ name ++ "(.lua)")
-        else Text.writeFile ("lua/" ++ name ++ ".lua") (renderLua compiled)
--- NOTE disabled javascript output
--- *> Text.writeFile ("javascript/" ++ name ++ ".js") (renderJavaScript compiled)
+        then putStrLn ("Skipped writing native module " ++ name ++ "." ++ abbreviation)
+        else Text.writeFile (abbreviation ++ "/" ++ name ++ "." ++ abbreviation) (renderLanguage compiled)

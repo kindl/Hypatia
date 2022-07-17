@@ -8,7 +8,7 @@ import Control.Monad((>=>))
 import Control.Applicative(liftA2)
 
 
-aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBiM j
+aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBiM h
   where
     f e@(ConstructorExpression c) =
         (findEither c aliasTable >>= toConstructor) <> Right e
@@ -18,11 +18,11 @@ aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBi
         (findEither c aliasTable >>= toConstructorPattern ps) <> Right e
     g e = Right e
 
-    j e@(TypeConstructor c) =
+    h e@(TypeConstructor c) =
         findEither c aliasTable <> Right e
-    j e = Right e
+    h e = Right e
 
-aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM j
+aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM h
   where
     f (PrefixNegation e) =
         Right (FunctionApplication (Variable (fromText "Native.negate")) e)
@@ -40,11 +40,11 @@ aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM j
         fmap (flip ConstructorPattern ps) (findEither c aliases)
     g p = Right p
 
-    j (TypeInfixOperator a op b) =
+    h (TypeInfixOperator a op b) =
         fmap (\al -> makeOpTyp al a b) (findEither op aliases)
-    j (TypeConstructor c) | isOperator c =
+    h (TypeConstructor c) | isOperator c =
         fmap TypeConstructor (findEither c aliases)
-    j t = Right t
+    h t = Right t
 
 aliasOperatorsMod (ModuleDeclaration modName decls) =
     let

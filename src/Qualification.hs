@@ -101,12 +101,12 @@ captureTopName _ = []
 -- Type Level
 qualifyTypeNames quals (ModuleDeclaration name decls) =
     let
-        f (TypeInfixOperator ta op tb) =
+        h (TypeInfixOperator ta op tb) =
             fmap (\q -> TypeInfixOperator ta q tb) (findName quals op)
-        f (TypeConstructor c) =
+        h (TypeConstructor c) =
             fmap TypeConstructor (findName quals c)
-        f t = Right t
-    in transformBiM f =<< fmap (ModuleDeclaration name) (traverse (qualifyTypesD quals) decls)
+        h t = Right t
+    in transformBiM h =<< fmap (ModuleDeclaration name) (traverse (qualifyTypesD quals) decls)
 
 -- The constructors itself are on value level
 qualifyTypesD quals (TypeDeclaration v vs cs) =

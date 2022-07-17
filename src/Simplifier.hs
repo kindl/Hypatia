@@ -85,7 +85,7 @@ foo = (fun v1 v2 v3 -> case (v1, v2, v3) of
     (c, d, False) -> d)
 
 -}
-removeFunctionDeclaration m = (transformBi f . transformBi k) m
+removeFunctionDeclaration m = (transformBi f) (k m)
   where
     f (LetExpression decls e) =
         LetExpression (transBinds decls) e

@@ -37,22 +37,20 @@ renderLua sts = render (toLuaM sts)
 
 toLuaM (Mod modName sts) = vcat [
     text "local" <+> flatModName modName <+> equals <+> text "{}",
-    vcatMap toLuaT sts,
+    vcatMap toLuaS sts,
     text "return" <+> flatModName modName]
 
--- Top level without "local"
-toLuaT (Assign x e) =
-    flatVar x <+> equals <+> toLuaE e
-toLuaT s = toLuaS s
-
 -- local functions need to be declared beforehand for recursion
---local fix = function(f) return f(fix(f)) end
--- would result in an error because "fix" is undefined
-toLuaS (Assign x e@(Func _ _)) = vcat [
+-- `local fix = function(f) return f(fix(f)) end`
+-- would result in an error because `fix` is undefined
+toLuaS (Assign (Name [] x) e@(Func _ _)) = vcat [
     text "local" <+> pretty x,
     pretty x <+> equals <+> toLuaE e]
-toLuaS (Assign x e) =
+toLuaS (Assign (Name [] x) e) =
     text "local" <+> pretty x <+> equals <+> toLuaE e
+-- Qualified names do not need "local"
+toLuaS (Assign x e) =
+    flatVar x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName

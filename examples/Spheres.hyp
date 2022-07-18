@@ -1,6 +1,6 @@
 module Spheres
 
-import Native((+), (*), (%), (-),
+import Native((+), (*), (%), (-), (/),
     uncurry4, uncurry5, Array, unsafeInsert, Numeral)
 import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
 import Common.Base((<), sqrt, repeatN)
@@ -17,9 +17,10 @@ setColorVec (Vec3 c1 c2 c3) = setColor c1 c2 c3
 
 circleVec (Vec2 x y) r = circle "fill" x y r
 
-drawSphere sphere = let {
-    _ = setColorVec (color sphere)
-        } in circleVec (position sphere) (radius sphere)
+drawSphere sphere =
+    let
+        _ = setColorVec (color sphere)
+    in circleVec (position sphere) (radius sphere)
 
 type Vector a = Vec2 a a | Vec3 a a a
 
@@ -39,8 +40,8 @@ radius (Sphere _ _ _ r) = r
 addSphere spheres =
     let
         pos = Vec2 (unsafeRandom 0 500) (unsafeRandom 0 500)
-        vel = Vec2 (unsafeRandom (-100) 100) (unsafeRandom (-100) 100)
-        col = Vec3 (unsafeRandom 0 255) (unsafeRandom 0 255) (unsafeRandom 0 255)
+        vel = Vec2 (unsafeRandom -100 100) (unsafeRandom -100 100)
+        col = Vec3 (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255)
         rad = unsafeRandom 30 100
     in unsafeInsert spheres (Sphere pos vel col rad)
 

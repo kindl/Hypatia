@@ -103,15 +103,15 @@ renderJs sts = render (toJsM sts)
 
 toJsM (Mod modName sts) = vcat [
     text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
-    vcatMap toJsT sts,
+    vcatMap toJsS sts,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
 
-toJsT (Assign x e) =
-    flatVar x <+> equals <+> toJsE e <> semi
-toJsT s = toJsS s
-
-toJsS (Assign x e) =
+toJsS (Assign (Name [] (Id "_" _)) e) =
+    toJsE e <> semi
+toJsS (Assign (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
+toJsS (Assign x e) =
+    flatVar x <+> equals <+> toJsE e <> semi
 toJsS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (toJsPath modName) <> semi

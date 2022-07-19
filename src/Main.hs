@@ -9,24 +9,26 @@ import Compiler
 import Transformations
 import Parser hiding (modDecl)
 import System.Environment
+import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
 main = do
     args <- getArgs
-    case args of
-        ["compile", path] -> compileFromPath path "lua" renderLua
-        ["compiletojs", path] -> compileFromPath path "js" renderJs
-        _ -> putStrLn "Usage: hypatia compile path"
+    case fmap Text.pack args of
+        ["compile", modName] -> compileProgram modName "lua" renderLua
+        ["compiletojs", modName] -> compileProgram modName "js" renderJs
+        _ -> putStrLn "Usage: hypatia compile A.Module.Name"
 
+compileProgram modName abbreviation renderFun =
+    if Text.isSuffixOf ".hyp" modName
+        then putStrLn "Enter a module name instead of a path"
+        else do
+            program <- loadProgram (fromText modName)
+            traverse_ (writeResult abbreviation renderFun) program
 
-compileFromPath path abbreviation renderLanguage = do
-    program <- loadProgram path
-    traverse_ (writeResult abbreviation renderLanguage) program
-
--- Load a list of modules from a file path
-loadProgram path = do
-    putStrLn ("Compiling module from " ++ path)
-    loadedModule <- parseFile path
+-- Load a list of modules from a module name
+loadProgram modName = do
+    loadedModule <- parseFromName modName
     mods <- growModuleEnv [loadedModule]
     simplified <- transformProgram mods
     _ <- typecheckProgram simplified
@@ -34,7 +36,7 @@ loadProgram path = do
 
 parseFromName modName = do
     let path = toPath modName
-    putStrLn ("Loading module " ++ path)
+    putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     m <- parseFile path
     if getName m == modName then return m else
         fail ("The file name did not match the name of the module " <> renderError (getName m))
@@ -50,7 +52,7 @@ growModuleEnv env =
                 mods <- traverse parseFromName needed
                 growModuleEnv (mods ++ env)
 
-writeResult abbreviation renderLanguage modDecl =
+writeResult abbreviation renderFun modDecl =
     let
         name = show (flatModName (getName modDecl))
         compiled = compile modDecl
@@ -65,4 +67,4 @@ writeResult abbreviation renderLanguage modDecl =
 -- Main is also excluded to not override the file main.lua
 -- which is used as an entry point by Love 2D
         then putStrLn ("Skipped writing native module " ++ name ++ "." ++ abbreviation)
-        else Text.writeFile (abbreviation ++ "/" ++ name ++ "." ++ abbreviation) (renderLanguage compiled)
+        else Text.writeFile (abbreviation ++ "/" ++ name ++ "." ++ abbreviation) (renderFun compiled)

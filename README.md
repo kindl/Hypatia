@@ -59,9 +59,10 @@ Hypatia could fill this gap and it could reuse parts of the existing lua ecosyst
 
 Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/) then run
 ```
+cd path/of/hypatia
 cabal install hypatia
 cd examples
-hypatia compile Spheres.hyp
+hypatia compile Spheres
 love lua
 ```
 

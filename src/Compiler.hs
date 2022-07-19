@@ -50,7 +50,7 @@ toLuaS (Assign (Name [] x) e) =
     text "local" <+> pretty x <+> equals <+> toLuaE e
 -- Qualified names do not need "local"
 toLuaS (Assign x e) =
-    flatVar x <+> equals <+> toLuaE e
+    flatName x <+> equals <+> toLuaE e
 toLuaS (Imp modName) =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
@@ -71,7 +71,7 @@ toLuaS (If e th el) = vcat [
     indent 4 (vcatMap toLuaS el),
     text "end"]
 
-toLuaE (Var x) = flatVar x
+toLuaE (Var x) = flatName x
 toLuaE (LitI i) = pretty i
 toLuaE (LitD d) = prettyNumeral d
 toLuaE (LitT t) = prettyEscaped t
@@ -109,7 +109,7 @@ toJsS (Assign (Name [] (Id "_" _)) e) =
 toJsS (Assign (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
 toJsS (Assign x e) =
-    flatVar x <+> equals <+> toJsE e <> semi
+    flatName x <+> equals <+> toJsE e <> semi
 toJsS (Imp modName) =
     text "const" <+> flatModName modName <+> equals <+>
         text "require" <> parens (toJsPath modName) <> semi
@@ -130,7 +130,7 @@ toJsS (If e th el) = vcat [
     indent 4 (vcatMap toJsS el),
     text "}"]
 
-toJsE (Var x) = flatVar x
+toJsE (Var x) = flatName x
 toJsE (LitI i) = pretty i
 toJsE (LitD d) = prettyNumeral d
 toJsE (LitT t) = prettyEscaped t

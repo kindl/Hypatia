@@ -186,7 +186,7 @@ instance Pretty Pattern where
         brackets (commas (fmap pretty ps))
 
 instance Pretty Name where
-    pretty = flatName (text ".") (text ".")
+    pretty = intercalateName (text ".") (text ".")
 
 instance Pretty Id where
     pretty (Id i _) = text i
@@ -195,23 +195,24 @@ instance Pretty Id where
 renderName modName = show (pretty modName)
 
 toPath name =
-    show (flatName (text "/") (text "/") name <> text ".hyp")
+    show (intercalateName (text "/") (text "/") name <> text ".hyp")
 
--- `flat` means displaying the module name joined with underscores instead of dots
-flatName _ _ (Name [] i) = pretty i
-flatName qualSep idSep (Name qs i) =
-    mintercalate qualSep (fmap text qs) <> idSep <> pretty i
+-- Join the module name with underscores instead of dots
+-- The underscore is used as escape character in file names,
+-- because dots cannot be used in Lua due to their special meaning:
+-- `local module = require "folder.file"`
+-- TODO Disallow/escape underscores in module names or find a better escape character
+flatModName = intercalateName (text "_") (text "_")
+{-# INLINE flatModName #-}
+
+flatName = intercalateName (text "_") (text ".")
 {-# INLINE flatName #-}
 
-flatVar = flatName (text "_") (text ".")
-{-# INLINE flatVar #-}
+intercalateName _ _ (Name [] i) = pretty i
+intercalateName qualSep idSep (Name qs i) =
+    mintercalate qualSep (fmap text qs) <> idSep <> pretty i
+{-# INLINE intercalateName #-}
 
--- TODO what would be a good escape character in file names?
--- Dots cannot be used in Lua, because they have a special meaning:
--- `local module = require "folder.file"`
--- For now underscores are used. However, as a consequence underscore should be disallowed.
-flatModName = flatName (text "_") (text "_")
-{-# INLINE flatModName #-}
 
 renderError p = show (prettyError p)
 

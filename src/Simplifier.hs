@@ -4,6 +4,8 @@ module Simplifier where
 import Syntax
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
+import Data.String(fromString)
+import Data.List(foldl1')
 
 
 -- This module translates complicated expressions
@@ -101,7 +103,29 @@ transBinds decls =
     in fmap (either id id) transformed
 
 
--- Groups function declarations with the same name
+{-
+Transforms function declarations. For example:
+```
+index 0 (Element e _) = e
+index n (Element _ es) = index (n - 1) es
+```
+becomes
+```
+index = fun v1 v2 ->
+    case (Tuple2 v1 v2) of
+        Tuple2 0 (Element e _) -> e
+        Tuple2 n (Element _ es) -> index (n - 1) es
+```
+
+However, this transformation is problematic because of
+* Performance: Creates a tuple, matches against it and throws it away
+* Typechecking: Impredicative instantiation might be necessary
+
+A possible solution might be to introduce a multi case expression
+`MultiCaseExpression [Expression] [([Pattern], Expression)]`
+that can match several patterns or change function declaration to
+`FunctionDeclaration Binding [([Pattern], Expression)]`
+-}
 groupBinds = foldr groupBindsStep []
 
 groupBindsStep (FunctionDeclaration id1 ps e) (Right (id2, xs):rest) | id1 == id2 =
@@ -115,12 +139,19 @@ transAlt (name, alts) =
     let
         n = length (fst (head alts))
         vs = fmap fromId (nNewVars n)
-        nalts = fmap (first toTuplesP1) alts
-        e = toTuplesE1 (fmap Variable vs)
+        nalts = fmap (first (toTuplesP n)) alts
+        e = toTuplesE n (fmap Variable vs)
     in ExpressionDeclaration (VariablePattern name)
         (LambdaExpression (fmap VariablePattern vs)
             (CaseExpression e nalts))
 
-toTuplesP1 = foldr1 (makeOpPat (fromText "Tuple"))
+toTuplesP _ [p] = p
+toTuplesP len ps =
+    ConstructorPattern (toTupleName len) ps
 
-toTuplesE1 = foldr1 (makeOp (fromText "Tuple"))
+toTuplesE _ [e] = e
+toTuplesE len es =
+    foldl1' FunctionApplication (ConstructorExpression (toTupleName len) : es)
+
+toTupleName len =
+    fromText ("Tuple" <> fromString (show len))

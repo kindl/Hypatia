@@ -10,8 +10,8 @@ import Control.Applicative(liftA2, liftA3)
 -- otherwise type Unit = Unit would be ambiguous.
 
 -- Aliases are mixed:
--- For example, in the declaration `infixl 7 * Tuple`
--- Tuple might be a type or a value alias
+-- For example, in the declaration `infixl 7 * Tuple2`
+-- Tuple2 might be a type or a value alias
 qualifyAliases (ModuleDeclaration modName decls) =
     let
         h (AliasDeclaration v t) =

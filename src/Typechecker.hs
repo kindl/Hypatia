@@ -174,7 +174,7 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 -- otherwise create a new type variable and infer a type
 -- TODO match variable against its signature in cases like this:
 -- x : Int
--- Tuple x _ = Tuple "hi" "ho"
+-- Tuple2 x _ = Tuple2 "hi" "ho"
 -- Should be a type error
 findSignature signatures (VariablePattern v) =
     maybe newTyVar return (lookup v signatures)

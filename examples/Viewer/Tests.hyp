@@ -1,8 +1,9 @@
 module Viewer.Tests
 
 import Native((+), (-), (*), (^), (++), write, words, size)
-import Common.Base((==), boolToString, Tuple)
-import Common.Geometry(Vec4, Mat4, transpose, multiply, dot)
+import Common.Base((==), boolToString, Tuple2)
+import Geometry.Vector4(Vector4, dot)
+import Geometry.Matrix(Matrix, transpose, multiply)
 import Common.Array(inspect)
 import Viewer.Obj
 
@@ -11,40 +12,40 @@ testLoad = test "Viewer.Obj.load" (Viewer.Obj.load "cube.obj")
 
 test name result = write (name ++ " " ++ inspect result)
 
-m1 = Mat4
-    (Vec4 2 3 5 7)
-    (Vec4 11 13 17 19)
-    (Vec4 23 29 31 37)
-    (Vec4 41 43 47 53)
+m1 = Matrix
+    (Vector4 2 3 5 7)
+    (Vector4 11 13 17 19)
+    (Vector4 23 29 31 37)
+    (Vector4 41 43 47 53)
 
-m2 = Mat4
-    (Vec4 59 61 67 71)
-    (Vec4 73 79 83 89)
-    (Vec4 97 101 103 107)
-    (Vec4 109 113 127 131)
+m2 = Matrix
+    (Vector4 59 61 67 71)
+    (Vector4 73 79 83 89)
+    (Vector4 97 101 103 107)
+    (Vector4 109 113 127 131)
 
 testTranspose =
     let {
-        m1t = Mat4
-            (Vec4 2 11 23 41)
-            (Vec4 3 13 29 43)
-            (Vec4 5 17 31 47)
-            (Vec4 7 19 37 53)
+        m1t = Matrix
+            (Vector4 2 11 23 41)
+            (Vector4 3 13 29 43)
+            (Vector4 5 17 31 47)
+            (Vector4 7 19 37 53)
     } in test "transpose" (boolToString (transpose m1 == m1t))
 
 testMultiply =
     let {
-        m = Mat4
-            (Vec4 1585 1655 1787 1861)
-            (Vec4 5318 5562 5980 6246)
-            (Vec4 10514 11006 11840 12378)
-            (Vec4 15894 16634 17888 18710)
+        m = Matrix
+            (Vector4 1585 1655 1787 1861)
+            (Vector4 5318 5562 5980 6246)
+            (Vector4 10514 11006 11840 12378)
+            (Vector4 15894 16634 17888 18710)
     } in test "multiply" (boolToString (multiply m1 m2 == m))
 
 testDot =
     let
-        v1 = Vec4 2 3 5 7
-        v2 = Vec4 11 13 17 19
+        v1 = Vector4 2 3 5 7
+        v2 = Vector4 11 13 17 19
     in test "dot prod" (boolToString (dot v1 v2 == 279))
 
 testPrecedence =
@@ -85,11 +86,11 @@ testNegate =
 
 testEq =
     let {
-        m = Mat4
-            (Vec4 2 3 5 7)
-            (Vec4 11 13 17 19)
-            (Vec4 23 29 31 37)
-            (Vec4 41 43 47 53)
+        m = Matrix
+            (Vector4 2 3 5 7)
+            (Vector4 11 13 17 19)
+            (Vector4 23 29 31 37)
+            (Vector4 41 43 47 53)
     } in test "eq" (boolToString (m1 == m))
 
 testRight = test "should be true" (m1 == m1)

@@ -2,14 +2,16 @@ module Viewer.Main
 
 import Native((/), (*), (+), uncurry2, uncurry5, Numeral, Array)
 import Native.Love(polygon)
-import Common.Base((>>), Tuple, getn)
+import Common.Base((>>), getn, pi)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
 import Viewer.Obj as Obj
-import Common.Geometry(Vec4, Matrix,
+import Geometry.Vector2(Vector2, toArray)
+import Geometry.Vector4(Vector4, to2d, normalize)
+import Geometry.Matrix(Matrix,
     translateMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationZ, rotationY, rotationX,
-    normalize, to2d, multiply, transform)
+    multiply, transform)
 import Common.Array(map, foldMap)
 import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 
@@ -26,9 +28,6 @@ modifyState f = unsafeRun (modifyRef gameState f)
 
 onState f = f (unsafeUnpackRef gameState)
 
-pi = 3.141592653589793
-
-## Load
 model = Obj.load "cube.obj"
 
 screenWidth = 800
@@ -38,7 +37,7 @@ r = rotationZ pi
 
 projection = simpleProjectionMatrix 5000
  
-lightDirection = normalize (Vec4 0 0 1 0)
+lightDirection = normalize (Vector4 0 0 1 0)
 
 faces = getFaces model
 
@@ -64,7 +63,7 @@ mousemovedC x y dx dy isTouch = modifyState (fun (MkGameState _ _ scale) ->
         rotY = rotationY (x / screenWidth * 5)
         rotX = rotationX (y / screenHeight * 5)
         rotation = multiply rotY rotX
-        points = map (tuplesToArray >> transformFace rotation scale) faces
+        points = map (foldMap toArray >> transformFace rotation scale) faces
     in MkGameState points rotation scale)
 
 wheelmoved = uncurry2 wheelmovedC
@@ -73,7 +72,7 @@ wheelmoved = uncurry2 wheelmovedC
 wheelmovedC _ y = modifyState (fun (MkGameState _ rotation oldScale) ->
     let
         scale = oldScale + y * 5
-        points = map (tuplesToArray >> transformFace rotation scale) faces
+        points = map (foldMap toArray >> transformFace rotation scale) faces
     in MkGameState points rotation scale)
 
 transformFace rotation scale face =
@@ -83,4 +82,4 @@ transformFace rotation scale face =
 
 draw _ = onState (fun (MkGameState ps _ _) -> map (polygon "line") ps)
 
-tuplesToArray = foldMap (fun (Tuple a b) -> [a, b])
+to2d (Vector4 x y _ w) = Vector2 (x / w) (y / w)

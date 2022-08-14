@@ -8,6 +8,8 @@ import Native(Numeral, Text, Array,
 
 sqrt x = x ^ 0.5
 
+pi = 3.141592653589793
+
 getn n = geti (n - 1)
 
 # Comparison
@@ -82,7 +84,13 @@ type Option a = None | Some a
 
 type Unit = Unit
 
-type Tuple a b = Tuple a b
+type Tuple2 a b = Tuple2 a b
+
+type Tuple3 a b c = Tuple3 a b c
+
+type Tuple4 a b c d = Tuple4 a b c d
+
+type Tuple5 a b c d e = Tuple5 a b c d e
 
 
 # Functions

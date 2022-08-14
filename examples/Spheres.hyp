@@ -6,6 +6,8 @@ import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
 import Common.Base((<), sqrt, repeatN)
 import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef, Ref)
 import Common.Array(map)
+import Geometry.Vector2(Vector2, add, subtract, dot, length, distance)
+import Geometry.Vector3(Vector3)
 
 
 gameState : Ref (Array Sphere)
@@ -13,20 +15,18 @@ gameState = unsafeMakeRef []
 
 modifyState f = unsafeRun (modifyRef gameState f)
 
-setColorVec (Vec3 c1 c2 c3) = setColor c1 c2 c3
+setColorVec (Vector3 c1 c2 c3) = setColor c1 c2 c3
 
-circleVec (Vec2 x y) r = circle "fill" x y r
+circleVec (Vector2 x y) r = circle "fill" x y r
 
 drawSphere sphere =
     let
         _ = setColorVec (color sphere)
     in circleVec (position sphere) (radius sphere)
 
-type Vector a = Vec2 a a | Vec3 a a a
-
-alias Position = Vector Numeral
-alias Velocity = Vector Numeral
-alias Color = Vector Numeral
+alias Position = Vector2 Numeral
+alias Velocity = Vector2 Numeral
+alias Color = Vector3 Numeral
 alias Radius = Numeral
 
 type Sphere = Sphere Position Velocity Color Radius
@@ -39,9 +39,9 @@ radius (Sphere _ _ _ r) = r
 
 addSphere spheres =
     let
-        pos = Vec2 (unsafeRandom 0 500) (unsafeRandom 0 500)
-        vel = Vec2 (unsafeRandom -100 100) (unsafeRandom -100 100)
-        col = Vec3 (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255)
+        pos = Vector2 (unsafeRandom 0 500) (unsafeRandom 0 500)
+        vel = Vector2 (unsafeRandom -100 100) (unsafeRandom -100 100)
+        col = Vector3 (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255)
         rad = unsafeRandom 30 100
     in unsafeInsert spheres (Sphere pos vel col rad)
 
@@ -56,21 +56,21 @@ update dt = modifyState (map (updateSphere dt))
 updateSphere dt (Sphere p v c r) =
     Sphere (updatePosition p v dt) v c r
 
-updatePosition (Vec2 x y) (Vec2 vx vy) dt =
+updatePosition (Vector2 x y) (Vector2 vx vy) dt =
     let
         nx = (x + vx * dt) % unsafeRun getWidth
         ny = (y + vy * dt) % unsafeRun getHeight
-    in Vec2 nx ny
+    in Vector2 nx ny
 
 mousepressed = uncurry4 mousepressedC
 
 mousepressedC x y button isTouch =
-    modifyState (map (hideSphere (Vec2 x y)))
+    modifyState (map (hideSphere (Vector2 x y)))
 
 mousemoved = uncurry5 mousemovedC
 
 mousemovedC x y dx dy isTouch =
-    modifyState (map (moveSphere (Vec2 x y)))
+    modifyState (map (moveSphere (Vector2 x y)))
 
 moveSphere screenPos (s alias Sphere p v c r) =
     if distance p screenPos < r
@@ -81,19 +81,5 @@ hideSphere screenPos (s alias Sphere p v c r) =
     if distance p screenPos < r
         then Sphere p v c 0
         else s
-
-
-add (Vec2 a b) (Vec2 c d) =
-    Vec2 (a + c) (b + d)
-
-sub (Vec2 a b) (Vec2 c d) =
-    Vec2 (a - c) (b - d)
-
-dot (Vec2 a b) (Vec2 c d) =
-    (a * c) + (b * d)
-
-distance vec1 vec2 = length (sub vec1 vec2)
-
-length vec = sqrt (dot vec vec)
 
 draw _ = modifyState (fun s -> let { _ = map drawSphere s } in s)

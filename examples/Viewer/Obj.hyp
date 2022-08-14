@@ -5,7 +5,7 @@ module Viewer.Obj
 import Native(toNumber, Array, Numeral, Text, split, words)
 import Native.Love(file)
 import Common.Base(notEquals, getn)
-import Common.Geometry(Vector, Vec4)
+import Geometry.Vector4(Vector4)
 import Common.Array(filter, map, foldMap, lines)
 
 
@@ -16,9 +16,9 @@ type VertexIndex
     | VTNI Numeral Numeral Numeral
 
 type ObjElement
-    = Vertex (Vector Numeral)
-    | TextureCoordinate (Vector Numeral)
-    | Normal (Vector Numeral)
+    = Vertex (Vector4 Numeral)
+    | TextureCoordinate (Vector4 Numeral)
+    | Normal (Vector4 Numeral)
     | Face (Array VertexIndex)
     | Comment (Array Text)
 
@@ -53,13 +53,13 @@ matchLine es =
         v -> Comment [v]
 
 readVector [_, v1, v2, v3, v4] =
-    Vec4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)
+    Vector4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)
 readVector [_, v1, v2, v3] =
-    Vec4 (toNumber v1) (toNumber v2) (toNumber v3) 1
+    Vector4 (toNumber v1) (toNumber v2) (toNumber v3) 1
 readVector [_, v1, v2] =
-    Vec4 (toNumber v1) (toNumber v2) 0 1
+    Vector4 (toNumber v1) (toNumber v2) 0 1
 readVector [_, v1] =
-    Vec4 (toNumber v1) 0 0 1
+    Vector4 (toNumber v1) 0 0 1
 
 readVI s = case split "/" s of
     [vi] -> VI (toNumber vi)

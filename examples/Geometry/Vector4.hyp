@@ -1,0 +1,27 @@
+module Geometry.Vector4
+
+import Native((+), (-), (*), (/))
+import Common.Base(sqrt)
+
+
+type Vector4 a = Vector4 a a a a
+
+scale f (Vector4 x y z w) =
+    Vector4 (f * x) (f * y) (f * z) (f * w)
+
+dot (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
+    (x1 * x2) + (y1 * y2) + (z1 * z2) + (w1 * w2)
+
+add (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
+    Vector4 (x1 + x2) (y1 + y2) (z1 + z2) (w1 + w2)
+
+subtract (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
+    Vector4 (x1 - x2) (y1 - y2) (z1 - z2) (w1 - w2)
+
+length v = sqrt (dot v v)
+
+normalize v = scale (1 / length v) v
+
+distance v w = length (subtract v w)
+
+toArray (Vector4 x y z w) = [x, y, z, w]

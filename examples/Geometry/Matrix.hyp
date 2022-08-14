@@ -1,0 +1,93 @@
+module Geometry.Matrix
+
+import Native((+), (*), (/), (-), negate, sin, cos)
+import Common.Base(sqrt)
+import Geometry.Vector4(Vector4, dot, normalize)
+
+
+type Matrix a = Matrix (Vector4 a) (Vector4 a) (Vector4 a) (Vector4 a)
+
+transform (Matrix a b c d) v =
+    Vector4 (dot a v) (dot b v) (dot c v) (dot d v)
+
+transpose (Matrix (Vector4 x1 x2 x3 x4) (Vector4 y1 y2 y3 y4)
+    (Vector4 z1 z2 z3 z4) (Vector4 w1 w2 w3 w4)) =
+        Matrix (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2)
+             (Vector4 x3 y3 z3 w3) (Vector4 x4 y4 z4 w4)
+
+multiply (Matrix a b c d) m =
+    case transpose m of
+        Matrix e f g h -> Matrix
+            (Vector4 (dot a e) (dot a f) (dot a g) (dot a h))
+            (Vector4 (dot b e) (dot b f) (dot b g) (dot b h))
+            (Vector4 (dot c e) (dot c f) (dot c g) (dot c h))
+            (Vector4 (dot d e) (dot d f) (dot d g) (dot d h))
+
+perspectiveMatrix top right near far =
+    let
+        a = near / right
+        b = near / top
+        c = -(far + near) / (far - near)
+        d = -(2 * far * near) / (far - near)
+        e = -1
+    in Matrix
+            (Vector4 a 0 0 0)
+            (Vector4 0 b 0 0)
+            (Vector4 0 0 c d)
+            (Vector4 0 0 e 0)
+
+simpleProjectionMatrix c =
+    let
+        d = -1 / c
+    in Matrix
+            (Vector4 1 0 0 0)
+            (Vector4 0 1 0 0)
+            (Vector4 0 0 1 0)
+            (Vector4 0 0 d 1)
+
+scaleMatrix f =
+    Matrix
+        (Vector4 f 0 0 0)
+        (Vector4 0 f 0 0)
+        (Vector4 0 0 f 0)
+        (Vector4 0 0 0 1)
+
+translateMatrix x y z =
+    Matrix
+        (Vector4 1 0 0 x)
+        (Vector4 0 1 0 y)
+        (Vector4 0 0 1 z)
+        (Vector4 0 0 0 1)
+
+rotationX angle =
+    let
+        s = sin angle
+        c = cos angle
+        x = -s
+    in Matrix
+        (Vector4 1 0 0 0)
+        (Vector4 0 c x 0)
+        (Vector4 0 s c 0)
+        (Vector4 0 0 0 1)
+
+rotationY angle =
+    let
+        s = sin angle
+        c = cos angle
+        x = -s
+    in Matrix
+        (Vector4 c 0 s 0)
+        (Vector4 0 1 0 0)
+        (Vector4 x 0 c 0)
+        (Vector4 0 0 0 1)
+
+rotationZ angle =
+    let
+        s = sin angle
+        c = cos angle
+        x = -s
+    in Matrix
+        (Vector4 c x 0 0)
+        (Vector4 s c 0 0)
+        (Vector4 0 0 1 0)
+        (Vector4 0 0 0 1)

@@ -1,0 +1,27 @@
+module Geometry.Vector2
+
+import Native((+), (-), (*), (/))
+import Common.Base(sqrt)
+
+
+type Vector2 a = Vector2 a a
+
+scale f (Vector2 x y) =
+    Vector2 (f * x) (f * y)
+
+dot (Vector2 x1 y1) (Vector2 x2 y2) =
+    (x1 * x2) + (y1 * y2)
+
+add (Vector2 x1 y1) (Vector2 x2 y2) =
+    Vector2 (x1 + x2) (y1 + y2)
+
+subtract (Vector2 x1 y1) (Vector2 x2 y2) =
+    Vector2 (x1 - x2) (y1 - y2)
+
+length v = sqrt (dot v v)
+
+normalize v = scale (1 / length v) v
+
+distance v w = length (subtract v w)
+
+toArray (Vector2 x y) = [x, y]

@@ -1,0 +1,27 @@
+module Geometry.Vector3
+
+import Native((+), (-), (*), (/))
+import Common.Base(sqrt)
+
+
+type Vector3 a = Vector3 a a a
+
+scale f (Vector3 x y z) =
+    Vector3 (f * x) (f * y) (f * z)
+
+dot (Vector3 x1 y1 z1) (Vector3 x2 y2 z2) =
+    (x1 * x2) + (y1 * y2) + (z1 * z2)
+
+add (Vector3 x1 y1 z1) (Vector3 x2 y2 z2) =
+    Vector3 (x1 + x2) (y1 + y2) (z1 + z2)
+
+subtract (Vector3 x1 y1 z1) (Vector3 x2 y2 z2) =
+    Vector3 (x1 - x2) (y1 - y2) (z1 - z2)
+
+length v = sqrt (dot v v)
+
+normalize v = scale (1 / length v) v
+
+distance v w = length (subtract v w)
+
+toArray (Vector3 x y z) = [x, y, z]

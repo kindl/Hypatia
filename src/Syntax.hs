@@ -9,7 +9,8 @@ import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol)
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey,
-    filterWithKey, fromListWith, unionWith)
+    filterWithKey, fromListWith, unionWith, keysSet)
+import qualified Data.HashSet as Set
 import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
     parens, brackets, layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text(renderStrict)
@@ -51,11 +52,15 @@ getDecls (ModuleDeclaration _ _ decls) = decls
 getName (ModuleDeclaration name _ _) = name
 getImports (ModuleDeclaration _ imports _) = imports
 
-gatherImports modDecl =
-    fmap fst (gatherSpecs modDecl)
-
-gatherSpecs modDecl = 
-    [(name, spec) | ImportDeclaration name spec _ <- getDecls modDecl]
+{-
+Uses a set so that the name of a module appears only once in cases as for example:
+```
+import Viewer.Obj(getFaces)
+import Viewer.Obj as Obj
+```
+-}
+importedModules (ModuleDeclaration _ imports _) =
+    Set.fromList [name | ImportDeclaration name _ _ <- imports]
 
 
 data Literal
@@ -222,6 +227,8 @@ intercalateName qualSep idSep (Name qs i) =
 
 renderError p = show (prettyError p)
 
+renderSetToError p = show (text "Set.fromList" <+> prettyError (Set.toList p))
+
 prettyError p = pretty p <> " at " <> pretty (mergeLocationInfos (locationInfos p))
 
 mergeLocationInfos locations@(Location _ _ filePath:_) =
@@ -282,14 +289,6 @@ getQualifiers (Name q _) = q
 
 getText (Id t _) = t
 
--- A flipped version of intersect that works on foldables
-including xs = filter (flip elem xs)
-{-# INLINE including #-}
-
--- Similar to a flipped version of difference
--- but deletes all, not only single occurences
-excluding xs = filter (flip notElem xs)
-{-# INLINE excluding #-}
 
 excludingKeys xs = filterWithKey (const . flip notElem xs)
 {-# INLINE excludingKeys #-}
@@ -297,12 +296,7 @@ excludingKeys xs = filterWithKey (const . flip notElem xs)
 includingKeys xs = filterWithKey (const . flip elem xs)
 {-# INLINE includingKeys #-}
 
-getDefsD (ExpressionDeclaration p _) = getDefsP p
-getDefsD (TypeDeclaration _ _ cs) = fmap fst cs
-getDefsD (TypeSignature s _) = [s]
-getDefsD _ = []
-
-getDefsP p =
+getBindings p =
     let
         f (VariablePattern v) = [v]
         f (AliasPattern i _) = [i]
@@ -336,13 +330,21 @@ notFoundMessage o m =
 locationInfos other = [l | Id _ l <- universeBi other]
 {-# INLINE locationInfos #-}
 
--- Functions for maps that error on overwriting a key
-fromListUnique xs = fromListWith shadowingError xs
+-- Functions for sets that error on overwriting a key
+unionUnique m1 m2 = sequenceA (unionWith (bind2 shadowingError) (fmap Right m1) (fmap Right m2))
+
+fromListUnique l = sequenceA (fromListWith (bind2 shadowingError) (fmap ((,) <*> Right) l))
+
+toSetUniqueM l = either fail return (fmap keysSet (fromListUnique l))
+
+bind2 f a b = do
+    a' <- a 
+    b' <- b
+    f a' b'
 
 shadowingError v1 v2 =
-    error (renderError v1 <> " shadows " <> renderError v2)
+    Left (renderError v1 <> " shadows " <> renderError v2)
 
-unionUnique m = unionWith shadowingError m
 
 intToDouble :: Int -> Double
 intToDouble = fromIntegral

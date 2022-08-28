@@ -11,6 +11,7 @@ import Parser hiding (modDecl)
 import System.Environment
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import qualified Data.HashSet as Set
 
 main = do
     args <- getArgs
@@ -44,11 +45,12 @@ parseFromName modName = do
 -- Load all imported modules step-by-step
 growModuleEnv env =
     let
-        imported = fmap getName env
-        imports = foldMap' gatherImports env
-    in case excluding imported imports of
-            [] -> return env
-            needed -> do
+        imported = Set.fromList (fmap getName env)
+        imports = foldMap' importedModules env
+        needed = Set.toList (Set.difference imports imported)
+    in case needed of
+        [] -> return env
+        _ -> do
                 mods <- traverse parseFromName needed
                 growModuleEnv (mods ++ env)
 

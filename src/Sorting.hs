@@ -4,6 +4,7 @@ import Syntax
 import Data.List(partition)
 import Data.Generics.Uniplate.Data(transformBiM, para)
 import Data.Foldable(foldMap')
+import qualified Data.HashSet as Set
 
 
 -- Sorting of declarations in let bindings and modules
@@ -18,47 +19,53 @@ sortDecls decls =
     let
         -- Only look at the dependency on local variables
         localDefs = foldMap' getDefsD decls
-        getLocalDeps = including localDefs . getDepsD
+        getLocalDeps x = Set.intersection localDefs (getDepsD x)
 
         -- Remove recursive dependency on itself
-        getDeps decl = excluding (getDefsD decl) (getLocalDeps decl)
-    in resolve getDefsD getDeps [] decls
+        getDeps decl = Set.difference (getLocalDeps decl) (getDefsD decl)
+    in resolve getDefsD getDeps mempty decls
 
 resolve getDefs getDeps done rest =
-    case partition (null . excluding done . getDeps) rest of
+    case partition (null . flip Set.difference done . getDeps) rest of
         ([], []) ->
-            Right []
+            Right mempty
         ([], ys) ->
-            Left ("Cyclic dependency in " ++ renderError (fmap getDeps ys))
+            Left ("Cyclic dependency in " ++ renderError (fmap (Set.toList . getDeps) ys))
         (xs, ys) -> do
             -- in the first run, xs contains all type signatures
             -- they have no value dependencies but define an id
             -- here these ids get marked as done which allows cycles
             let doneDefs = foldMap' getDefs xs
-            next <- resolve getDefs getDeps (doneDefs ++ done) ys
-            Right (xs ++ next)
+            next <- resolve getDefs getDeps (doneDefs <> done) ys
+            Right (xs <> next)
 
-sortModules = resolve (return . getName) gatherImports []
+sortModules =
+    resolve (Set.singleton . getName) importedModules mempty
 
 
---Gather variables used in an expression
---The second argument of f contains
---the dependencies of the child expressions
+-- Gather variables used in an expression
+-- The second argument of f contains
+-- the dependencies of the child expressions
 getDepsE e =
     let
-        f (Variable v) _ = [v]
-        f (ConstructorExpression c) _ = [c]
+        f (Variable v) _ = Set.singleton v
+        f (ConstructorExpression c) _ = Set.singleton c
         f (CaseExpression _ alts) (deps:cs) =
-            concat (deps : zipWith (\(p, _) c ->
-                excluding (getDefsP p) c) alts cs)
+            mconcat (deps : zipWith (\(p, _) c ->
+                Set.difference c (getDefsP p)) alts cs)
         f (LambdaExpression ps _) cs =
-            excluding (foldMap' getDefsP ps)
-                (concat cs)
+            Set.difference (mconcat cs) (foldMap' getDefsP ps)
         f (LetExpression decls _) cs =
-            excluding (foldMap' getDefsD decls)
-                (concat cs)
-        f _ cs = concat cs
+            Set.difference (mconcat cs) (foldMap' getDefsD decls)
+        f _ cs = mconcat cs
     in para f e
 
 getDepsD (ExpressionDeclaration _ e) = getDepsE e
-getDepsD _ = []
+getDepsD _ = mempty
+
+getDefsP p = Set.fromList (getBindings p)
+
+getDefsD (ExpressionDeclaration p _) = getDefsP p
+getDefsD (TypeDeclaration _ _ cs) = foldMap' (Set.singleton . fst) cs
+getDefsD (TypeSignature s _) = Set.singleton s
+getDefsD _ = mempty

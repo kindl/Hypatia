@@ -5,11 +5,11 @@ import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
 import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup)
+import qualified Data.HashSet as Set
 import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
-import Data.List(nub, foldl')
-import Data.Maybe(isNothing)
+import Data.List(foldl')
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
@@ -52,12 +52,12 @@ inferModule (ModuleDeclaration modName _ decls) = do
 sanitySkolemCheck = traverseWithKey_ (\k v ->
     let s = skolems v
     in unless (null s)
-        (fail ("Bug: " ++ renderError k ++ " leaked skolems " ++ renderError s)))
+        (fail ("Bug: " ++ renderError k ++ " leaked skolems " ++ renderSetToError s)))
 
 sanityFreeVariableCheck = traverseWithKey_ (\k v ->
     let vs = freeVars v
     in unless (null vs)
-        (fail ("Bug: " ++ renderError k ++ " leaked free variable " ++ renderError vs)))
+        (fail ("Bug: " ++ renderError k ++ " leaked free variable " ++ renderSetToError vs)))
 
 traverseWithKey_ f = foldrWithKey (\k v r -> f k v *> r) (pure ())
 
@@ -90,10 +90,10 @@ typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
     typecheckAlt alpha beta p e
     subst <- getSubst
     env <- getEnv
-    let escVars = skolems s ++ foldMap' (skolems . apply subst) env
-    let escaped = including escVars skolVars
+    let escVars = skolems s <> foldMap' (skolems . apply subst) env
+    let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check lambda: "
-        ++ renderError escaped ++ " escaped when checking fun "
+        ++ renderSetToError escaped ++ " escaped when checking fun "
         ++ renderError p ++ " -> ... against " ++ renderError s))
 typecheck (LambdaExpression [p] e) ty = do
     alpha <- newTyVar
@@ -136,11 +136,11 @@ Vec3 : forall a. a -> a -> a -> Vector a
 
 Vec2 is a constructor and Vector a type constructor
 -}
-gatherConstructor (TypeDeclaration tyIdent vars constructors) =
-    let
-        resTy = TypeConstructor tyIdent
-        tyCon = foldl' TypeApplication resTy (fmap TypeVariable vars)
-    in fmap fromList (traverse (traverse (constructorToType tyCon vars)) constructors)
+gatherConstructor (TypeDeclaration tyIdent vars constructors) = do
+    vars' <- toSetUniqueM vars
+    let resTy = TypeConstructor tyIdent
+    let tyCon = foldl' TypeApplication resTy (fmap TypeVariable vars)
+    fmap fromList (traverse (traverse (constructorToType tyCon vars')) constructors)
 gatherConstructor _ = pure mempty
 
 -- convert a constructor declaration to a type
@@ -150,9 +150,9 @@ constructorToType tyCon vars tys =
 -- fails type W = Wrapped (a -> a)
 -- works type W a = Wrapped (a -> a)
 -- works type W = Wrapped (forall a. a -> a)
-scopeCheck ty = case freeVars ty of
-    [] -> pure ty
-    frees -> fail ("Type variables " ++ renderError frees ++ " have no definition")
+scopeCheck ty = if null (freeVars ty)
+    then pure ty
+    else fail ("Type variables " ++ renderSetToError (freeVars ty) ++ " have no definition")
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]
@@ -186,7 +186,7 @@ bindsWithoutSignatures signatures binds =
 inferDecl gen signatures (ExpressionDeclaration p e) next = do
     ty <- findSignature signatures p
     binds <- typecheckPattern p ty
-    let binds' = fromList (bindsWithoutSignatures signatures binds)
+    let binds' = fromList binds
 
     -- If an error occurs, show in which declaration it happened
     onException' (with binds' (typecheck e ty))
@@ -315,14 +315,14 @@ newTyVar = fmap TypeVariable newUniqueName
 newUniqueName = fmap (prefixedId . uintToText) newUnique
 
 -- extract skolem constants
-skolems ty = [c | SkolemConstant c <- universe ty]
+skolems ty = Set.fromList [c | SkolemConstant c <- universe ty]
 
 -- extract free variables
 freeVars ty =
     let
-        f (ForAll vars _) cs = excluding vars (concat cs)
-        f (TypeVariable v) _ = [v]
-        f _ cs = concat cs
+        f (ForAll vars _) cs = Set.difference (mconcat cs) (Set.fromList vars)
+        f (TypeVariable v) _ = Set.singleton v
+        f _ cs = mconcat cs
     in para f ty
 
 generalize ty = do
@@ -330,7 +330,7 @@ generalize ty = do
     let ty' = apply subst ty
     env <- getEnv
     let envVars = foldMap' (freeVars . apply subst) env
-    let qualVars = excluding envVars (freeVars ty')
+    let qualVars = Set.difference (freeVars ty') envVars
     return (makeForAll qualVars ty')
 
 instantiate (ForAll vars ty) = do
@@ -354,9 +354,9 @@ subsume' scheme1 scheme2@(ForAll _ _) = do
     (skolVars, ty) <- skolemise scheme2
     subsume' scheme1 ty
     subst <- getSubst
-    let escVars = skolems (apply subst scheme1) ++ skolems (apply subst scheme2)
-    let escaped = including escVars skolVars
-    unless (null escaped) (fail ("Escape check: " ++ renderError escaped
+    let escVars = skolems (apply subst scheme1) <> skolems (apply subst scheme2)
+    let escaped = Set.intersection escVars (Set.fromList skolVars)
+    unless (null escaped) (fail ("Escape check: " ++ renderSetToError escaped
         ++ " escaped when subsuming " ++ renderError scheme1
         ++ " and " ++ renderError scheme2))
 subsume' scheme@(ForAll _ _) t2 = do
@@ -368,9 +368,9 @@ subsume' t1 t2 = unify' t1 t2
 -- forall a. forall b. t becomes forall a b. t 
 -- forall a a. t becomes forall a. t 
 makeForAll tvs1 (ForAll tvs2 ty) =
-    makeForAll (tvs1 ++ tvs2) ty
-makeForAll [] ty = ty
-makeForAll tvs ty = ForAll (nub tvs) ty
+    makeForAll (tvs1 <> Set.fromList tvs2) ty
+makeForAll tvs ty =
+    if null tvs then ty else ForAll (Set.toList tvs) ty
 
 skolemise (ForAll vars ty) = do
     skolVars <- traverse (const newUniqueName) vars

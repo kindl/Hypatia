@@ -1,10 +1,12 @@
 module Qualification where
 
 import Syntax
+import Prelude hiding (lookup)
+import Data.HashMap.Strict(lookup, mapKeys, fromList)
 import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
 import Control.Applicative(liftA2, liftA3)
-
+import Control.Monad((>=>))
 
 -- Qualification is split into value level and type level,
 -- otherwise type Unit = Unit would be ambiguous.
@@ -56,11 +58,10 @@ qualifyE quals (Variable n) =
     fmap Variable (findName quals n)
 qualifyE quals (ConstructorExpression c) =
     fmap ConstructorExpression (findName quals c)
-qualifyE quals (LetExpression decls e) =
-    let
-        locals = toLocals (foldMap' captureNameD decls)
-        newQuals = unionUnique locals quals
-    in liftA2 LetExpression (traverse (qualifyD newQuals) decls)
+qualifyE quals (LetExpression decls e) = do
+    locals <- toLocals (foldMap' captureDecl decls)
+    newQuals <- unionUnique locals quals
+    liftA2 LetExpression (traverse (qualifyD newQuals) decls)
         (qualifyE newQuals e)
 qualifyE quals (CaseExpression e alts) =
     liftA2 CaseExpression (qualifyE quals e) (traverse (qualifyAlt quals) alts)
@@ -72,45 +73,45 @@ qualifyE quals (InfixOperator ea name eb) =
 qualifyE quals e =
     descendM (qualifyE quals) e
 
+qualifyAlt quals (p, e) = do
+    locals <- toLocals (getBindings p)
+    newQuals <- unionUnique locals quals
+    liftA2 (,) (qualifyP newQuals p) (qualifyE newQuals e)
 
-qualifyAlt quals (p, e) =
-    let
-        locals = toLocals (getDefsP p)
-        newQuals = unionUnique locals quals
-    in liftA2 (,) (qualifyP newQuals p) (qualifyE newQuals e)
+captureNames (ModuleDeclaration modName _ decls) = do
+    -- Here toQualifieds is used seperately on purpose
+    -- for example, combining the name from a declaration
+    -- and a signature should not result in a shadowing error.
+    fromSigs <- toQualifieds modName (foldMap' captureSignature decls)
+    fromTopDecls <- toQualifieds modName (foldMap' captureTopDecl decls)
+    fromDecls <- toQualifieds modName (foldMap' captureDecl decls)
+    return (fromSigs <> fromTopDecls <> fromDecls)
 
+captureDecl (ExpressionDeclaration p _) = getBindings p
+captureDecl _ = []
 
-captureNames (ModuleDeclaration modName decls) = mappend
-    (toQualifieds modName (foldMap' captureNameD decls))
-    (toQualifieds modName (foldMap' captureTopName decls))
+captureSignature (TypeSignature identifier _) = [identifier]
+captureSignature _ = []
 
-captureNameD (ExpressionDeclaration p _) = getDefsP p
-captureNameD _ = []
-
--- Type signatures can also appear in normal declarations,
--- but then they need an expression declaration
--- and are captured there
-captureTopName (TypeSignature identifier _) = [identifier]
-captureTopName (TypeDeclaration _ _ cs) = fmap fst cs
-captureTopName (AliasDeclaration identifier _) = [identifier]
-captureTopName (FixityDeclaration _ _ op _) = [op]
-captureTopName _ = []
+captureTopDecl (TypeDeclaration _ _ cs) = fmap fst cs
+captureTopDecl (AliasDeclaration identifier _) = [identifier]
+captureTopDecl (FixityDeclaration _ _ op _) = [op]
+captureTopDecl _ = []
 
 
 -- Type Level
-qualifyTypeNames quals (ModuleDeclaration name decls) =
+qualifyTypeNames quals m =
     let
         h (TypeInfixOperator ta op tb) =
             fmap (\q -> TypeInfixOperator ta q tb) (findName quals op)
         h (TypeConstructor c) =
             fmap TypeConstructor (findName quals c)
         h t = Right t
-    in transformBiM h =<< fmap (ModuleDeclaration name) (traverse (qualifyTypesD quals) decls)
 
--- The constructors itself are on value level
-qualifyTypesD quals (TypeDeclaration v vs cs) =
-    fmap (\q -> TypeDeclaration q vs cs) (findName quals v)
-qualifyTypesD _ decl = Right decl
+        k (TypeDeclaration v vs cs) =
+            fmap (\q -> TypeDeclaration q vs cs) (findName quals v)
+        k decl = Right decl
+    in (transformBiM h >=> transformBiM k) m
 
 -- The constructors itself are on value level
 captureTypeNames (ModuleDeclaration modName _ decls) =
@@ -125,15 +126,14 @@ findName quals (Name [] identifier) = do
     pure (Name (getQualifiers q) identifier)
 findName _ n = Right n
 
-toLocals = toMap
-toQualifieds modName ids = fmap (qualify modName) (toMap ids)
-toMap ids = fromListUnique (fmap (\i -> (toId i, i)) ids)
+toLocals ids = fmap (mapKeys toId) (fromListUnique ids)
+toQualifieds modName ids = fmap (fmap (qualify modName)) (toLocals ids)
 
 -- Change qualified imports
 -- e.g. import Viewer.Obj as Obj
 -- Obj.load is changed to Viewer.Obj.Load
 changeQualifiedImportsMod (ModuleDeclaration modName imports decls) =
-    let quals = captureQualifiedImports decls
+    let quals = fromList (captureQualifiedImports imports)
     in ModuleDeclaration modName imports (changeQualifiedImports quals decls)
 
 changeQualifiedImports quals =

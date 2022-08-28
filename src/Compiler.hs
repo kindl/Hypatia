@@ -2,11 +2,11 @@
 module Compiler where
 
 import Syntax
-import Data.List(nub)
 import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes)
 import Data.Foldable(foldMap')
+import qualified Data.HashSet as Set
 
 
 type Import = Name
@@ -163,11 +163,11 @@ toJsPath modName = dquotes ("./" <> flatModName modName)
 
 
 -- Compile to simplified language
-compile (ModuleDeclaration modName decls) =
+compile m =
     let
-        compiledDecls = foldMap' compileTop decls
-        imports = compileImports decls
-    in Mod modName (imports ++ compiledDecls)
+        compiledDecls = foldMap' compileTop (getDecls m)
+        imports = importedModules m
+    in Mod (getName m) (Set.toList imports) compiledDecls
 
 compileE (Variable v) = Var v
 compileE (ConstructorExpression c) = Var c

@@ -55,21 +55,21 @@ qualifyTypesProgram =
     feedbackM (simpleActionA qualifyTypeNames filterIds captureTypeNames)
 
 fixAssocProgram =
-    feedbackM (simpleActionA fixAssoc filterNames captureAssocs)
+    feedbackM (simpleActionA fixAssoc filterNames (return . captureAssocs))
 
 aliasOperatorsProgram =
-    feedbackM (simpleActionA aliasOperators filterNames captureOperatorAliases)
+    feedbackM (simpleActionA aliasOperators filterNames (return . captureOperatorAliases))
 
 aliasConstructorsProgram =
-    feedbackM (simpleActionA aliasConstructors filterNames captureAliases)
+    feedbackM (simpleActionA aliasConstructors filterNames (return . captureAliases))
 
 -- Run action with captured local env and imported envs
 -- but return only the local environment
-simpleActionA action filterEnvs capture envs m =
-    let
-        captured = capture m
-        combined = captured `mappend` filterEnvs (gatherSpecs m) envs
-    in fmap (\result -> (result, captured)) (action combined m)
+simpleActionA action filterEnvs capture envs m = do
+    captured <- capture m
+    let combined = captured `mappend` filterEnvs (getImports m) envs
+    result <- action combined m
+    pure (result, captured)
 
 -- Incrementally grow an environment and perform an action on all modules.
 -- An action is a function that returns captured information e.g. operators and their aliases

@@ -1,29 +1,34 @@
 module Example
 
-import Native(Numeral, Array)
+import Native(Numeral, Array, (/))
 import Native.Love(setColor, circle, rectangle)
 import Common.Array(map)
+import Geometry.Vector2(Vector2)
 
-# This is an algebraic datatype. A primitive is either a Rectangle or a Circle
-type Primitive = Rectangle Point Point | Circle Point Radius
+// This is an algebraic datatype.
+// A Primitive is either a Rectangle or a Circle.
+// Datatypes can have type variables.
+// So this type could become a Primitive (Vector2 Numeral), Primitive (Vector3 Numeral) and more.
+type Primitive point = Rectangle point point | Circle point Radius
 
-# Datatypes can have type variables
-type Vector2 a = Vec2 a a
-
-# Typing Vector2 Numeral would be tedious. Let's give it a new name
-alias Point = Vector2 Numeral
-
+// You can give types a new name with an alias
 alias Radius = Numeral
 
-fill (Circle (Vec2 x y) r) = circle "fill" x y r
-fill (Rectangle (Vec2 x y) (Vec2 w h)) = rectangle "fill" x y w h
+alias Primitive2d = Primitive (Vector2 Numeral)
 
-primitives : Array Primitive
+
+fill (Circle (Vector2 x y) r) = circle "fill" x y r
+fill (Rectangle (Vector2 x y) (Vector2 w h)) = rectangle "fill" x y w h
+
+primitives : Array Primitive2d
 primitives = [
-    Rectangle (Vec2 150 100) (Vec2 100 400),
-    Rectangle (Vec2 350 100) (Vec2 100 400),
-    Rectangle (Vec2 250 250) (Vec2 100 100),
-    Rectangle (Vec2 550 300) (Vec2 100 200),
-    Circle (Vec2 550 200) 100]
+    Rectangle (Vector2 150 100) (Vector2 100 400),
+    Rectangle (Vector2 350 100) (Vector2 100 400),
+    Rectangle (Vector2 250 250) (Vector2 100 100),
+    Rectangle (Vector2 550 300) (Vector2 100 200),
+    Circle (Vector2 550 200) 100]
 
-draw _ = let { _ = setColor 70 40 250 } in map fill primitives
+draw _ =
+    let
+        _ = setColor (70 / 255) (40 / 255) (250 / 255)
+    in map fill primitives

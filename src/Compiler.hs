@@ -34,7 +34,7 @@ data Expr
 
 
 -- Render simplified language as Lua
-renderLua sts = render (toLuaM sts)
+renderLua statements = render (toLuaM statements)
 
 toLuaM (Mod modName imports statements) = vcat [
     vcatMap toLuaI imports,
@@ -78,9 +78,9 @@ toLuaE (Var x) = flatName x
 toLuaE (LitI i) = pretty i
 toLuaE (LitD d) = prettyNumeral d
 toLuaE (LitT t) = prettyEscaped t
-toLuaE (Func vs sts) = vcat [
-    text "function" <> parens (commas (fmap pretty vs)),
-    indent 4 (vcatMap toLuaS sts),
+toLuaE (Func variables statements) = vcat [
+    text "function" <> parens (commas (fmap pretty variables)),
+    indent 4 (vcatMap toLuaS statements),
     text "end"]
 toLuaE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty . (+ 1)) indices
@@ -100,7 +100,7 @@ toLuaPath modName = dquotes (flatModName modName)
 
 
 -- Render simplified language as Js
-renderJs sts = render (toJsM sts)
+renderJs statements = render (toJsM statements)
 
 toJsM (Mod modName imports statements) = vcat [
     vcatMap toJsI imports,
@@ -139,9 +139,9 @@ toJsE (Var x) = flatName x
 toJsE (LitI i) = pretty i
 toJsE (LitD d) = prettyNumeral d
 toJsE (LitT t) = prettyEscaped t
-toJsE (Func vs sts) = vcat [
-    text "function" <> parens (commas (fmap pretty vs)) <+> text "{",
-    indent 4 (vcatMap toJsS sts),
+toJsE (Func variables statements) = vcat [
+    text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
+    indent 4 (vcatMap toJsS statements),
     text "}"]
 toJsE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty) indices
@@ -222,27 +222,29 @@ compileD (ExpressionDeclaration (Wildcard w) e) =
 {-
 Compile pattern matches in let expressions like
 let
-    Tuple a b = Tuple 2 3
+    Tuple2 a b = Tuple2 2 3
 in write (toString a)
 -}
 compileD (ExpressionDeclaration p pe) =
     let
         v = prefixedId "d"
         err = Ret (mkError ("No pattern match in declaration for " <> prettyError p))
-        s = getAssignments v [] p
-        cs = getConditions v [] p
-    in Assign (fromId v) (compileE pe) : If (foldr1 And cs) [] [err] : s
+        assignments = getAssignments v [] p
+        withEarlyOut = case getConditions v [] p of
+            [] -> assignments
+            cs -> If (foldr1 And cs) [] [err] : assignments
+    in Assign (fromId v) (compileE pe) : withEarlyOut
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
 compileConstructor (c, []) =
     Assign c (Func [] [])
-compileConstructor (c, vs) =
+compileConstructor (c, variables) =
     let
-        vars = nNewVars (length vs)
-        body = Arr (fmap Var (c:fmap fromId vars))
-    in Assign c (curryFunc body vars)
+        parameters = nNewVars (length variables)
+        body = Arr (fmap Var (c:fmap fromId parameters))
+    in Assign c (curryFunc body parameters)
 
 curryFunc = foldr (\v r -> Func [v] [Ret r])
 
@@ -323,7 +325,7 @@ descendAccess f i j (p:ps) =
     f (i ++ [j]) p ++ descendAccess f i (j + 1) ps
 
 
-immediate sts = Call (Func [] sts) []
+immediate statements = Call (Func [] statements) []
 
 
 mkError s = Call (Var (fromText "Native.error")) [LitT (render s)]

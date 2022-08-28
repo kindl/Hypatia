@@ -63,6 +63,7 @@ toLuaS (If e th []) = vcat [
     text "if" <+> toLuaE e <+> text "then",
     indent 4 (vcatMap toLuaS th),
     text "end"]
+-- This shortcut exists for pattern matches in let expressions
 toLuaS (If e [] th) = vcat [
     text "if not" <+> parens (toLuaE e) <+> text "then",
     indent 4 (vcatMap toLuaS th),
@@ -124,6 +125,7 @@ toJsS (If e th []) = vcat [
     text "if" <> parens (toJsE e) <+> text "{",
     indent 4 (vcatMap toJsS th),
     text "}"]
+-- This shortcut exists for pattern matches in let expressions
 toJsS (If e [] th) = vcat [
     text "if" <> parens (text "!" <> parens (toJsE e)) <+> text "{",
     indent 4 (vcatMap toJsS th),
@@ -195,6 +197,10 @@ TODO investigate
 Compiling an expressions to a statement seemed to be a good way of saving immediate functions
 however nested case expressions lead to problems e.g. multiple defined local _v
 -}
+compileEtoS (CaseExpression (Variable (Name [] v)) alts) =
+    let
+        err = Ret (mkError ("No pattern match for " <> prettyError (fmap fst alts)))
+    in compileAlts v [err] alts
 compileEtoS (CaseExpression e alts) =
     let
         v = prefixedId "c"
@@ -287,7 +293,7 @@ compileAlts v = foldr (\(p, e) rest ->
     let s = getAssignments v [] p ++ compileEtoS e
     in case getConditions v [] p of
         [] -> s
-        cs -> If (foldr1 And cs) s []:rest)
+        cs -> [If (foldr1 And cs) s rest])
 
 getConditions v i (AliasPattern _ p) =
     getConditions v i p

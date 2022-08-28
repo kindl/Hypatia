@@ -38,8 +38,7 @@ inferModule (ModuleDeclaration modName _ decls) = do
     let signatures = fromList (foldMap' gatherTypeSig decls)
 
     let types = mappend constructors signatures
-    -- The signatures are also passed as a plain argument for lookups
-    binds <- with types (inferDecls generalize signatures decls)
+    binds <- with types (inferDecls generalize decls)
     
     sanitySkolemCheck binds
     sanityFreeVariableCheck binds
@@ -102,7 +101,7 @@ typecheck (LambdaExpression [p] e) ty = do
     subsume (TypeArrow alpha beta) ty
 typecheck (LetExpression decls e) ty = do
     let signatures = fromList (foldMap' gatherTypeSig decls)
-    binds <- with signatures (inferDecls return signatures decls)
+    binds <- with signatures (inferDecls return decls)
     with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty = do
     typecheck c (TypeConstructor (fromText "Native.Boolean"))
@@ -164,27 +163,14 @@ gatherTypeSig _ = mempty
 
 -- Assumes that the let bindings are already sorted
 -- Let bindings have to be sorted for the translation anyway
-inferDecls gen signatures =
-    foldr (inferDecl gen signatures) (return mempty)
+inferDecls gen =
+    foldr (inferDecl gen) (return mempty)
 
 -- A version of onException that works with ReaderT
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
--- If a signature is given, check against it
--- otherwise create a new type variable and infer a type
--- TODO match variable against its signature in cases like this:
--- x : Int
--- Tuple2 x _ = Tuple2 "hi" "ho"
--- Should be a type error
-findSignature signatures (VariablePattern v) =
-    maybe newTyVar return (lookup v signatures)
-findSignature _ _ = newTyVar
-
-bindsWithoutSignatures signatures binds =
-    filter (\x -> isNothing (lookup (fst x) signatures)) binds
-
-inferDecl gen signatures (ExpressionDeclaration p e) next = do
-    ty <- findSignature signatures p
+inferDecl gen (ExpressionDeclaration p e) next = do
+    ty <- newTyVar
     binds <- typecheckPattern p ty
     let binds' = fromList binds
 
@@ -200,11 +186,14 @@ inferDecl gen signatures (ExpressionDeclaration p e) next = do
 
     nextTys <- with generalized next
     return (mappend generalized nextTys)
-inferDecl _ _ _ next = next
+inferDecl _ _ next = next
 
 -- Typecheck Patterns
-typecheckPattern (VariablePattern x) ty =
-    return [(x, ty)]
+typecheckPattern (VariablePattern x) ty = do
+    env <- getEnv
+    case lookup x env of
+        Nothing -> return [(x, ty)]
+        Just found -> subsume found ty >> return [(x, found)]
 typecheckPattern (AliasPattern x p) ty = do
     binds <- typecheckPattern p ty
     return ((x, ty):binds)

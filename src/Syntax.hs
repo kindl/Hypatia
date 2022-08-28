@@ -277,9 +277,6 @@ firstIs f = Text.foldr (const . f) False
 isSym x = isSymbol x || Text.elem x "!%&*/?@-:"
 {-# INLINE isSym #-}
 
-isUnqualified (Name [] _) = True
-isUnqualified _ = False
-
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
 prefixedId x = Id ("_v" <> x) builtinLocation

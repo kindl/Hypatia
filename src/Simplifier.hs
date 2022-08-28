@@ -93,8 +93,8 @@ removeFunctionDeclaration m = (transformBi f) (k m)
         LetExpression (transBinds decls) e
     f e = e
     
-    k (ModuleDeclaration name decls) =
-        ModuleDeclaration name (transBinds decls)
+    k (ModuleDeclaration name imports decls) =
+        ModuleDeclaration name imports (transBinds decls)
 
 transBinds decls =
     let

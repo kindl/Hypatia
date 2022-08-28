@@ -31,7 +31,7 @@ typecheckModule env m = do
     s <- newIORef mempty
     runReaderT (inferModule m) (TypecheckerState env r s)
 
-inferModule (ModuleDeclaration modName decls) = do
+inferModule (ModuleDeclaration modName _ decls) = do
     info ("Typechecking Module " ++ renderName modName)
 
     constructors <- getAp (foldMap' gatherConstructor decls)

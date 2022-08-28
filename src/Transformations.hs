@@ -41,7 +41,7 @@ transformations = traverse sortDeclsMod
 typecheckProgram p = feedbackM typecheckAction p
 
 typecheckAction envs m = do
-    let filtered = filterNames (gatherSpecs m) envs
+    let filtered = filterNames (getImports m) envs
     captured <- typecheckModule filtered m
     let path = "logs/" ++ renderName (getName m) ++ ".log"
     Text.writeFile path (renderEnv captured)
@@ -84,10 +84,10 @@ feedbackM action mods = fmap fst (mapAccumM step mempty mods)
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =
-    foldMap' (\(modName, importedIds) ->
+    foldMap' (\(ImportDeclaration modName importedIds _) ->
         case importedIds of
             Just ids -> includingKeys ids (envs ! modName)
             Nothing -> mempty) imports
 
 filterNames imports envs =
-    foldMap' (\(modName, _) -> envs ! modName) imports
+    foldMap' (\(ImportDeclaration modName _ _) -> envs ! modName) imports

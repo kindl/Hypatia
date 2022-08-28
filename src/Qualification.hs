@@ -12,19 +12,19 @@ import Control.Applicative(liftA2, liftA3)
 -- Aliases are mixed:
 -- For example, in the declaration `infixl 7 * Tuple2`
 -- Tuple2 might be a type or a value alias
-qualifyAliases (ModuleDeclaration modName decls) =
+qualifyAliases (ModuleDeclaration modName imports decls) =
     let
         h (AliasDeclaration v t) =
             AliasDeclaration (qualify modName v) t
         h (FixityDeclaration a p op alias) =
             FixityDeclaration a p (qualify modName op) (qualify modName alias)
         h decl = decl
-    in ModuleDeclaration modName (fmap h decls)
+    in ModuleDeclaration modName imports (fmap h decls)
 
 
 -- Value Level
-qualifyNames quals (ModuleDeclaration name decls) =
-    fmap (ModuleDeclaration name) (traverse (qualifyD quals) decls)
+qualifyNames quals (ModuleDeclaration name imports decls) =
+    fmap (ModuleDeclaration name imports) (traverse (qualifyD quals) decls)
 
 -- Qualify the bindings and expressions appearing in declarations
 qualifyD quals (ExpressionDeclaration p e) =
@@ -33,7 +33,6 @@ qualifyD quals (TypeDeclaration v vars cs) =
     fmap (TypeDeclaration v vars) (traverse (firstA (findName quals)) cs)
 qualifyD quals (TypeSignature v t) =
     fmap (flip TypeSignature t) (findName quals v)
-qualifyD _ decl@(ImportDeclaration _ _ _) = Right decl
 qualifyD _ decl@(AliasDeclaration _ _) = Right decl
 qualifyD _ decl@(FixityDeclaration _ _ _ _) = Right decl
 qualifyD _ decl = Left ("Bug: Unexpected declaration " ++ show decl)
@@ -113,12 +112,13 @@ qualifyTypesD quals (TypeDeclaration v vs cs) =
     fmap (\q -> TypeDeclaration q vs cs) (findName quals v)
 qualifyTypesD _ decl = Right decl
 
-captureTypeNames (ModuleDeclaration modName decls) =
-    toQualifieds modName (foldMap' captureTypeNameD decls)
+-- The constructors itself are on value level
+captureTypeNames (ModuleDeclaration modName _ decls) =
+    toQualifieds modName (foldMap' captureTypeNamesTopDecl decls)
 
-captureTypeNameD (AliasDeclaration identifier _) = [identifier]
-captureTypeNameD (TypeDeclaration identifier _ _) = [identifier]
-captureTypeNameD _ = []
+captureTypeNamesTopDecl (AliasDeclaration identifier _) = [identifier]
+captureTypeNamesTopDecl (TypeDeclaration identifier _ _) = [identifier]
+captureTypeNamesTopDecl _ = []
 
 findName quals (Name [] identifier) = do
     q <- findEither identifier quals
@@ -132,9 +132,9 @@ toMap ids = fromListUnique (fmap (\i -> (toId i, i)) ids)
 -- Change qualified imports
 -- e.g. import Viewer.Obj as Obj
 -- Obj.load is changed to Viewer.Obj.Load
-changeQualifiedImportsMod (ModuleDeclaration modName decls) =
+changeQualifiedImportsMod (ModuleDeclaration modName imports decls) =
     let quals = captureQualifiedImports decls
-    in ModuleDeclaration modName (changeQualifiedImports quals decls)
+    in ModuleDeclaration modName imports (changeQualifiedImports quals decls)
 
 changeQualifiedImports quals =
     let
@@ -159,9 +159,9 @@ changeQualifiedImports quals =
         h t = t
     in transformBi f . transformBi g . transformBi h
 
-captureQualifiedImports decls =
+captureQualifiedImports imports =
     [(nameToList renamedModName, nameToList modName) |
-        ImportDeclaration modName Nothing (Just renamedModName) <- decls]
+        ImportDeclaration modName Nothing (Just renamedModName) <- imports]
 
 changeQualifier n@(Name modNames identifier) quals =
     case lookup modNames quals of

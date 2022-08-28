@@ -9,13 +9,14 @@ import Prettyprinter(vcat, indent, (<+>),
 import Data.Foldable(foldMap')
 
 
-data Mod = Mod Name [Statement]
+type Import = Name
+
+data Mod = Mod Name [Import] [Statement]
 
 data Statement
     = Ret Expr
     | Assign Binding Expr
     | If Expr [Statement] [Statement]
-    | Imp Name
         deriving (Show)
 
 data Expr
@@ -35,10 +36,15 @@ data Expr
 -- Render simplified language as Lua
 renderLua sts = render (toLuaM sts)
 
-toLuaM (Mod modName sts) = vcat [
+toLuaM (Mod modName imports statements) = vcat [
+    vcatMap toLuaI imports,
     text "local" <+> flatModName modName <+> equals <+> text "{}",
-    vcatMap toLuaS sts,
+    vcatMap toLuaS statements,
     text "return" <+> flatModName modName]
+
+toLuaI modName =
+    text "local" <+> flatModName modName <+> equals
+        <+> text "require" <+> toLuaPath modName
 
 -- local functions need to be declared beforehand for recursion
 -- `local fix = function(f) return f(fix(f)) end`
@@ -51,9 +57,6 @@ toLuaS (Assign (Name [] x) e) =
 -- Qualified names do not need "local"
 toLuaS (Assign x e) =
     flatName x <+> equals <+> toLuaE e
-toLuaS (Imp modName) =
-    text "local" <+> flatModName modName <+> equals
-        <+> text "require" <+> toLuaPath modName
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) = vcat [
@@ -99,10 +102,15 @@ toLuaPath modName = dquotes (flatModName modName)
 -- Render simplified language as Js
 renderJs sts = render (toJsM sts)
 
-toJsM (Mod modName sts) = vcat [
+toJsM (Mod modName imports statements) = vcat [
+    vcatMap toJsI imports,
     text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
-    vcatMap toJsS sts,
+    vcatMap toJsS statements,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
+
+toJsI modName =
+    text "const" <+> flatModName modName <+> equals <+>
+        text "require" <> parens (toJsPath modName) <> semi
 
 toJsS (Assign (Name [] (Id "_" _)) e) =
     toJsE e <> semi
@@ -110,9 +118,6 @@ toJsS (Assign (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
 toJsS (Assign x e) =
     flatName x <+> equals <+> toJsE e <> semi
-toJsS (Imp modName) =
-    text "const" <+> flatModName modName <+> equals <+>
-        text "require" <> parens (toJsPath modName) <> semi
 toJsS (Ret e) =
     text "return" <+> toJsE e <> semi
 toJsS (If e th []) = vcat [
@@ -207,17 +212,8 @@ compileL (Text t) = LitT t
 -- Compile top level declarations
 compileTop (TypeDeclaration _ _ cs) =
     fmap compileConstructor cs
-compileTop (ImportDeclaration _ _ _) = []
 compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
-
-{-
-Only import a module once in cases as for example
-import Viewer.Obj(getFaces)
-import Viewer.Obj as Obj
--}
-compileImports decls = fmap Imp (nub [modName |
-    ImportDeclaration modName _ _ <- decls])
 
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]

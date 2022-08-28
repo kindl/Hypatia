@@ -21,7 +21,7 @@ fixAssoc operatorTable =
     in transformBiM f >=> transformBiM g >=> transformBiM h
 
 {- Read the fixity declarations -}
-captureAssocs (ModuleDeclaration _ decls) =
+captureAssocs (ModuleDeclaration _ _ decls) =
     fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
 
 fixAssocE operatorTable prev@(InfixOperator (InfixOperator e1 child e2) root e3) =

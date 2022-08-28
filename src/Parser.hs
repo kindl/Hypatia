@@ -4,14 +4,13 @@ module Parser where
 import Syntax
 import qualified Data.Text.IO as Text
 import Data.List(uncons, foldl1')
-import Data.Maybe(fromMaybe)
 import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), lexlex, prettyLocated,
     extractLexeme, extractLocation)
-import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP)
+import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP, option)
 
 
 {-
@@ -60,17 +59,11 @@ bracketed p = token "[" *> p <* token "]"
 
 {- Module -}
 modDecl = do
-    name <- optional (token "module" *> modid <* token ";")
-    b <- body
-    return (ModuleDeclaration (fromMaybe (fromText "Scratch") name) b)
+    name <- option (fromText "Scratch") (token "module" *> modid <* token ";")
+    imports <- many' (impdecl <* token ";")
+    topDecls <- many' (topdecl <* token ";")
+    return (ModuleDeclaration name imports topDecls)
 {-# INLINE modDecl #-}
-
-{- Declarations -}
-body = do
-    is <- many' (impdecl <* token ";")
-    ts <- many' (topdecl <* token ";")
-    return (is ++ ts)
-{-# INLINE body #-}
 
 impdecl = do
     token "import"
@@ -83,6 +76,7 @@ impdecl = do
 impspec = parenthesized (sepBy' spec (token ","))
 {-# INLINE impspec #-}
 
+{- Declarations -}
 topdecl = typeDeclaration <|> aliasDeclaration <|> decl
 {-# INLINE topdecl #-}
 

@@ -46,21 +46,21 @@ aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM h
         fmap TypeConstructor (findEither c aliases)
     h t = Right t
 
-aliasOperatorsMod (ModuleDeclaration modName decls) =
+aliasOperatorsMod (ModuleDeclaration modName imports decls) =
     let
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]
 
-        h (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
+        k (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
             fmap (\al -> ExpressionDeclaration (VariablePattern al) e) (findEither op aliases)
-        h (TypeSignature op t) | isOperator op =
+        k (TypeSignature op t) | isOperator op =
             fmap (flip TypeSignature t) (findEither op aliases)
-        h (TypeDeclaration op vars constructors) =
+        k (TypeDeclaration op vars constructors) =
             liftA2 (\aliases' constructors' -> TypeDeclaration aliases' vars constructors')
                 (findConstructor aliases op)
                 (traverse (firstA (findConstructor aliases)) constructors)
-        h d = Right d
-    in fmap (ModuleDeclaration modName) (traverse h decls)
+        k d = Right d
+    in fmap (ModuleDeclaration modName imports) (traverse k decls)
 
 findConstructor aliases op | isOperator op = do
     alias <- findEither op aliases
@@ -71,10 +71,10 @@ findConstructor aliases op | isOperator op = do
             ++  " is not a constructor")
 findConstructor _ op = Right op
 
-captureAliases (ModuleDeclaration _ decls) =
+captureAliases (ModuleDeclaration _ _ decls) =
     fromList [(v, alias) | AliasDeclaration v alias <- decls]
 
-captureOperatorAliases (ModuleDeclaration _ decls) =
+captureOperatorAliases (ModuleDeclaration _ _ decls) =
     fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
 toConstructor (TypeConstructor c) =

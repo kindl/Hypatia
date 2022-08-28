@@ -7,12 +7,12 @@ import Data.Foldable(foldMap')
 
 
 -- Sorting of declarations in let bindings and modules
-sortDeclsMod (ModuleDeclaration modName decls) =
+sortDeclsMod (ModuleDeclaration modName imports decls) =
     let
         f (LetExpression ds e) =
             fmap (flip LetExpression e) (sortDecls ds)
         f e = Right e
-    in transformBiM f =<< fmap (ModuleDeclaration modName) (sortDecls decls)
+    in transformBiM f =<< fmap (ModuleDeclaration modName imports) (sortDecls decls)
         
 sortDecls decls =
     let

@@ -44,11 +44,12 @@ instance Hashable Name where
 
 
 data ModuleDeclaration =
-    ModuleDeclaration Name [Declaration]
+    ModuleDeclaration Name [ImportDeclaration] [Declaration]
         deriving (Show, Data, Typeable)
 
-getDecls (ModuleDeclaration _ decls) = decls
-getName (ModuleDeclaration name _) = name
+getDecls (ModuleDeclaration _ _ decls) = decls
+getName (ModuleDeclaration name _ _) = name
+getImports (ModuleDeclaration _ imports _) = imports
 
 gatherImports modDecl =
     fmap fst (gatherSpecs modDecl)
@@ -72,9 +73,14 @@ type OperatorAlias = Name
 
 type Binding = Name
 
+-- The imported Ids in an `import`
+type Spec = Maybe [Id]
+
+data ImportDeclaration = ImportDeclaration Name Spec (Maybe Name)
+    deriving (Show, Data, Typeable)
+
 data Declaration
-    = ImportDeclaration Name (Maybe [Id]) (Maybe Name)
-    | TypeDeclaration Binding [Id] [(Binding, [Type])]
+    = TypeDeclaration Binding [Id] [(Binding, [Type])]
     | AliasDeclaration Binding Type
     | FixityDeclaration Associativity Precedence Binding OperatorAlias
     | TypeSignature Binding Type

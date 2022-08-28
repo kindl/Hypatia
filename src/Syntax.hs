@@ -263,7 +263,8 @@ fromText s =
 fromId = Name []
 
 toId (Name [] identifier) = identifier
-toId n = error ("Name " <> renderError n <> " has qualifiers")
+toId n = error ("Tried to turn name " <> renderError n
+    <> " into an identifier but it had qualifiers")
 
 isConstructor (Name _ i) = firstIs isUpper (getText i)
 

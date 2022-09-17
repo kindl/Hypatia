@@ -86,7 +86,7 @@ mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 filterIds imports envs =
     foldMap' (\(ImportDeclaration modName importedIds _) ->
         case importedIds of
-            Just ids -> includingKeys ids (envs ! modName)
+            Just ids -> intersectionKeys (envs ! modName) ids
             Nothing -> mempty) imports
 
 filterNames imports envs =

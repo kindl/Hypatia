@@ -264,7 +264,7 @@ occurs x ty = elem x (freeVars ty)
 
 -- substitute bound variables with unification variables
 apply subst (ForAll vs ty) =
-    let filteredSubst = excludingKeys vs subst
+    let filteredSubst = differenceKeys subst vs
     in ForAll vs (apply filteredSubst ty)
 -- TODO investigate infinite loop
 -- sometimes the typechecker looped infinitely

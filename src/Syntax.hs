@@ -288,11 +288,11 @@ getQualifiers (Name q _) = q
 getText (Id t _) = t
 
 
-excludingKeys xs = filterWithKey (const . flip notElem xs)
-{-# INLINE excludingKeys #-}
+differenceKeys m ks = filterWithKey (const . flip notElem ks) m
+{-# INLINE differenceKeys #-}
 
-includingKeys xs = filterWithKey (const . flip elem xs)
-{-# INLINE includingKeys #-}
+intersectionKeys m ks = filterWithKey (const . flip elem ks) m
+{-# INLINE intersectionKeys #-}
 
 getBindings p =
     let

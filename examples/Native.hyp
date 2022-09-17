@@ -60,7 +60,7 @@ error : Text -> a
 # Arrays
 geti : Numeral -> Array a -> a
 
-size : Array a -> Numeral
+length : Array a -> Numeral
 
 isArray : a -> Boolean
 

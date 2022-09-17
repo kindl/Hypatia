@@ -87,7 +87,7 @@ toLuaE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty . (+ 1)) indices
 -- Add parantheses for immediate functions
 -- (function () print "Hi" end)() would be a syntax error
--- without parentheses 
+-- without parentheses
 toLuaE (Call e@(Func _ _) es) =
     parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
@@ -301,12 +301,12 @@ getConditions v i (ConstructorPattern c []) =
     [Eq (Access v i) (Var c)]
 getConditions v i (ConstructorPattern c ps) =
     [mkIsArray (Access v i),
-    Eq (mkSize (Access v i)) (LitI (length ps + 1)),
+    Eq (mkLength (Access v i)) (LitI (length ps + 1)),
     Eq (Access v (i ++ [0])) (Var c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
     [mkIsArray (Access v i),
-    Eq (mkSize (Access v i)) (LitI (length ps))]
+    Eq (mkLength (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 getConditions v i (LiteralPattern l) =
     [Eq (Access v i) (compileL l)]
@@ -336,7 +336,7 @@ immediate statements = Call (Func [] statements) []
 
 mkError s = Call (Var (fromText "Native.error")) [LitT (render s)]
 mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
-mkSize a = Call (Var (fromText "Native.size")) [a]
+mkLength a = Call (Var (fromText "Native.length")) [a]
 
 
 vcatMap f x = vcat (fmap f x)

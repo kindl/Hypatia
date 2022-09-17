@@ -2,7 +2,7 @@ module Common.Array
 
 import Native((++), (+),
     isArray, unsafeCoerce, toString,
-    split, unsafeInsert, size, geti)
+    split, unsafeInsert, geti, length)
 import Common.Base((==))
 
 
@@ -25,7 +25,7 @@ foldMap f a = foldl (fun z e -> append z (f e)) [] a
 
 foldl f z a = foldlWithIndex (fun _ x y -> f x y) z a
 
-foldlWithIndex f z a = foldlWithRangeAndIndex 0 (size a) f z a
+foldlWithIndex f z a = foldlWithRangeAndIndex 0 (length a) f z a
 
 foldlWithRangeAndIndex i maxN f z a =
     if i == maxN then z else
@@ -33,4 +33,4 @@ foldlWithRangeAndIndex i maxN f z a =
 
 inspect x = if isArray x
     then "{" ++ foldl (fun z i -> z ++ " " ++ inspect i) "" (unsafeCoerce x) ++ "}"
-    else toString x 
+    else toString x

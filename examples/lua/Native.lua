@@ -95,7 +95,7 @@ end
 
 Native.words = Native.split("%s")
 
-function Native.size(a)
+function Native.length(a)
     return #a
 end
 

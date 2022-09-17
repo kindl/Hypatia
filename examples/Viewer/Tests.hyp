@@ -1,6 +1,6 @@
 module Viewer.Tests
 
-import Native((+), (-), (*), (^), (++), write, words, size)
+import Native((+), (-), (*), (^), (++), write, words, length)
 import Common.Base((==), boolToString, Tuple2)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix, transpose, multiply)
@@ -97,4 +97,4 @@ testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
-testWords = test "words should be 3" (size (words "Hello Little World!"))
+testWords = test "words should be 3" (length (words "Hello Little World!"))

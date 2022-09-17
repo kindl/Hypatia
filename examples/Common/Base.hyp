@@ -2,7 +2,7 @@ module Common.Base
 
 import Native(Numeral, Text, Array,
     (^), (-), (+),
-    geti, size, isArray, unsafeCoerce,
+    geti, length, isArray, unsafeCoerce,
     eq, lt, gt, le, ge,
     True, False)
 
@@ -55,10 +55,10 @@ bothArray l r =
 
 seqComp comp l r =
     let
-        lsize = size l
-        rsize = size r
-    in if eq lsize rsize
-        then seqCompAux comp 0 lsize l r
+        lengthOfL = length l
+        lengthOfR = length r
+    in if eq lengthOfL lengthOfR
+        then seqCompAux comp 0 lengthOfL l r
         else False
 
 seqCompAux comp i maxN l r =

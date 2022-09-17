@@ -9,11 +9,11 @@ import qualified Data.HashSet as Set
 import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
-import Data.List(foldl')
+import Data.List(sortOn)
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
-import Data.Foldable(traverse_, foldMap')
+import Data.Foldable(traverse_, foldMap', foldl')
 import Control.Exception(onException)
 
 
@@ -29,20 +29,19 @@ type Typechecker a = ReaderT TypecheckerState IO a
 typecheckModule env m = do
     r <- newIORef 0
     s <- newIORef mempty
+    putStrLn ("Typechecking Module " ++ renderName (getName m))
     runReaderT (inferModule m) (TypecheckerState env r s)
 
-inferModule (ModuleDeclaration modName _ decls) = do
-    info ("Typechecking Module " ++ renderName modName)
-
+inferModule (ModuleDeclaration _ _ decls) = do
     constructors <- getAp (foldMap' gatherConstructor decls)
     let signatures = fromList (foldMap' gatherTypeSig decls)
 
     let types = mappend constructors signatures
     binds <- with types (inferDecls generalize decls)
-    
+
     sanitySkolemCheck binds
     sanityFreeVariableCheck binds
-    
+
     return (mappend types binds)
 
 -- Skolem variables are caught earlier,
@@ -284,11 +283,11 @@ getEnv = asks (\(TypecheckerState env _ _) -> env)
 
 insertSubst k v = do
     r <- asks (\(TypecheckerState _ _ s) -> s)
-    modifyRef r (insert k v)
+    lift (modifyIORef' r (insert k v))
 
 getSubst = do
     r <- asks (\(TypecheckerState _ _ s) -> s)
-    readRef r
+    lift (readIORef r)
 
 with binds = local (\(TypecheckerState env r s) ->
     TypecheckerState (mappend binds env) r s)
@@ -296,8 +295,7 @@ with binds = local (\(TypecheckerState env r s) ->
 -- Type Variables
 newUnique = do
     r <- asks (\(TypecheckerState _ u _) -> u)
-    modifyRef r succ
-    readRef r
+    lift (modifyIORef' r succ >> readIORef r)
 
 newTyVar = fmap TypeVariable newUniqueName
 
@@ -366,9 +364,3 @@ skolemise (ForAll vars ty) = do
     let subs = fromList (zip vars (fmap SkolemConstant skolVars))
     return (skolVars, apply subs ty)
 skolemise ty = return ([], ty)
-
-info s = lift (putStrLn s)
-
-readRef s = lift (readIORef s)
-
-modifyRef s f = lift (modifyIORef' s f)

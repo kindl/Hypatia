@@ -14,7 +14,7 @@ sortDeclsMod (ModuleDeclaration modName imports decls) =
             fmap (flip LetExpression e) (sortDecls ds)
         f e = Right e
     in transformBiM f =<< fmap (ModuleDeclaration modName imports) (sortDecls decls)
-        
+
 sortDecls decls =
     let
         -- Only look at the dependency on local variables

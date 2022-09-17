@@ -170,7 +170,7 @@ forAll = do
 {-
 otype could be defined as
 otype = typeArrow <|> typeOperator <|> btype
-but because all options would start with a btype 
+but because all options would start with a btype
 a lot of backtracking might be necessary
 Better: first parse a btype and then decide
 what to parse on the following token "->" or qvarsym
@@ -375,7 +375,7 @@ constructorPattern = do
     c <- qcon
     return (ConstructorPattern c [])
 {-# INLINE constructorPattern #-}
-    
+
 literalPattern = LiteralPattern <$!> literal
 {-# INLINE literalPattern #-}
 

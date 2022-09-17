@@ -102,7 +102,7 @@ data Type
     | TypeConstructor Name
     | ParenthesizedType Type
     | ForAll [Id] Type
-    | TypeVariable Id 
+    | TypeVariable Id
     | SkolemConstant Id
         deriving (Show, Data, Typeable)
 
@@ -336,7 +336,7 @@ fromListUnique l = sequenceA (fromListWith (bind2 shadowingError) (fmap ((,) <*>
 toSetUniqueM l = either fail return (fmap keysSet (fromListUnique l))
 
 bind2 f a b = do
-    a' <- a 
+    a' <- a
     b' <- b
     f a' b'
 

@@ -26,10 +26,10 @@ removeParens m = (transformBi f . transformBi g . transformBi h) m
   where
     f (ParenthesizedExpression e) = e
     f e = e
-    
+
     g (ParenthesizedPattern p) = p
     g p = p
-    
+
     h (ParenthesizedType t) = t
     h t = t
 
@@ -91,7 +91,7 @@ removeFunctionDeclaration m = (transformBi f) (k m)
     f (LetExpression decls e) =
         LetExpression (transBinds decls) e
     f e = e
-    
+
     k (ModuleDeclaration name imports decls) =
         ModuleDeclaration name imports (transBinds decls)
 

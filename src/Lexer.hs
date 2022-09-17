@@ -68,7 +68,7 @@ isLayout (LocatedLexeme (Reserved t) _)
     | elem t ["let", "where", "of"] = True
 isLayout _ = False
 
--- add 1 because counting columns starts from 1 
+-- add 1 because counting columns starts from 1
 indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =
@@ -80,7 +80,7 @@ getIndent (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Indent (indLength ws)) pos
 getIndent l =
     error ("getIndent impossible case at " ++ prettyLocated l)
-    
+
 
 followedByOpen rest = case dropWhile isWhite rest of
     (LocatedLexeme (Reserved t) _:_) | t == "{" -> True

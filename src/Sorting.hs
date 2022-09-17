@@ -30,7 +30,7 @@ resolve getDefs getDeps done rest =
         ([], []) ->
             Right mempty
         ([], ys) ->
-            Left ("Cyclic dependency in " ++ renderError (fmap (Set.toList . getDeps) ys))
+            Left ("Cyclic dependency in " ++ foldMap' (renderSetToError . getDeps) ys)
         (xs, ys) -> do
             -- in the first run, xs contains all type signatures
             -- they have no value dependencies but define an id

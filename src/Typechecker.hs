@@ -352,12 +352,12 @@ subsume' scheme@(ForAll _ _) t2 = do
 subsume' t1 t2 = unify' t1 t2
 
 -- Normalizes foralls
--- forall a. forall b. t becomes forall a b. t 
--- forall a a. t becomes forall a. t 
+-- forall a. forall b. t becomes forall a b. t
+-- forall a a. t becomes forall a. t
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 <> Set.fromList tvs2) ty
 makeForAll tvs ty =
-    if null tvs then ty else ForAll (Set.toList tvs) ty
+    if null tvs then ty else ForAll (sortOn getText (Set.toList tvs)) ty
 
 skolemise (ForAll vars ty) = do
     skolVars <- traverse (const newUniqueName) vars

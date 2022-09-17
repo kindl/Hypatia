@@ -46,11 +46,14 @@ aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM h
         fmap TypeConstructor (findEither c aliases)
     h t = Right t
 
+
 aliasOperatorsMod (ModuleDeclaration modName imports decls) =
     let
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]
 
+        -- This requires that `FunctionDeclaration` have already been changed
+        -- to `ExpressionDeclaration`
         k (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
             fmap (\al -> ExpressionDeclaration (VariablePattern al) e) (findEither op aliases)
         k (TypeSignature op t) | isOperator op =

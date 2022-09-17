@@ -30,10 +30,10 @@ transformations = traverse sortDeclsMod
     <=< qualifyProgram
     <=< qualifyTypesProgram
     <$> fmap changeQualifiedImportsMod
-    -- Simplifier
-    <$> fmap simplifications
     -- Aliases
     <=< traverse aliasOperatorsMod
+    -- Simplifier
+    <$> fmap simplifications
     -- Sorting
     <=< sortModules
 

@@ -47,11 +47,11 @@ growModuleEnv env =
     let
         imported = Set.fromList (fmap getName env)
         imports = foldMap' importedModules env
-        needed = Set.toList (Set.difference imports imported)
-    in case needed of
-        [] -> return env
-        _ -> do
-                mods <- traverse parseFromName needed
+        needed = Set.difference imports imported
+    in if null needed
+        then return env
+        else do
+                mods <- traverse parseFromName (Set.toList needed)
                 growModuleEnv (mods ++ env)
 
 writeResult abbreviation renderFun modDecl =

@@ -34,7 +34,7 @@ executable hypatia
     OverloadedStrings
   build-depends:
     -- Lower bound necessary for foldMap'
-    base >= 4.13.0.0 && < 4.17,
+    base >= 4.13.0.0 && < 4.18,
     -- Lower bound necessary for Text.elem
     text >= 1.2.5.0 && < 2.1,
     unordered-containers < 0.3,

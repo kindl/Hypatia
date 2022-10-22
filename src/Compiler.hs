@@ -4,7 +4,7 @@ module Compiler where
 import Syntax
 import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
-    equals, braces, parens, brackets, semi, pretty, dquotes)
+    equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 import Data.Foldable(foldMap')
 import qualified Data.HashSet as Set
 
@@ -39,6 +39,7 @@ renderLua statements = render (toLuaM statements)
 toLuaM (Mod modName imports statements) = vcat [
     vcatMap toLuaI imports,
     text "local" <+> flatModName modName <+> equals <+> text "{}",
+    hardline,
     vcatMap toLuaS statements,
     text "return" <+> flatModName modName]
 
@@ -56,7 +57,7 @@ toLuaS (Assign (Name [] x) e) =
     text "local" <+> pretty x <+> equals <+> toLuaE e
 -- Qualified names do not need "local"
 toLuaS (Assign x e) =
-    flatName x <+> equals <+> toLuaE e
+    flatName x <+> equals <+> toLuaE e <> hardline
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) = vcat [

@@ -275,7 +275,7 @@ firstIs f = Text.foldr (const . f) False
 
 -- these are not symbols in unicode, but in the language
 -- otherwise e.g 2 - 2 would not be lexed as minus
-isSym x = isSymbol x || Text.elem x "!%&*/?@-:"
+isSym x = isSymbol x || Text.elem x "!%&*/?@\\-:"
 {-# INLINE isSym #-}
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"

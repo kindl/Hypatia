@@ -252,7 +252,7 @@ lexpr = lambdaExpression <|> letExpression
 {-# INLINE lexpr #-}
 
 lambdaExpression = do
-    token "fun"
+    token "fun" <|> token "\\"
     ps <- many1' apat
     token "->"
     e <- expr

@@ -208,7 +208,7 @@ makeIdent ms i = Varid ms i
 reserved = ["alias", "enum", "type", "forall", "await",
         "import", "module", "fun", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as", "_",
-        ":", "=", "->", "|"]
+        ":", "=", "->", "|", "\\"]
 
 ident = takeWhile1 (\x -> isAlphaNum x || x == '_')
 {-# INLINE ident #-}

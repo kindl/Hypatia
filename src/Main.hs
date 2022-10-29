@@ -20,12 +20,10 @@ main = do
         ["compiletojs", modName] -> compileProgram modName "js" renderJs
         _ -> putStrLn "Usage: hypatia compile A.Module.Name"
 
-compileProgram modName abbreviation renderFun =
-    if Text.isSuffixOf ".hyp" modName
-        then putStrLn "Enter a module name instead of a path"
-        else do
-            program <- loadProgram (fromText modName)
-            traverse_ (writeResult abbreviation renderFun) program
+compileProgram modName abbreviation renderFun = do
+    modName' <- inputToModuleName modName
+    program <- loadProgram modName'
+    traverse_ (writeResult abbreviation renderFun) program
 
 -- Load a list of modules from a module name
 loadProgram modName = do
@@ -40,7 +38,8 @@ parseFromName modName = do
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     m <- parseFile path
     if getName m == modName then return m else
-        fail ("The file name did not match the name of the module " <> renderError (getName m))
+        fail ("The parsed module name " <> renderError (getName m)
+            <> " did not match the expected module name " <> renderName modName <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
 growModuleEnv env =

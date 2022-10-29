@@ -256,9 +256,14 @@ renderEnv m = render (foldrWithKey (\k v r ->
 
 nameToList (Name is i) = is ++ [getText i]
 
-fromText s =
-    let is = Text.split (== '.') s
-    in Name (init is) (Id (last is) builtinLocation)
+fromText t =
+    let splitted = Text.split (== '.') t
+    in Name (init splitted) (Id (last splitted) builtinLocation)
+
+inputToModuleName s =
+    if Text.isSuffixOf ".hyp" s || Text.elem '/' s || Text.elem '\\' s 
+        then fail "Expected a module name instead of a path"
+        else return (fromText s)
 
 fromId = Name []
 

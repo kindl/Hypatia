@@ -35,29 +35,34 @@ lexFileDebug2 path =
 lexDebug = parseOnly (program "")
 
 {- Layout -}
+layout :: [LocatedLexeme] -> [Int] -> [LocatedLexeme]
 layout ls@(LocatedLexeme (Indent n) pos:ts) (m:ms)
     | n == m = semi pos : layout ts (m:ms)
     | n < m = close pos : layout ls ms
-    | otherwise = layout ts (m:ms)
+layout (LocatedLexeme (Indent _) _:ts) ms =
+    layout ts ms
 layout (LocatedLexeme (Block n) pos:ts) (m:ms)
     | n > m = open pos : layout ts (n : m : ms)
 layout (LocatedLexeme (Block n) pos:ts) []
     | n > 0 = open pos : layout ts [n]
--- NOTE Removed. Allows only explicit empty blocks
+-- NOTE Removed to only allow explicit empty blocks
 --layout (LocatedLexeme (Block n) pos:ts) ms =
 --    open pos : close pos :
 --        layout (LocatedLexeme (Indent n) pos:ts) ms
-layout (t@(LocatedLexeme (Reserved l) _):ts) (0:ms)
-    | l == "}" = t : layout ts ms
-layout (t@(LocatedLexeme (Reserved l) _):_) _
-    | l == "}" = error ("Layout: Explicit "
-        ++ prettyLocated t ++ " without open brace.")
-layout (t@(LocatedLexeme (Reserved l) _):ts) ms
-    | l == "{" = t : layout ts (0:ms)
--- NOTE Parser rule left out.
+layout (t@(LocatedLexeme (Reserved "}") _):ts) (0:ms) =
+    t : layout ts ms
+layout (t@(LocatedLexeme (Reserved "}") _):_) _ =
+    error ("Layout: Explicit " ++ prettyLocated t ++ " without open brace.")
+layout (t@(LocatedLexeme (Reserved "{") _):ts) ms =
+    t : layout ts (0:ms)
+-- NOTE Next rule left out, because we cannot check for parse error here
+--layout (t@(LocatedLexeme _ pos):ts) (m:ms)
+--    | m /= 0 && parseError t = close pos : layout (t : ts) ms 
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
-layout [] (_:ms) = close builtinLocation : layout [] ms
+layout [] (m:ms)
+    | m /= 0 = close builtinLocation : layout [] ms
+    | otherwise = error "Not in a layout context"
 {-# INLINE layout #-}
 
 semi pos = LocatedLexeme (Reserved ";") pos

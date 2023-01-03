@@ -1,6 +1,6 @@
 module Common.Base
 
-import Native(Numeral, Text, Array,
+import Native(Numeral, Text, Array, Bool,
     (^), (-), (+),
     geti, length, isArray, unsafeCoerce,
     eq, lt, gt, le, ge,
@@ -72,9 +72,23 @@ repeatN f n =
     if eq n 0 then Unit
         else let { _ = f Unit } in repeatN f (n - 1)
 
-# not is a keyword in lua
+// TODO build a keyword rename mechanism
+// not has to be appended with _ because `not` is a keyword in lua
+// and would result in a syntax error
 not_ True = False
 not_ False = True
+
+// TODO create lazy variants
+infixr 3 && and_
+infixr 2 || or_
+
+and_ : Bool -> Bool -> Bool
+and_ False _ = False
+and_ True a = a
+
+or_ : Bool -> Bool -> Bool
+or_ True _ = True
+or_ False a = a
 
 boolToString False = "False"
 boolToString True = "True"

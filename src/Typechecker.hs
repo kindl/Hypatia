@@ -103,7 +103,7 @@ typecheck (LetExpression decls e) ty = do
     binds <- with signatures (inferDecls return decls)
     with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression c th el) ty = do
-    typecheck c (TypeConstructor (fromText "Native.Boolean"))
+    typecheck c (TypeConstructor (fromText "Native.Bool"))
     typecheck th ty
     typecheck el ty
 typecheck (ArrayExpression es) ty = do

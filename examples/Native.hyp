@@ -11,7 +11,7 @@ type Text
 
 type Void
 
-type Boolean = True | False
+type Bool = True | False
 
 infixl 6 + plus
 infixl 6 - minus
@@ -27,9 +27,6 @@ infixr 5 <> append
 
 // combining strings
 infixr 5 ++ concat
-
-infixr 3 && and
-infixr 2 || or
 
 
 # Math
@@ -62,7 +59,7 @@ geti : Numeral -> Array a -> a
 
 length : Array a -> Numeral
 
-isArray : a -> Boolean
+isArray : a -> Bool
 
 # Beware that insert and set is impure and changes the array
 unsafeInsert : Array a -> a -> Array a
@@ -75,15 +72,15 @@ split : Text -> Text -> Array Text
 words : Text -> Array Text
 
 # Comparing Numerals, Strings and Constructors
-eq : e -> e -> Boolean
+eq : e -> e -> Bool
 
-lt : e -> e -> Boolean
+lt : e -> e -> Bool
 
-gt : e -> e -> Boolean
+gt : e -> e -> Bool
 
-le : e -> e -> Boolean
+le : e -> e -> Bool
 
-ge : e -> e -> Boolean
+ge : e -> e -> Bool
 
 # IO
 write : Text -> Void

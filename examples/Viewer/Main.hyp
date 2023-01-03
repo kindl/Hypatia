@@ -20,7 +20,7 @@ alias Points = Array (Array Numeral)
 alias Rotation = Matrix Numeral
 alias Scale = Numeral
 
-type GameState = MkGameState Points Rotation Scale 
+type GameState = MkGameState Points Rotation Scale
 
 gameState = unsafeMakeRef (MkGameState [] (scaleMatrix 1) (screenHeight / 2))
 
@@ -36,7 +36,7 @@ t = translateMatrix (screenWidth / 2) (screenHeight / 2) 0
 r = rotationZ pi
 
 projection = simpleProjectionMatrix 5000
- 
+
 lightDirection = normalize (Vector4 0 0 1 0)
 
 faces = getFaces model

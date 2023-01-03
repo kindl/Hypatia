@@ -132,7 +132,7 @@ end
 Native.uncurry2 = function(f)
     return function(a, b)
         return f(a)(b)
-    end 
+    end
 end
 
 Native.uncurry3 = function(f)

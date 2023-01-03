@@ -94,8 +94,6 @@ boolToString False = "False"
 boolToString True = "True"
 
 
-type Option a = None | Some a
-
 type Unit = Unit
 
 type Tuple2 a b = Tuple2 a b

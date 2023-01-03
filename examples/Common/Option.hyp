@@ -1,0 +1,19 @@
+module Common.Option
+
+import Native
+import Common.Base(Tuple2, Tuple3)
+
+type Option a = None | Some a
+
+point = Some
+
+map f (Some a) = Some (f a)
+map _ _ = None
+
+map2 f (Some a) (Some b) = Some (f a b)
+map2 _ _ _ = None
+
+bind (Some a) f = f a
+bind _ _ = None
+
+unsafeFromOption (Some a) = a

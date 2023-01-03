@@ -3,7 +3,8 @@ module Common.Array
 import Native((++), (+),
     isArray, unsafeCoerce, toString,
     split, unsafeInsert, geti, length)
-import Common.Base((==))
+import Common.Option(Some, None, unsafeFromOption)
+import Common.Base((==), (<), Tuple2, identity)
 
 
 lines a = split "\n" a

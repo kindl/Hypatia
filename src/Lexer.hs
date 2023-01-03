@@ -57,7 +57,7 @@ layout (t@(LocatedLexeme (Reserved "{") _):ts) ms =
     t : layout ts (0:ms)
 -- NOTE Next rule left out, because we cannot check for parse error here
 --layout (t@(LocatedLexeme _ pos):ts) (m:ms)
---    | m /= 0 && parseError t = close pos : layout (t : ts) ms 
+--    | m /= 0 && parseError t = close pos : layout (t : ts) ms
 layout (t:ts) ms = t:layout ts ms
 layout [] [] = []
 layout [] (m:ms)

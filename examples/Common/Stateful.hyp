@@ -13,7 +13,7 @@ unsafeStateful = unsafeCoerce
 
 unsafeRun : Stateful s -> s
 unsafeRun f = unsafeCoerce f Unit
-        
+
 # Sequential composition
 # andThen f g = unsafeRun (f (unsafeRun g))
 # Would run the computation directly
@@ -50,8 +50,8 @@ readRef r = point (unsafeUnpackRef r)
 
 # Because the type constructor (Mkref t) is represented as the array [Mkref, t],
 # writing a reference means reinterpreting it as an array
-# and setting the inner value 
-writeRef r x = unsafeStateful (fun _ -> 
+# and setting the inner value
+writeRef r x = unsafeStateful (fun _ ->
     let
         toArray : Ref t -> Array t
         toArray = unsafeCoerce

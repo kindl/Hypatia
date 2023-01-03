@@ -261,7 +261,7 @@ fromText t =
     in Name (init splitted) (Id (last splitted) builtinLocation)
 
 inputToModuleName s =
-    if Text.isSuffixOf ".hyp" s || Text.elem '/' s || Text.elem '\\' s 
+    if Text.isSuffixOf ".hyp" s || Text.elem '/' s || Text.elem '\\' s
         then fail "Expected a module name instead of a path"
         else return (fromText s)
 

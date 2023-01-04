@@ -1,0 +1,52 @@
+module Common.Json
+
+import Native(Numeral, Text, Array,
+    (++), (+), (-),
+    toString, Bool, True, False)
+import Common.Base(Tuple2)
+import Common.Parser((*>), (<*), (<|>), ($>), map2, map,
+    sepBy, parse, parseTilEnd, token, text,
+    string, double, array, skipAnySpace, toArray)
+import Common.Array(intercalate, foldl)
+import Common.State(defer)
+import Common.Array as Array
+
+
+parseJson s = parseTilEnd (value <* skipAnySpace) s
+
+
+type JsonValue = JsonNumber Numeral
+    | JsonString Text
+    | JsonObject (Array (Tuple2 Text JsonValue))
+    | JsonArray (Array JsonValue)
+    | JsonBool Bool
+    | JsonNull
+
+
+pretty (JsonObject o) =
+    "{" ++ intercalate ", " (Array.map (\(Tuple2 k v) -> prettyString k ++ ": " ++ pretty v) o) ++ "}"
+pretty (JsonNumber n) = toString n
+pretty (JsonArray a) = "[" ++ intercalate ", " (Array.map pretty a) ++ "]"
+pretty (JsonString s) = prettyString s
+
+prettyString s = "\"" ++ escape s ++ "\""
+
+escape s = foldl (\acc c -> acc ++ (escapeSingle c)) "" (toArray s)
+
+escapeSingle "\n" = "\\n"
+escapeSingle "\t" = "\\t"
+escapeSingle "\r" = "\\r"
+escapeSingle "\\" = "\\\\"
+escapeSingle c = c
+
+object kv = token "{" *> sepBy kv (token ",") <* token "}"
+
+keyValuePair v = map2 Tuple2 string (text ":" *> v)
+
+// The defer is necessary, because value depends on itself
+value = defer (\_ ->
+        map JsonObject (object (keyValuePair value)) <|> map JsonArray (array value))
+    <|> map JsonString string
+    <|> map JsonNumber double
+    <|> map JsonBool (token "true" $> True <|> token "false" $> False)
+    <|> token "null" $> JsonNull

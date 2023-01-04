@@ -2,11 +2,12 @@ module Viewer.Obj
 
 #A module for parsing obj files
 
-import Native(toNumber, Array, Numeral, Text, split, words)
+import Native(toNumber, Array, Numeral, Text)
 import Native.Love(file)
 import Common.Base(notEquals, getn)
+import Common.Parser(split, words, lines)
 import Geometry.Vector4(Vector4)
-import Common.Array(filter, map, foldMap, lines)
+import Common.Array(filter, map, foldMap)
 
 
 type VertexIndex

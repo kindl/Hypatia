@@ -78,25 +78,6 @@ function Native.negate(v)
     return -v
 end
 
-function Native.split(seperator)
-    return function(s)
-        local from
-        local to
-        from, to = s:find(seperator)
-        if from == nil then
-            return {s}
-        else
-            local result = s:sub(1, from - 1)
-            local tail = s:sub(to + 1)
-            local rest = Native.split(seperator)(tail)
-            table.insert(rest, 1, result)
-            return rest
-        end
-    end
-end
-
-Native.words = Native.split("%s")
-
 function Native.length(a)
     return #a
 end

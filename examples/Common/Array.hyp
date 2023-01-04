@@ -7,8 +7,6 @@ import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), Tuple2, identity)
 
 
-lines a = split "\n" a
-
 filterWithIndex p a = foldlWithIndex (fun i z e ->
     if p i e then unsafeInsert z e else z) [] a
 

@@ -104,6 +104,8 @@ type Tuple4 a b c d = Tuple4 a b c d
 
 type Tuple5 a b c d e = Tuple5 a b c d e
 
+first f (Tuple2 a b) = Tuple2 (f a) b
+
 
 # Functions
 fix f x = f (fix f) x

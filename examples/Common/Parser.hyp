@@ -1,0 +1,176 @@
+module Common.Parser
+
+import Native((++), (+), (-),
+    substring, textLength, toNumber, True, Array)
+import Common.Base((==), (!=), (||), (>>),
+    Tuple2, always, alwaysSecond, flip, not_)
+import Common.Array(prepend, foldl, elem)
+import Common.Option(Option, Some, None, unsafeFromOption)
+import Common.Option as Option
+import Common.State(StateT, runStateT, defer)
+import Common.State as State
+
+
+safeSubstring s i j = let { len = textLength s } in
+    if len == i || len == j then None else Some (substring s i j)
+
+
+runParser p i = runStateT p i
+
+parse p s = runParser p (Tuple2 s 0)
+
+parseTilEnd p s = case parse p s of
+    Some (Tuple2 result (Tuple2 _ position)) ->
+        if position == textLength s
+            then Some result
+            else None
+    None -> None
+
+
+// Combinators
+takeWhile p = map flat (many (satisfy p))
+
+takeWhile1 p = map flat (many1 (satisfy p))
+
+flat a = foldl (++) "" a
+
+
+many p = many1 p <|> point []
+
+// The definition of many is inlined to avoid a dependency cycle
+many1 p = map2 prepend p (defer (\_ -> many1 p <|> point []))
+
+sepBy p sep = sepBy1 p sep <|> point []
+
+sepBy1 p sep = map2 prepend p (many (sep *> p))
+
+
+map = State.mapWith Option.map
+
+map2 = State.map2With Option.point Option.bind
+
+map3 = State.map3With Option.point Option.bind
+
+map4 = State.map4With Option.point Option.bind
+
+
+point = State.pointWith Option.point
+
+
+optional p = map Some p <|> point None
+
+option a p = p <|> point a
+
+
+infixr 3 <|> alternative
+
+p1 <|> p2 = StateT (\s1 ->
+    case runParser p1 s1 of
+        None -> runParser p2 s1
+        result -> result
+    )
+
+
+infixl 4 <*> apply
+
+infixl 4 <* applyFirst
+
+infixl 4 *> applySecond
+
+p1 <*> p2 = State.applyWith Some Option.bind p1 p2
+
+(*>) : StateT s Option a -> StateT s Option b -> StateT s Option b
+p1 *> p2 = map2 alwaysSecond p1 p2
+
+(<*) : StateT s Option a -> StateT s Option b -> StateT s Option a
+p1 <* p2 = map2 always p1 p2
+
+
+infixl 4 <$> map
+
+infixl 4 <$ mapAlways
+
+infixl 4 $> reverseMapAlways
+
+(<$) = map >> always
+
+($>) = flip (<$)
+
+
+text t = StateT (fun (Tuple2 input position) ->
+    let { l = position + textLength t } in
+        case safeSubstring input position (l - 1) of
+            Some part -> if t == part then Some (Tuple2 part (Tuple2 input l)) else None
+            None -> None
+        )
+
+satisfy p = StateT (fun (Tuple2 input position) ->
+    case safeSubstring input position position of
+        Some part -> if p part then Some (Tuple2 part (Tuple2 input (position + 1))) else None
+        None -> None
+    )
+
+// Helpers for splitting strings into arrays
+toArray s =
+    unsafeFromOption (parseTilEnd (many (satisfy (\_ -> True))) s)
+
+split sep s =
+    unsafeFromOption (parseTilEnd (sepBy (takeWhile ((!=) sep)) (text sep)) s)
+
+words s =
+    unsafeFromOption (parseTilEnd (sepBy (takeWhile (not_ >> isAnySpace)) (takeWhile1 isAnySpace)) s)
+
+lines s = split "\n" s
+
+
+space = text " "
+
+tab = text "\t"
+
+newline = text "\n"
+
+skipAnySpace = takeWhile isAnySpace
+
+spaceArray = toArray " \t\n\r"
+
+isAnySpace c = elem c spaceArray
+
+
+token t = skipAnySpace *> text t
+
+
+array p = token "[" *> sepBy p (token ",") <* token "]"
+
+parens p = token "(" *> p <* token ")"
+
+escapeCharacter = (text "\\\\" $> "\\")
+    <|> (text "\\n" $> "\n")
+    <|> (text "\\r" $> "\r")
+    <|> (text "\\t" $> "\t")
+
+string =
+    token "\""
+    *> map flat (many (escapeCharacter <|> satisfy ((!=) "\"")))
+    // This uses text on purpose to not consume any spaces before a double quote
+    <* text "\""
+
+double = map4 (\x y z u -> toNumber (x ++ y ++ z ++ u))
+    (option "" (text "-"))
+    digits
+    (option "" fraction)
+    (option "" exponent)
+
+fraction = map2 (++)
+    (text ".")
+    digits
+
+exponent = map3 (\x y z -> x ++ y ++ z)
+    (text "e" <|> text "E")
+    (option "" (text "+" <|> text "-"))
+    digits
+
+digitArray = toArray "0123456789"
+
+isDigit c = elem c digitArray
+
+digits = takeWhile1 isDigit

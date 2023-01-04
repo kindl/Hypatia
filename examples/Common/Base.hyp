@@ -131,3 +131,5 @@ infixr 9 << reverseCompose
 reverseCompose = flip compose
 
 always x _ = x
+
+alwaysSecond _ x = x

@@ -66,10 +66,10 @@ unsafeInsert : Array a -> a -> Array a
 
 unsafeSet : Array a -> Numeral -> a -> Array a
 
+# Text
+textLength : Text -> Numeral
 
-split : Text -> Text -> Array Text
-
-words : Text -> Array Text
+substring : Text -> Numeral -> Numeral -> Text
 
 # Comparing Numerals, Strings and Constructors
 eq : e -> e -> Bool

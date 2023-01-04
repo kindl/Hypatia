@@ -1,3 +1,5 @@
+local utf8 = require("utf8")
+
 local Native = {}
 
 function Native.eq(v1)
@@ -161,6 +163,18 @@ Native.cos = math.cos
 Native.write = print
 
 Native.toString = tostring
+
+Native.textLength = function(s)
+    return utf8.len(s)
+end
+
+Native.substring = function(s)
+    return function(i)
+        return function(j)
+            return utf8.char(utf8.codepoint(s, i + 1, j + 1))
+        end
+    end
+end
 
 Native.toNumber = function(s)
     return tonumber(s) or error("\"" .. s .. "\" is not a number")

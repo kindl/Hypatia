@@ -2,7 +2,8 @@ module Viewer.Obj
 
 #A module for parsing obj files
 
-import Native(toNumber, Array, Number, Text)
+import Native(Array, Number, Text,
+    toNumber, unsafeIndex)
 import Native.Love(file)
 import Common.Base(notEquals, getn)
 import Common.Parser(split, words, lines)
@@ -46,7 +47,7 @@ parseLine s = matchLine (filter (notEquals "") (words s))
 load filePath = map parseLine (lines (file filePath))
 
 matchLine es =
-    case getn 1 es of
+    case unsafeIndex 0 es of
         "v" -> Vertex (readVector es)
         "vn" -> Normal (readVector es)
         "vt" -> TextureCoordinate (readVector es)

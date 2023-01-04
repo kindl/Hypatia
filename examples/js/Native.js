@@ -54,7 +54,7 @@ Native.isArray = function (v) {
     return typeof (v) === typeof ([]);
 };
 
-Native.geti = function (n) {
+Native.unsafeIndex = function (n) {
     return function (a) {
         return a[n];
     };

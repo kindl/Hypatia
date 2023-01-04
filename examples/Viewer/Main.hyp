@@ -1,9 +1,9 @@
 module Viewer.Main
 
-import Native((/), (*), (+),
-    uncurry2, uncurry5, Number, Array)
+import Native((/), (*), (+), (-),
+    uncurry2, uncurry5, Number, Array, unsafeIndex)
 import Native.Love(polygon)
-import Common.Base((>>), getn, pi)
+import Common.Base((>>), pi)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
     VTNI, VNI, VTI, VI)
 import Viewer.Obj as Obj
@@ -43,6 +43,8 @@ lightDirection = normalize (Vector4 0 0 1 0)
 faces = getFaces model
 
 vertices = getVertices model
+
+getn n = unsafeIndex (n - 1)
 
 getPoint (VTNI v _ _) = getn v vertices
 getPoint (VNI v _) = getn v vertices

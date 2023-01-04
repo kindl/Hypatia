@@ -86,7 +86,7 @@ function Native.isArray(t)
     return type(t) == "table"
 end
 
-function Native.geti(i)
+function Native.unsafeIndex(i)
     return function(a)
         return a[i + 1]
     end

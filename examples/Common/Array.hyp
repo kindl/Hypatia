@@ -2,7 +2,7 @@ module Common.Array
 
 import Native((++), (+),
     isArray, unsafeCoerce, toString,
-    unsafeInsert, geti, length, True, False)
+    unsafeInsert, unsafeIndex, length, True, False)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), Tuple2, identity)
 
@@ -38,7 +38,7 @@ foldlWithIndex f z a = foldlWithRangeAndIndex 0 (length a) f z a
 
 foldlWithRangeAndIndex i maxN f z a =
     if i == maxN then z else
-        foldlWithRangeAndIndex (i + 1) maxN f (f i z (geti i a)) a
+        foldlWithRangeAndIndex (i + 1) maxN f (f i z (unsafeIndex i a)) a
 
 foldl1 f a = unsafeFromOption (foldl (fun o y -> case o of
         Some x -> Some (f x y)

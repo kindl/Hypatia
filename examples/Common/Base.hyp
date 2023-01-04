@@ -2,15 +2,13 @@ module Common.Base
 
 import Native(Number, Text, Array, Bool,
     (^), (-), (+),
-    geti, length, isArray, unsafeCoerce,
+    unsafeIndex, length, isArray, unsafeCoerce,
     eq, lt, gt, le, ge,
     True, False)
 
 sqrt x = x ^ 0.5
 
 pi = 3.141592653589793
-
-getn n = geti (n - 1)
 
 # Comparison
 infix 4 == equals
@@ -64,7 +62,7 @@ seqComp comp l r =
 seqCompAux comp i maxN l r =
     if eq i maxN
         then True
-        else (if comp (geti i l) (geti i r)
+        else (if comp (unsafeIndex i l) (unsafeIndex i r)
             then seqCompAux comp (i + 1) maxN l r
             else False)
 

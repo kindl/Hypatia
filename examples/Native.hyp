@@ -55,7 +55,7 @@ unsafeCoerce : a -> b
 error : Text -> a
 
 # Arrays
-geti : Number -> Array a -> a
+unsafeIndex : Number -> Array a -> a
 
 length : Array a -> Number
 

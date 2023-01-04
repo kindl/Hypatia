@@ -21,7 +21,7 @@ unsafeRun f = unsafeCoerce f Unit
 andThen f g = unsafeStateful (fun _ ->
     unsafeRun (f (unsafeRun g)))
 
-bind = flip andThen
+bind m f = andThen f m
 
 map f = andThen (compose point f)
 

@@ -1,6 +1,7 @@
 module Viewer.Main
 
-import Native((/), (*), (+), uncurry2, uncurry5, Numeral, Array)
+import Native((/), (*), (+),
+    uncurry2, uncurry5, Number, Array)
 import Native.Love(polygon)
 import Common.Base((>>), getn, pi)
 import Viewer.Obj(getFaces, getVertices, getNormals, load,
@@ -16,9 +17,9 @@ import Common.Array(map, foldMap)
 import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 
 
-alias Points = Array (Array Numeral)
-alias Rotation = Matrix Numeral
-alias Scale = Numeral
+alias Points = Array (Array Number)
+alias Rotation = Matrix Number
+alias Scale = Number
 
 type GameState = MkGameState Points Rotation Scale
 

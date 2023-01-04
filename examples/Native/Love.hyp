@@ -1,22 +1,38 @@
 module Native.Love
 
-import Native(Numeral, Array, Void, Text)
+import Native(Number, Array, Void, Text)
 import Common.Stateful(Stateful)
 
-#      Path -> Content
+type Image
+
+type Quad
+
+//     Path -> Content
 file : Text -> Text
 
-unsafeRandom : Numeral -> Numeral -> Numeral
+unsafeRandom : Number -> Number -> Number
 
-getWidth : Stateful Numeral
+getWidth : Stateful Number
 
-getHeight : Stateful Numeral
+getHeight : Stateful Number
 
-# Drawing
-polygon : Text -> Array Numeral -> Void
+// Drawing
+polygon : Text -> Array Number -> Void
 
-setColor : Numeral -> Numeral -> Numeral -> Void
+setColor : Number -> Number -> Number -> Void
 
-circle : Text -> Numeral -> Numeral -> Numeral -> Void
+circle : Text -> Number -> Number -> Number -> Void
 
-rectangle : Text -> Numeral -> Numeral -> Numeral -> Numeral -> Void
+rectangle : Text -> Number -> Number -> Number -> Number -> Void
+
+newImage : Text -> Image
+
+imageWidth : Image -> Number
+
+imageHeight : Image -> Number
+
+// TODO switch to transform based?
+drawImage : Image -> Quad -> Number -> Number -> Void
+
+//        X       -> Y       -> Width   -> Height  -> Sw      -> Sh      -> Quad
+newQuad : Number -> Number -> Number -> Number -> Number -> Number -> Quad

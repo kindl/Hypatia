@@ -484,7 +484,7 @@ string = do
 {-# INLINE string #-}
 
 literal =
-    Numeral . intToDouble <$!> integer
-    <|> Numeral <$!> float
+    Number . intToDouble <$!> integer
+    <|> Number <$!> float
     <|> Text <$!> string
 {-# INLINE literal #-}

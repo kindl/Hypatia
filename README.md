@@ -8,7 +8,7 @@ How did you end up here? Let me introduce myself, I am Hypatia, youngest child o
 ```
 module Example
 
-import Native(Numeral, Array, (/))
+import Native(Number, Array, (/))
 import Native.Love(setColor, circle, rectangle)
 import Common.Array(map)
 import Geometry.Vector2(Vector2)
@@ -16,13 +16,13 @@ import Geometry.Vector2(Vector2)
 // This is an algebraic datatype.
 // A Primitive is either a Rectangle or a Circle.
 // Datatypes can have type variables.
-// So this type could become a Primitive (Vector2 Numeral), Primitive (Vector3 Numeral) and more.
+// So this type could become a Primitive (Vector2 Number), Primitive (Vector3 Number) and more.
 type Primitive point = Rectangle point point | Circle point Radius
 
 // You can give types a new name with an alias
-alias Radius = Numeral
+alias Radius = Number
 
-alias Primitive2d = Primitive (Vector2 Numeral)
+alias Primitive2d = Primitive (Vector2 Number)
 
 
 fill (Circle (Vector2 x y) r) = circle "fill" x y r

@@ -1,7 +1,7 @@
 module Spheres
 
 import Native((+), (*), (%), (-), (/),
-    uncurry4, uncurry5, Array, unsafeInsert, Numeral)
+    uncurry4, uncurry5, Array, unsafeInsert, Number)
 import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
 import Common.Base((<), sqrt, repeatN)
 import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef, Ref)
@@ -24,10 +24,10 @@ drawSphere sphere =
         _ = setColorVec (color sphere)
     in circleVec (position sphere) (radius sphere)
 
-alias Position = Vector2 Numeral
-alias Velocity = Vector2 Numeral
-alias Color = Vector3 Numeral
-alias Radius = Numeral
+alias Position = Vector2 Number
+alias Velocity = Vector2 Number
+alias Color = Vector3 Number
+alias Radius = Number
 
 type Sphere = Sphere Position Velocity Color Radius
 

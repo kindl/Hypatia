@@ -225,8 +225,8 @@ typecheckPattern other _ =
     fail ("Cannot typecheck pattern " ++ renderError other)
 
 -- Typecheck Literals
-typecheckLiteral (Numeral _) ty =
-    unify (TypeConstructor (fromText "Native.Numeral")) ty
+typecheckLiteral (Number _) ty =
+    unify (TypeConstructor (fromText "Native.Number")) ty
 typecheckLiteral (Text _) ty =
     unify (TypeConstructor (fromText "Native.Text")) ty
 

@@ -64,7 +64,7 @@ importedModules (ModuleDeclaration _ imports _) =
 
 
 data Literal
-    = Numeral Double
+    = Number Double
     | Text Text
         deriving (Show, Data, Typeable)
 
@@ -175,7 +175,7 @@ instance Pretty Type where
             <> text "." <+> pretty t
 
 instance Pretty Literal where
-    pretty (Numeral n) = pretty n
+    pretty (Number n) = pretty n
     pretty (Text t) = prettyEscaped t
 
 instance Pretty Pattern where
@@ -239,7 +239,7 @@ mergeLocationInfos _ = builtinLocation
 text :: Text -> Doc a
 text = pretty
 
-prettyNumeral d =
+prettyNumber d =
     if not (isInfinite d) && d == intToDouble (round d)
         then pretty (round d :: Int)
         else pretty d

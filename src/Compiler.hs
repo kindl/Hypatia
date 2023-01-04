@@ -78,7 +78,7 @@ toLuaS (If e th el) = vcat [
 
 toLuaE (Var x) = flatName x
 toLuaE (LitI i) = pretty i
-toLuaE (LitD d) = prettyNumeral d
+toLuaE (LitD d) = prettyNumber d
 toLuaE (LitT t) = prettyEscaped t
 toLuaE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)),
@@ -140,7 +140,7 @@ toJsS (If e th el) = vcat [
 
 toJsE (Var x) = flatName x
 toJsE (LitI i) = pretty i
-toJsE (LitD d) = prettyNumeral d
+toJsE (LitD d) = prettyNumber d
 toJsE (LitT t) = prettyEscaped t
 toJsE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
@@ -213,7 +213,7 @@ compileEtoS (IfExpression c th el) =
     [If (compileE c) (compileEtoS th) (compileEtoS el)]
 compileEtoS e = [Ret (compileE e)]
 
-compileL (Numeral n) = LitD n
+compileL (Number n) = LitD n
 compileL (Text t) = LitT t
 
 -- Compile top level declarations

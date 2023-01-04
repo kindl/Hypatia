@@ -3,7 +3,7 @@ module Native
 // this is a native module
 // meaning the corresponding lua file is created by hand
 
-type Numeral
+type Number
 
 type Array
 
@@ -30,23 +30,23 @@ infixr 5 ++ concat
 
 
 # Math
-negate : Numeral -> Numeral
+negate : Number -> Number
 
-(*) : Numeral -> Numeral -> Numeral
+(*) : Number -> Number -> Number
 
-(/) : Numeral -> Numeral -> Numeral
+(/) : Number -> Number -> Number
 
-(+) : Numeral -> Numeral -> Numeral
+(+) : Number -> Number -> Number
 
-(-) : Numeral -> Numeral -> Numeral
+(-) : Number -> Number -> Number
 
-(^) : Numeral -> Numeral -> Numeral
+(^) : Number -> Number -> Number
 
-(%) : Numeral -> Numeral -> Numeral
+(%) : Number -> Number -> Number
 
-sin : Numeral -> Numeral
+sin : Number -> Number
 
-cos : Numeral -> Numeral
+cos : Number -> Number
 
 
 # Primitive
@@ -55,23 +55,23 @@ unsafeCoerce : a -> b
 error : Text -> a
 
 # Arrays
-geti : Numeral -> Array a -> a
+geti : Number -> Array a -> a
 
-length : Array a -> Numeral
+length : Array a -> Number
 
 isArray : a -> Bool
 
 # Beware that insert and set is impure and changes the array
 unsafeInsert : Array a -> a -> Array a
 
-unsafeSet : Array a -> Numeral -> a -> Array a
+unsafeSet : Array a -> Number -> a -> Array a
 
 # Text
-textLength : Text -> Numeral
+textLength : Text -> Number
 
-substring : Text -> Numeral -> Numeral -> Text
+substring : Text -> Number -> Number -> Text
 
-# Comparing Numerals, Strings and Constructors
+# Comparing Numbers, Strings and Constructors
 eq : e -> e -> Bool
 
 lt : e -> e -> Bool
@@ -90,7 +90,7 @@ toString : a -> Text
 
 concat : Text -> Text -> Text
 
-toNumber : Text -> Numeral
+toNumber : Text -> Number
 
 
 uncurry2 : a -> b -> c -> Native.Fun2 a b c

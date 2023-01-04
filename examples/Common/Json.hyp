@@ -1,6 +1,6 @@
 module Common.Json
 
-import Native(Numeral, Text, Array,
+import Native(Number, Text, Array,
     (++), (+), (-),
     toString, Bool, True, False)
 import Common.Base(Tuple2)
@@ -15,7 +15,7 @@ import Common.Array as Array
 parseJson s = parseTilEnd (value <* skipAnySpace) s
 
 
-type JsonValue = JsonNumber Numeral
+type JsonValue = JsonNumber Number
     | JsonString Text
     | JsonObject (Array (Tuple2 Text JsonValue))
     | JsonArray (Array JsonValue)

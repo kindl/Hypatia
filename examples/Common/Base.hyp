@@ -1,6 +1,6 @@
 module Common.Base
 
-import Native(Numeral, Text, Array, Bool,
+import Native(Number, Text, Array, Bool,
     (^), (-), (+),
     geti, length, isArray, unsafeCoerce,
     eq, lt, gt, le, ge,

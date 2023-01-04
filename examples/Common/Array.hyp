@@ -2,7 +2,7 @@ module Common.Array
 
 import Native((++), (+),
     isArray, unsafeCoerce, toString,
-    split, unsafeInsert, geti, length)
+    unsafeInsert, geti, length, True, False)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), Tuple2, identity)
 
@@ -18,9 +18,19 @@ copy a = foldl unsafeInsert [] a
 // The first array is copied to avoid inserting the elements into a
 append a b = foldl unsafeInsert (copy a) b
 
+// Inserting the elements into a fresh array
+prepend a b = foldl unsafeInsert [a] b
+
+
 map f a = foldl (fun z e -> unsafeInsert z (f e)) [] a
 
+mapWithIndex f a = foldlWithIndex (fun i z e -> unsafeInsert z (f i e)) [] a
+
 foldMap f a = foldl (fun z e -> append z (f e)) [] a
+
+foldr f z xs = foldl (fun k x y -> k (f x y)) identity xs z
+
+foldMapWithIndex f a = foldlWithIndex (fun i z e -> append z (f i e)) [] a
 
 foldl f z a = foldlWithIndex (fun _ x y -> f x y) z a
 
@@ -30,6 +40,23 @@ foldlWithRangeAndIndex i maxN f z a =
     if i == maxN then z else
         foldlWithRangeAndIndex (i + 1) maxN f (f i z (geti i a)) a
 
+foldl1 f a = unsafeFromOption (foldl (fun o y -> case o of
+        Some x -> Some (f x y)
+        None -> Some y
+    ) None a)
+
+
+any p xs = foldl (\z e -> if p e then True else z) False xs
+
+all p xs = foldl (\z e -> if p e then z else False) True xs
+
+elem x xs = any ((==) x) xs
+
+
+intercalate _ [] = ""
+intercalate sep a = foldl1 (\x r -> x ++ sep ++ r) a
+
+// Useful for debugging
 inspect x = if isArray x
-    then "{" ++ foldl (fun z i -> z ++ " " ++ inspect i) "" (unsafeCoerce x) ++ "}"
+    then "{" ++ intercalate ", " (unsafeCoerce x) ++ "}"
     else toString x

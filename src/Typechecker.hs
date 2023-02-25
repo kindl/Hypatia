@@ -297,9 +297,9 @@ newUnique = do
     r <- asks (\(TypecheckerState _ u _) -> u)
     lift (modifyIORef' r succ >> readIORef r)
 
-newTyVar = fmap TypeVariable newUniqueName
+newTyVar = fmap TypeVariable (newUniqueName builtinLocation)
 
-newUniqueName = fmap (prefixedId . uintToText) newUnique
+newUniqueName location = fmap (prefixedId location . uintToText) newUnique
 
 -- extract skolem constants
 skolems ty = Set.fromList [c | SkolemConstant c <- universe ty]
@@ -360,7 +360,7 @@ makeForAll tvs ty =
     if null tvs then ty else ForAll (sortOn getText (Set.toList tvs)) ty
 
 skolemise (ForAll vars ty) = do
-    skolVars <- traverse (const newUniqueName) vars
+    skolVars <- traverse (newUniqueName . getLocation) vars
     let subs = fromList (zip vars (fmap SkolemConstant skolVars))
     return (skolVars, apply subs ty)
 skolemise ty = return ([], ty)

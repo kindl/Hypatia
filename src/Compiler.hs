@@ -177,7 +177,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
     Func [toId v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
     let
-        v = prefixedId "l"
+        v = prefixedId builtinLocation "l"
         err = Ret (mkError ("No pattern match in lambda for " <> prettyError p))
     in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
@@ -204,7 +204,7 @@ compileEtoS (CaseExpression (Variable (Name [] v)) alts) =
     in compileAlts v [err] alts
 compileEtoS (CaseExpression e alts) =
     let
-        v = prefixedId "c"
+        v = prefixedId builtinLocation "c"
         err = Ret (mkError ("No pattern match for " <> prettyError (fmap fst alts)))
     in Assign (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
@@ -234,7 +234,7 @@ in write (toString a)
 -}
 compileD (ExpressionDeclaration p pe) =
     let
-        v = prefixedId "d"
+        v = prefixedId builtinLocation "d"
         err = Ret (mkError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
         withEarlyOut = case getConditions v [] p of

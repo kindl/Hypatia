@@ -285,13 +285,14 @@ isSym x = isSymbol x || Text.elem x "!%&*/?@\\-:"
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
-prefixedId x = Id ("_v" <> x) builtinLocation
+prefixedId location x = Id ("_v" <> x) location
 {-# INLINE prefixedId #-}
 
 getQualifiers (Name q _) = q
 
 getText (Id t _) = t
 
+getLocation (Id _ l) = l
 
 differenceKeys m ks = filterWithKey (const . flip notElem ks) m
 {-# INLINE differenceKeys #-}
@@ -306,7 +307,8 @@ getBindings p =
         f _ = []
     in foldMap' f (universe p)
 
-nNewVars n = fmap (prefixedId . intToText) [1..n]
+nNewVars n =
+    fmap (prefixedId builtinLocation . intToText) [1..n]
 
 makeOp op a b =
     FunctionApplication (FunctionApplication

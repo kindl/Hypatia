@@ -240,9 +240,9 @@ unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
 unify' (TypeConstructor a) (TypeConstructor b) | a == b = return ()
 -- When unifying, no higher rank type should appear
 unify' s@(ForAll _ _) ty =
-    fail ("Cannot unify scheme " ++ renderError s ++ " and " ++ renderError ty)
+    fail ("Cannot unify scheme:\n" ++ renderError s ++ "\nand\n" ++ renderError ty)
 unify' ty s@(ForAll _ _) =
-    fail ("Cannot unify " ++ renderError ty ++ " and scheme " ++ renderError s)
+    fail ("Cannot unify:\n" ++ renderError ty ++ "\nand scheme\n" ++ renderError s)
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
 -- After unifying f1 and f2 the substitution might have changed
@@ -252,7 +252,7 @@ unify' (TypeApplication f1 e1) (TypeApplication f2 e2) =
 unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
     unify' a1 a2 *> unify b1 b2
 unify' a b =
-    fail ("Cannot unify " ++ renderError a ++ " and " ++ renderError b)
+    fail ("Cannot unify:\n" ++ renderError a ++ "\nand\n" ++ renderError b)
 
 unifyVar x ty = if occurs x ty
     then fail ("Occurs check: " ++ renderError x ++ " occurs in " ++ renderError ty)
@@ -344,8 +344,8 @@ subsume' scheme1 scheme2@(ForAll _ _) = do
     let escVars = skolems (apply subst scheme1) <> skolems (apply subst scheme2)
     let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check: " ++ renderSetToError escaped
-        ++ " escaped when subsuming " ++ renderError scheme1
-        ++ " and " ++ renderError scheme2))
+        ++ "\nescaped when subsuming\n" ++ renderError scheme1
+        ++ "\nand\n" ++ renderError scheme2))
 subsume' scheme@(ForAll _ _) t2 = do
     t1 <- instantiate scheme
     subsume' t1 t2

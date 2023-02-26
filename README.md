@@ -44,11 +44,12 @@ draw _ =
 
 People say, I look like my father, Haskell, but somehow I am a little different:
 
-* No guards. I want to be free! Just use if expressions.
-* No operator sections. In Haskell `(-2)` could be a section or a prefix minus. Just use anonymous functions for partial application.
-* No do-expressions, list comprehensions and arithmetic sequences. When I grow up I want to use plain functions like `liftM2` or `enumFrom`.
+* No guards. Just use if expressions.
+* No operator sections. In Haskell `(-2)` could be a section or a prefix minus. Just use anonymous functions like `(\x -> x - 2)` or partial applications like `((-) 3)`.
+* No do-expressions, list comprehensions and arithmetic sequences. Instead plain functions like `andThen`, `map2` or `range`.
 * No records. My father's Achilles heel... I am dreaming of a unified solution for first class modules, records and ad-hoc polymorphism when I am older.
-* Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` instead of `type`, because it can be used for pattern- and type aliases and `fun` instead of `\` to be a little less cryptic.
+* Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` can be used for pattern- and type aliases.
+* You can write `fun` instead of `\` to be a little less cryptic.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
 
 It was nice to talk with you stranger.

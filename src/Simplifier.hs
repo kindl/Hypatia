@@ -4,7 +4,6 @@ module Simplifier where
 import Syntax
 import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
-import Data.List(foldl1')
 
 
 -- This module translates complicated expressions
@@ -150,7 +149,7 @@ toTuplesP len ps =
 
 toTuplesE _ [e] = e
 toTuplesE len es =
-    foldl1' FunctionApplication (ConstructorExpression (toTupleName len) : es)
+    FunctionApplication (ConstructorExpression (toTupleName len)) es
 
 toTupleName len =
     fromText ("Tuple" <> intToText len)

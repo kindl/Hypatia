@@ -3,7 +3,7 @@ module Parser where
 
 import Syntax
 import qualified Data.Text.IO as Text
-import Data.List(uncons, foldl1')
+import Data.List(uncons)
 import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
@@ -184,8 +184,7 @@ otype = do
         Nothing -> b)
 {-# INLINE otype #-}
 
--- NOTE The left fold handles left recursion
-btype = foldl1' TypeApplication <$!> many1' atype
+btype = liftA2 makeTypeApplication atype (many' atype)
 {-# INLINE btype #-}
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
@@ -287,8 +286,7 @@ caseExpression = do
     return (CaseExpression e als)
 {-# INLINE caseExpression #-}
 
--- NOTE The left fold handles left recursion
-fexpr = foldl1' FunctionApplication <$!> many1' aexpr
+fexpr = liftA2 makeFunctionApplication aexpr (many' aexpr)
 {-# INLINE fexpr #-}
 
 aexpr = variable <|> constructorExpression <|> literalExpression

@@ -98,7 +98,7 @@ data Declaration
 data Type
     = TypeArrow Type Type
     | TypeInfixOperator Type Name Type
-    | TypeApplication Type Type
+    | TypeApplication Type [Type]
     | TypeConstructor Name
     | ParenthesizedType Type
     | ForAll [Id] Type
@@ -123,7 +123,7 @@ data Expression
     = Variable Name
     | LiteralExpression Literal
     | ConstructorExpression Name
-    | FunctionApplication Expression Expression
+    | FunctionApplication Expression [Expression]
     | LetExpression [Declaration] Expression
 -- TODO think about a nicer way to add case lambdas
 -- It should have a way to match on more than just a single value
@@ -168,7 +168,9 @@ instance Pretty Type where
     pretty (TypeConstructor n) = pretty n
     pretty (TypeVariable n) = pretty n
     pretty (SkolemConstant s) = text "skolem." <> pretty s
-    pretty (TypeApplication a b) = parens (pretty a <+> pretty b)
+    pretty (TypeApplication t ts) =
+        parens (pretty t
+            <+> mintercalate (text " ") (fmap pretty ts))
     pretty (ParenthesizedType t) = parens (pretty t)
     pretty (ForAll ts t) =
         text "forall" <+> mintercalate (text " ") (fmap pretty ts)
@@ -311,15 +313,20 @@ nNewVars n =
     fmap (prefixedId builtinLocation . intToText) [1..n]
 
 makeOp op a b =
-    FunctionApplication (FunctionApplication
-        (if isConstructor op then
-            ConstructorExpression op else Variable op) a) b
+    FunctionApplication (if isConstructor op then
+            ConstructorExpression op else Variable op) [a, b]
 
 makeOpPat op a b =
     ConstructorPattern op [a, b]
 
 makeOpTyp op a b =
-    TypeApplication (TypeApplication (TypeConstructor op) a) b
+    TypeApplication (TypeConstructor op) [a, b]
+
+makeTypeApplication t [] = t
+makeTypeApplication t ts = TypeApplication t ts
+
+makeFunctionApplication e [] = e
+makeFunctionApplication e es = FunctionApplication e es
 
 findEither o m = maybe (Left (notFoundMessage o m)) Right (lookup o m)
 

@@ -297,7 +297,9 @@ newUnique = do
     r <- asks (\(TypecheckerState _ u _) -> u)
     lift (modifyIORef' r succ >> readIORef r)
 
-newTyVar = fmap TypeVariable (newUniqueName builtinLocation)
+newTyVarAt location = fmap TypeVariable (newUniqueName location)
+
+newTyVar = newTyVarAt builtinLocation
 
 newUniqueName location = fmap (prefixedId location . uintToText) newUnique
 
@@ -321,7 +323,7 @@ generalize ty = do
     return (makeForAll qualVars ty')
 
 instantiate (ForAll vars ty) = do
-    subst <- traverse (\x -> fmap (\t -> (x, t)) newTyVar) vars
+    subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt (getLocation x))) vars
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 

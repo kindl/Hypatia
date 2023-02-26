@@ -22,6 +22,7 @@ transformations = traverse sortDeclsMod
     <=< aliasConstructorsProgram
     <=< aliasOperatorsProgram
     -- Simplifier
+    <$> fmap mergeApplications
     <$> fmap removeParens
     -- Operators
     <=< fixAssocProgram

@@ -148,9 +148,6 @@ scopeCheck ty = if null (freeVars ty)
     then pure ty
     else fail ("Type variables " ++ renderSetToError (freeVars ty) ++ " have no definition")
 
-arrowsToList (TypeArrow x xs) = x:arrowsToList xs
-arrowsToList x = [x]
-
 -- Typecheck Bindings
 gatherTypeSig (TypeSignature name ty) =
     [(name, makeForAll (freeVars ty) ty)]

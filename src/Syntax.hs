@@ -161,8 +161,8 @@ instance Pretty Location where
         <> text ":" <> pretty column
 
 instance Pretty Type where
-    pretty (TypeArrow a b) =
-        parens (pretty a <+> text "->" <+> pretty b)
+    pretty t@(TypeArrow _ _) =
+        parens (mintercalate (text " -> ") (fmap pretty (arrowsToList t)))
     pretty (TypeInfixOperator a op b) =
         parens (pretty a <+> pretty op <+> pretty b)
     pretty (TypeConstructor n) = pretty n
@@ -296,6 +296,8 @@ getText (Id t _) = t
 
 getLocation (Id _ l) = l
 
+getId (Name _ i) = i
+
 differenceKeys m ks = filterWithKey (const . flip notElem ks) m
 {-# INLINE differenceKeys #-}
 
@@ -327,6 +329,9 @@ makeTypeApplication t ts = TypeApplication t ts
 
 makeFunctionApplication e [] = e
 makeFunctionApplication e es = FunctionApplication e es
+
+arrowsToList (TypeArrow x xs) = x:arrowsToList xs
+arrowsToList x = [x]
 
 findEither o m = maybe (Left (notFoundMessage o m)) Right (lookup o m)
 

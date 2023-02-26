@@ -15,7 +15,7 @@ import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
 import Data.Foldable(traverse_, foldMap', foldl')
 import Control.Exception(onException)
-
+import Control.Applicative((<|>))
 
 type Environment = HashMap Name Type
 
@@ -168,11 +168,18 @@ inferDecls gen =
 -- A version of onException that works with ReaderT
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
+inferDecl gen (ExpressionDeclaration p@(VariablePattern v) e) next = do
+    env <- getEnv
+    ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
+    inferDecl' gen [(v, ty)] p e ty next
 inferDecl gen (ExpressionDeclaration p e) next = do
     ty <- newTyVar
     binds <- typecheckPattern p ty
-    let binds' = fromList binds
+    inferDecl' gen binds p e ty next
+inferDecl _ _ next = next
 
+inferDecl' gen binds p e ty next = do
+    let binds' = fromList binds
     -- If an error occurs, show in which declaration it happened
     onException' (with binds' (typecheck e ty))
         (putStrLn ("When typechecking declaration " ++ renderError p))
@@ -189,10 +196,7 @@ inferDecl _ _ next = next
 
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty = do
-    env <- getEnv
-    case lookup x env of
-        Nothing -> return [(x, ty)]
-        Just found -> subsume found ty >> return [(x, found)]
+    return [(x, ty)]
 typecheckPattern (AliasPattern x p) ty = do
     binds <- typecheckPattern p ty
     return ((x, ty):binds)

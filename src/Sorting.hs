@@ -65,7 +65,7 @@ getDepsD _ = mempty
 
 getDefsP p = Set.fromList (getBindings p)
 
+-- Type signatures are not considered for sorting
 getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (TypeDeclaration _ _ cs) = foldMap' (Set.singleton . fst) cs
-getDefsD (TypeSignature s _) = Set.singleton s
 getDefsD _ = mempty

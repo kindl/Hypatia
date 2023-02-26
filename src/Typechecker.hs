@@ -72,12 +72,11 @@ typecheck (FunctionApplication e es) ty = do
     let t = foldr TypeArrow ty vars
     typecheck e t
 typecheck (CaseExpression expr alts) ty = do
-    pty <- newTyVar
-    traverse_ (uncurry (typecheckAlt pty ty)) alts
-    typecheck expr pty
--- A common shortcut that avoids generating new type variables
-typecheck (LambdaExpression [p] e) (TypeArrow pty ety) =
-    typecheckAlt pty ety p e
+    patternTy <- newTyVar
+    traverse_ (uncurry (typecheckAlt patternTy ty)) alts
+    typecheck expr patternTy
+typecheck (LambdaExpression [p] e) (TypeArrow patternTy resultTy) =
+    typecheckAlt patternTy resultTy p e
 -- A shortcut that avoids generating new type variables
 typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
     (skolVars, TypeArrow alpha beta) <- skolemise s
@@ -90,18 +89,18 @@ typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
         ++ renderSetToError escaped ++ " escaped when checking fun "
         ++ renderError p ++ " -> ... against " ++ renderError s))
 typecheck (LambdaExpression [p] e) ty = do
-    alpha <- newTyVar
-    beta <- newTyVar
-    typecheckAlt alpha beta p e
-    subsume (TypeArrow alpha beta) ty
+    patternTy <- newTyVar
+    resultTy <- newTyVar
+    typecheckAlt patternTy resultTy p e
+    subsume (TypeArrow patternTy resultTy) ty
 typecheck (LetExpression decls e) ty = do
     let signatures = fromList (foldMap' gatherTypeSig decls)
     binds <- with signatures (inferDecls return decls)
     with (mappend signatures binds) (typecheck e ty)
-typecheck (IfExpression c th el) ty = do
-    typecheck c (TypeConstructor (fromText "Native.Bool"))
-    typecheck th ty
-    typecheck el ty
+typecheck (IfExpression condtition thenBranch elseBranch) ty = do
+    typecheck condtition (TypeConstructor (fromText "Native.Bool"))
+    typecheck thenBranch ty
+    typecheck elseBranch ty
 typecheck (ArrayExpression es) ty = do
     elementTy <- newTyVar
     traverse_ (flip typecheck elementTy) es
@@ -113,9 +112,9 @@ typecheckVar x ty = do
     scheme <- mfind x env
     subsume scheme ty
 
-typecheckAlt pty ety pat expr = do
-    binds <- typecheckPattern pat pty
-    with (fromList binds) (typecheck expr ety)
+typecheckAlt patternTy expressionTy pat expr = do
+    binds <- typecheckPattern pat patternTy
+    with (fromList binds) (typecheck expr expressionTy)
 
 {-
 Typecheck Constructors
@@ -132,8 +131,8 @@ Vec2 is a constructor and Vector a type constructor
 -}
 gatherConstructor (TypeDeclaration tyIdent vars constructors) = do
     vars' <- toSetUniqueM vars
-    let resTy = TypeConstructor tyIdent
-    let tyCon = makeTypeApplication resTy (fmap TypeVariable vars)
+    let resultTy = TypeConstructor tyIdent
+    let tyCon = makeTypeApplication resultTy (fmap TypeVariable vars)
     fmap fromList (traverse (traverse (constructorToType tyCon vars')) constructors)
 gatherConstructor _ = pure mempty
 
@@ -249,7 +248,7 @@ unify' ty (TypeVariable x) = unifyVar x ty
 unify' (TypeApplication f1 es1) (TypeApplication f2 es2) = do
     unify' f1 f2
     when (length es1 /= length es2)
-        (fail ("Type " ++ renderError f1
+        (fail ("Cannot unify:\nType " ++ renderError f1
             ++ " was given wrong number of arguments"))
 
 -- After unifying f1 and f2 the substitution might have changed.

@@ -39,7 +39,8 @@ point x = unsafeStateful (fun _ -> x)
 # (In purescript-refs references are JS objects.)
 type Ref t = MkRef t
 
-# The constructor MkRef is opaque and should not be imported
+# The constructor MkRef should not be imported.
+# If necessary, import `unsafeMakeRef` instead.
 unsafeMakeRef x = MkRef x
 
 unsafeUnpackRef (MkRef x) = x

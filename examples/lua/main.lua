@@ -4,8 +4,7 @@ local game
 
 local watch = function(dt)
     -- Checks if the loaded game file is newer
-    -- NOTE getLastModified will be deprecated with love 0.11
-    local modtime = love.filesystem.getLastModified(filename)
+    local modtime = love.filesystem.getInfo(filename).modtime
     if modtime > loadtime then
         game = love.filesystem.load(filename)()
         if game then

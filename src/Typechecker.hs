@@ -249,7 +249,10 @@ unify' (TypeApplication f1 es1) (TypeApplication f2 es2) = do
     unify' f1 f2
     when (length es1 /= length es2)
         (fail ("Cannot unify:\nType " ++ renderError f1
-            ++ " was given wrong number of arguments"))
+            ++ " was given wrong number of arguments\n"
+            ++ renderError es1
+            ++ "\nand\n"
+            ++ renderError es2))
 
 -- After unifying f1 and f2 the substitution might have changed.
 -- Therefore, unify is used instead of unify'

@@ -1,0 +1,28 @@
+module Abstract.Reader
+
+import Native
+import Common.Base(Unit, always, alwaysSecond, identity, (>>))
+import Common.Array(prepend)
+
+
+type ReaderT r f a = ReaderT (r -> f a)
+
+runReaderT (ReaderT f) = f
+
+// Modifies the environment
+local f r = ReaderT (\input -> runReaderT r (f input))
+
+ask innerPoint = ReaderT innerPoint
+
+
+defer f = ReaderT (\input -> runReaderT (f Unit) input)
+
+point innerPoint = lift >> innerPoint
+
+lift f = ReaderT (always f)
+
+bind innerBind r f =
+    ReaderT (\input -> innerBind (runReaderT r input) (\a -> runReaderT (f a) input))
+
+map2 innerMap2 f a1 a2 =
+    ReaderT (\input -> innerMap2 f (runReaderT a1 input) (runReaderT a2 input))

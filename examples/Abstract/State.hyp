@@ -1,0 +1,27 @@
+module Abstract.State
+
+import Native
+import Common.Base(Tuple2, Unit)
+
+
+type StateT s f a = StateT (s -> f (Tuple2 a s))
+
+runStateT (StateT f) = f
+
+ask innerPoint = StateT (\input -> innerPoint (Tuple2 input input))
+
+
+defer f =
+    StateT (\input -> runStateT (f Unit) input)
+
+point innerPoint a =
+    StateT (\input -> innerPoint (Tuple2 a input))
+
+lift innerMap fa =
+    StateT (\input -> innerMap (Tuple2 input) fa)
+
+bind innerBind r f =
+    StateT (\input1 -> innerBind (runStateT r input1) (\(Tuple2 a input2) -> runStateT (f a) input2))
+
+alternative innerAlternative f1 f2 =
+    StateT (innerAlternative (runStateT f1) (runStateT f2))

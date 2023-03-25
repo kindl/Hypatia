@@ -1,0 +1,8 @@
+module Abstract.Functor
+
+import Common.Base(always)
+
+
+mapAlways map a1 a2 = map (always a1) a2
+
+reverseMapAlways map a1 a2 = map (always a2) a1

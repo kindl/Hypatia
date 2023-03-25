@@ -1,0 +1,24 @@
+module Abstract.Applicative
+
+import Native(unsafeCoerce)
+import Common.Base(always, alwaysSecond, identity)
+
+
+apply map2 a1 a2 =
+    map2 identity a1 a2
+
+applyFirst map2 a1 a2 =
+    map2 always a1 a2
+
+applySecond map2 a1 a2 =
+    map2 alwaysSecond a1 a2
+
+map point map2 f a =
+    map2 identity (point f) a
+
+// TODO remove unsafe coerce as soon as higher rank polymorphism works correctly
+map3 map2 f a1 a2 a3 =
+    apply (unsafeCoerce map2) (map2 f a1 a2) a3
+
+map4 map2 f a1 a2 a3 a4 =
+    apply (unsafeCoerce map2) (map3 map2 f a1 a2 a3) a4

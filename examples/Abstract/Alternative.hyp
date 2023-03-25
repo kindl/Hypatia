@@ -1,0 +1,28 @@
+module Abstract.Alternative
+
+import Native(unsafeCoerce)
+import Common.Array(prepend)
+import Common.Base(alwaysSecond, Unit)
+import Common.Option(Some, None)
+
+
+many point map2 alternative defer p =
+    alternative (many1 point map2 alternative defer p) (point [])
+
+many1 point map2 alternative defer p =
+    map2 prepend p (defer (\_ ->
+        alternative (many1 point map2 alternative defer p) (point [])))
+
+sepBy point map2 alternative defer p sep =
+    alternative (sepBy1 point map2 alternative defer p sep) (point [])
+
+sepBy1 point map2 alternative defer p sep =
+    map2 prepend p
+        // TODO remove unsafe coerce as soon as higher rank polymorphism works correctly
+        (many point map2 alternative defer (unsafeCoerce map2 alwaysSecond sep p))
+
+option point alternative a p =
+    alternative p (point a)
+
+optional point map alternative p =
+    alternative (map Some p) (point None)

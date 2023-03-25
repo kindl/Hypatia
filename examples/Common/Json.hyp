@@ -4,12 +4,13 @@ import Native(Number, Text, Array,
     (++), (+), (-),
     toString, Bool, True, False)
 import Common.Base(Tuple2)
-import Common.Parser((*>), (<*), (<|>), ($>), map2, map,
-    sepBy, parse, parseTilEnd, token, text,
-    string, double, array, skipAnySpace, toArray)
+import Common.Parser((*>), (<*), (<|>), ($>),
+    parse, parseTilEnd, token, text,
+    string, double, array, skipAnySpace, toArray,
+    map2, map, sepBy)
 import Common.Array(intercalate, foldl)
-import Common.State(defer)
 import Common.Array as Array
+import Abstract.State(defer)
 
 
 parseJson s = parseTilEnd (value <* skipAnySpace) s

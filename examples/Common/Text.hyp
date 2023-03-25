@@ -1,0 +1,9 @@
+module Common.Text
+
+import Native(textLength, substring)
+import Common.Base((||), (==))
+import Common.Option(None, Some)
+
+
+safeSubstring s i j = let { len = textLength s } in
+    if len == i || len == j then None else Some (substring s i j)

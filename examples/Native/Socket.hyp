@@ -1,0 +1,15 @@
+module Native.Socket
+
+import Native(Void, Text, Number)
+
+alias Host = Text
+alias Port = Number
+alias Message = Text
+
+type Socket
+
+tcpConnect : Host -> Port -> Socket
+
+send : Socket -> Message -> Void
+
+close : Socket -> Void

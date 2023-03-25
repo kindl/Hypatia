@@ -1,8 +1,7 @@
 module Abstract.Reader
 
 import Native
-import Common.Base(Unit, always, alwaysSecond, identity, (>>))
-import Common.Array(prepend)
+import Common.Base(Unit, always, (>>))
 
 
 type ReaderT r f a = ReaderT (r -> f a)

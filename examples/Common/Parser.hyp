@@ -1,14 +1,14 @@
 module Common.Parser
 
 import Native((++), (+), (-),
-    True, Array, Text, Bool, Number,
-    substring, textLength, toNumber, unsafeCoerce)
-import Common.Base((==), (!=), (||), (>>),
+    True, Array, Text,
+    textLength, toNumber, unsafeCoerce)
+import Common.Base((==), (!=), (>>),
     Tuple2, Tuple3,
-    always, alwaysSecond, flip, not_)
+    not_)
 import Common.Text(safeSubstring)
-import Common.Array(prepend, foldl, elem, flat)
-import Common.Option(Some, None, Option, unsafeFromOption)
+import Common.Array(elem, flat)
+import Common.Option(Some, None, unsafeFromOption)
 import Common.Option as Option
 import Abstract.State(StateT, runStateT)
 import Abstract.State as State

@@ -16,7 +16,7 @@ applySecond map2 a1 a2 =
 map point map2 f a =
     map2 identity (point f) a
 
-// TODO remove unsafe coerce as soon as higher rank polymorphism works correctly
+// TODO remove unsafeCoerce as soon as higher-rank polymorphism works correctly
 map3 map2 f a1 a2 a3 =
     apply (unsafeCoerce map2) (map2 f a1 a2) a3
 

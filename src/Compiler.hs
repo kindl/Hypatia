@@ -80,6 +80,7 @@ toLuaE (Var x) = flatName x
 toLuaE (LitI i) = pretty i
 toLuaE (LitD d) = prettyNumber d
 toLuaE (LitT t) = prettyEscaped t
+toLuaE (Func [] []) = text "function() end"
 toLuaE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)),
     indent 4 (vcatMap toLuaS statements),

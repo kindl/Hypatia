@@ -21,7 +21,7 @@ splitLambdas m = transformBi f m
     f e = e
 
 mergeApplications m =
-    let 
+    let
         f (FunctionApplication (FunctionApplication e es1) es2) =
             FunctionApplication e (es1 ++ es2)
         f e = e

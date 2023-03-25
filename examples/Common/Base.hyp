@@ -17,8 +17,8 @@ infix 4 == equals
 infix 4 != notEquals
 infix 4 < lessThan
 infix 4 > greaterThan
-infix 4 <= lessOrEqal
-infix 4 >= greaterOrEqal
+infix 4 <= lessThanOrEqual
+infix 4 >= greaterThanOrEqual
 
 equals l r = genComp eq l r
 

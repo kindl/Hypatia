@@ -163,14 +163,14 @@ onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 inferDecl gen (ExpressionDeclaration p@(VariablePattern v) e) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
-    inferDecl' gen [(v, ty)] p e ty next
+    typecheckDecl gen [(v, ty)] p e ty next
 inferDecl gen (ExpressionDeclaration p e) next = do
     ty <- newTyVar
     binds <- typecheckPattern p ty
-    inferDecl' gen binds p e ty next
+    typecheckDecl gen binds p e ty next
 inferDecl _ _ next = next
 
-inferDecl' gen binds p e ty next = do
+typecheckDecl gen binds p e ty next = do
     let binds' = fromList binds
     -- If an error occurs, show in which declaration it happened
     onException' (with binds' (typecheck e ty))

@@ -180,7 +180,7 @@ compileE (LambdaExpression [VariablePattern v] e) =
 compileE (LambdaExpression [p] e) =
     let
         v = prefixedId builtinLocation "l"
-        err = Ret (mkError ("No pattern match in lambda for " <> prettyError p))
+        err = Ret (makeError ("No pattern match in lambda for " <> prettyError p))
     in Func [v] (compileAlts v [err] [(p, e)])
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
@@ -204,12 +204,12 @@ however nested case expressions lead to problems e.g. multiple defined local _v
 -}
 compileEtoS (CaseExpression (Variable (Name [] v)) alts) =
     let
-        err = Ret (mkError ("No pattern match for " <> prettyError (fmap fst alts)))
+        err = Ret (makeError ("No pattern match for " <> prettyError (fmap fst alts)))
     in compileAlts v [err] alts
 compileEtoS (CaseExpression e alts) =
     let
         v = prefixedId builtinLocation "c"
-        err = Ret (mkError ("No pattern match for " <> prettyError (fmap fst alts)))
+        err = Ret (makeError ("No pattern match for " <> prettyError (fmap fst alts)))
     in Assign (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
     foldMap' compileD decls ++ compileEtoS e
@@ -230,7 +230,7 @@ compileD (FunctionDeclaration x alts) =
     let
         -- TODO transpose and merge matching variables
         vs = nNewVars (length (fst (head alts)))
-        err = Ret (mkError ("No pattern match in function for " <> prettyError (fmap fst alts)))
+        err = Ret (makeError ("No pattern match in function for " <> prettyError (fmap fst alts)))
         sts = compileMultiAlts vs [err] alts
     in [Assign x (curryFuncSts vs sts)]
 compileD (ExpressionDeclaration (VariablePattern x) e) =
@@ -246,7 +246,7 @@ in write (toString a)
 compileD (ExpressionDeclaration p pe) =
     let
         v = prefixedId builtinLocation "d"
-        err = Ret (mkError ("No pattern match in declaration for " <> prettyError p))
+        err = Ret (makeError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
         withEarlyOut = makeIf (getConditions v [] p) assignments [err]
     in Assign (fromId v) (compileE pe) : withEarlyOut
@@ -323,13 +323,13 @@ getConditions v i (AliasPattern _ p) =
 getConditions v i (ConstructorPattern c []) =
     [Eq (Access v i) (Var c)]
 getConditions v i (ConstructorPattern c ps) =
-    [mkIsArray (Access v i),
-    Eq (mkLength (Access v i)) (LitI (length ps + 1)),
+    [makeIsArray (Access v i),
+    Eq (makeLength (Access v i)) (LitI (length ps + 1)),
     Eq (Access v (i ++ [0])) (Var c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
-    [mkIsArray (Access v i),
-    Eq (mkLength (Access v i)) (LitI (length ps))]
+    [makeIsArray (Access v i),
+    Eq (makeLength (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 getConditions v i (LiteralPattern l) =
     [Eq (Access v i) (compileL l)]
@@ -357,9 +357,9 @@ descendAccess f i j (p:ps) =
 immediate statements = Call (Func [] statements) []
 
 
-mkError s = Call (Var (fromText "Native.error")) [LitT (render s)]
-mkIsArray a = Call (Var (fromText "Native.isArray")) [a]
-mkLength a = Call (Var (fromText "Native.length")) [a]
+makeError s = Call (Var (fromText "Native.error")) [LitT (render s)]
+makeIsArray a = Call (Var (fromText "Native.isArray")) [a]
+makeLength a = Call (Var (fromText "Native.length")) [a]
 
 
 vcatMap f x = vcat (fmap f x)

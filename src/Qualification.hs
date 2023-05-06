@@ -31,14 +31,14 @@ qualifyNames quals (ModuleDeclaration name imports decls) =
 -- Qualify the bindings and expressions appearing in declarations
 qualifyD quals (ExpressionDeclaration p e) =
     liftA2 ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
+qualifyD quals (FunctionDeclaration v alts) =
+    liftA2 FunctionDeclaration (findName quals v) (traverse (qualifyMultiAlt quals) alts)
 qualifyD quals (TypeDeclaration v vars cs) =
     fmap (TypeDeclaration v vars) (traverse (firstA (findName quals)) cs)
 qualifyD quals (TypeSignature v t) =
     fmap (flip TypeSignature t) (findName quals v)
 qualifyD _ decl@(AliasDeclaration _ _) = Right decl
 qualifyD _ decl@(FixityDeclaration _ _ _ _) = Right decl
-qualifyD _ decl = Left ("Bug: Unexpected declaration " ++ show decl)
-
 
 qualifyP quals pat =
     let
@@ -73,6 +73,11 @@ qualifyE quals (InfixOperator ea name eb) =
 qualifyE quals e =
     descendM (qualifyE quals) e
 
+qualifyMultiAlt quals (ps, e) = do
+    locals <- toLocals (foldMap' getBindings ps)
+    newQuals <- unionUnique locals quals
+    liftA2 (,) (traverse (qualifyP newQuals) ps) (qualifyE newQuals e)
+
 qualifyAlt quals (p, e) = do
     locals <- toLocals (getBindings p)
     newQuals <- unionUnique locals quals
@@ -88,6 +93,7 @@ captureNames (ModuleDeclaration modName _ decls) = do
     return (fromSigs <> fromTopDecls <> fromDecls)
 
 captureDecl (ExpressionDeclaration p _) = getBindings p
+captureDecl (FunctionDeclaration v _) = [v]
 captureDecl _ = []
 
 captureSignature (TypeSignature identifier _) = [identifier]

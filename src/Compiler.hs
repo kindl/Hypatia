@@ -226,6 +226,13 @@ compileTop (TypeDeclaration _ _ cs) =
 compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
 
+compileD (FunctionDeclaration x alts) =
+    let
+        -- TODO transpose and merge matching variables
+        vs = nNewVars (length (fst (head alts)))
+        err = Ret (mkError ("No pattern match in function for " <> prettyError (fmap fst alts)))
+        sts = compileMultiAlts vs [err] alts
+    in [Assign x (curryFuncSts vs sts)]
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration (Wildcard w) e) =
@@ -241,9 +248,7 @@ compileD (ExpressionDeclaration p pe) =
         v = prefixedId builtinLocation "d"
         err = Ret (mkError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
-        withEarlyOut = case getConditions v [] p of
-            [] -> assignments
-            cs -> If (foldr1 And cs) [] [err] : assignments
+        withEarlyOut = makeIf (getConditions v [] p) assignments [err]
     in Assign (fromId v) (compileE pe) : withEarlyOut
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
@@ -255,10 +260,12 @@ compileConstructor (c, variables) =
     let
         parameters = nNewVars (length variables)
         body = Arr (fmap Var (c:fmap fromId parameters))
-    in Assign c (curryFunc body parameters)
+    in Assign c (curryFunc parameters body)
 
-curryFunc = foldr (\v r -> Func [v] [Ret r])
+curryFunc vs sts = foldr (\v r -> Func [v] [Ret r]) sts vs
 
+curryFuncSts [v] s = Func [v] s
+curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
 
 {-
 Compiling case expressions
@@ -295,10 +302,21 @@ descendAccess is used to recurse deeper into the patterns.
 The y in (Just y) could be any pattern and not only a variable.
 -}
 compileAlts v = foldr (\(p, e) rest ->
-    let s = getAssignments v [] p ++ compileEtoS e
-    in case getConditions v [] p of
-        [] -> s
-        cs -> [If (foldr1 And cs) s rest])
+    let
+        assignments = getAssignments v [] p
+        conditions = getConditions v [] p
+        s = assignments ++ compileEtoS e
+    in makeIf conditions s rest)
+
+compileMultiAlts vs = foldr (\(ps, e) rest ->
+    let
+        assignments = concat (zipWith (\v p -> getAssignments v [] p) vs ps)
+        conditions = concat (zipWith (\v p -> getConditions v [] p) vs ps)
+        s = assignments ++ compileEtoS e
+    in makeIf conditions s rest)
+
+makeIf [] s _ = s
+makeIf cs s elseBranch = [If (foldr1 And cs) s elseBranch]
 
 getConditions v i (AliasPattern _ p) =
     getConditions v i p

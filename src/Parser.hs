@@ -123,7 +123,7 @@ functionDeclaration = do
     v <- var
     ps <- many1' apat
     r <- rhs
-    return (FunctionDeclaration (fromId v) ps r)
+    return (FunctionDeclaration (fromId v) [(ps, r)])
 {-# INLINE functionDeclaration #-}
 
 operatorDeclaration = do
@@ -131,7 +131,7 @@ operatorDeclaration = do
     o <- varsym
     p2 <- lpat
     r <- rhs
-    return (FunctionDeclaration (fromId o) [p1, p2] r)
+    return (FunctionDeclaration (fromId o) [([p1, p2], r)])
 {-# INLINE operatorDeclaration #-}
 
 expressionDeclaration = do

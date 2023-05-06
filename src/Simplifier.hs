@@ -2,7 +2,6 @@
 module Simplifier where
 
 import Syntax
-import Control.Arrow(first)
 import Data.Generics.Uniplate.Data(transformBi)
 
 
@@ -14,11 +13,11 @@ import Data.Generics.Uniplate.Data(transformBi)
 simplifications m =
     (splitLambdas . removeAwaitDeclaration . removeFunctionDeclaration) m
 
-splitLambdas m = transformBi f m
-  where
-    f (LambdaExpression ps e) =
-        foldr (\p -> LambdaExpression [p]) e ps
-    f e = e
+splitLambdas m =
+    let
+        f (LambdaExpression ps e) = curryLambda ps e
+        f e = e
+    in transformBi f m
 
 mergeApplications m =
     let
@@ -83,83 +82,42 @@ splitAwaitDeclsStep d acc = Right [d]:acc
 
 
 {-
-Transform a function declaration to expression declaration
-
-foo a b True = a
-foo c d False = d
-
-is translated to
-
-foo = (fun v1 v2 v3 -> case (v1, v2, v3) of
-    (a, b, True) -> a
-    (c, d, False) -> d)
-
--}
-removeFunctionDeclaration m = (transformBi f) (k m)
-  where
-    f (LetExpression decls e) =
-        LetExpression (transBinds decls) e
-    f e = e
-
-    k (ModuleDeclaration name imports decls) =
-        ModuleDeclaration name imports (transBinds decls)
-
-transBinds decls =
-    let
-        merged = groupBinds decls
-        transformed = fmap (fmap transAlt) merged
-    in fmap (either id id) transformed
-
-
-{-
-Transforms function declarations. For example:
+Merge function declarations.
+A function declaration like this is first parsed seperately
 ```
 index 0 (Element e _) = e
 index n (Element _ es) = index (n - 1) es
 ```
-becomes
+and is merged like this
 ```
-index = fun v1 v2 ->
-    case (Tuple2 v1 v2) of
-        Tuple2 0 (Element e _) -> e
-        Tuple2 n (Element _ es) -> index (n - 1) es
+index
+    0 (Element e _) = e
+    n (Element _ es) = index (n - 1) es
 ```
-
-However, this transformation is problematic because of
-* Performance: Creates a tuple, matches against it and throws it away
-* Typechecking: Impredicative instantiation might be necessary
-
-A possible solution might be to introduce a multi case expression
-`MultiCaseExpression [Expression] [([Pattern], Expression)]`
-that can match several patterns or change function declaration to
-`FunctionDeclaration Binding [([Pattern], Expression)]`
 -}
-groupBinds = foldr groupBindsStep []
+removeFunctionDeclaration m = (transformBi f) (k m)
+  where
+    f (LetExpression decls e) =
+        LetExpression (groupBinds decls) e
+    f e = e
 
-groupBindsStep (FunctionDeclaration id1 ps e) (Right (id2, xs):rest) | id1 == id2 =
-    Right (id1, (ps, e):xs):rest
-groupBindsStep (FunctionDeclaration id1 ps e) acc = Right (id1, [(ps, e)]):acc
-groupBindsStep other acc = Left other:acc
+    k (ModuleDeclaration name imports decls) =
+        ModuleDeclaration name imports (groupBinds decls)
 
-transAlt (name, [(ps, e)]) =
-    ExpressionDeclaration (VariablePattern name) (LambdaExpression ps e)
-transAlt (name, alts) =
+groupBinds decls =
     let
-        n = length (fst (head alts))
-        vs = fmap fromId (nNewVars n)
-        nalts = fmap (first (toTuplesP n)) alts
-        e = toTuplesE n (fmap Variable vs)
-    in ExpressionDeclaration (VariablePattern name)
-        (LambdaExpression (fmap VariablePattern vs)
-            (CaseExpression e nalts))
+        merged = foldr groupBindsStep [] decls
+        transformed = fmap (fmap (uncurry makeFunctionDeclaration)) merged
+    in fmap (either id id) transformed
 
-toTuplesP _ [p] = p
-toTuplesP len ps =
-    ConstructorPattern (toTupleName len) ps
+makeFunctionDeclaration v [(ps, e)] =
+    ExpressionDeclaration (VariablePattern v) (LambdaExpression ps e)
+makeFunctionDeclaration v alts =
+    FunctionDeclaration v alts
 
-toTuplesE _ [e] = e
-toTuplesE len es =
-    FunctionApplication (ConstructorExpression (toTupleName len)) es
-
-toTupleName len =
-    fromText ("Tuple" <> intToText len)
+groupBindsStep (FunctionDeclaration id1 [(ps, e)]) (Right (id2, xs):rest) | id1 == id2 =
+    Right (id1, (ps, e):xs):rest
+groupBindsStep (FunctionDeclaration id1 alts) acc =
+    Right (id1, alts):acc
+groupBindsStep other acc =
+    Left other:acc

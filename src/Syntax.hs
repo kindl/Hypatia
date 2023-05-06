@@ -91,7 +91,7 @@ data Declaration
     | TypeSignature Binding Type
     | ExpressionDeclaration Pattern Expression
     -- simplified to an expression declaration
-    | FunctionDeclaration Binding [Pattern] Expression
+    | FunctionDeclaration Binding [([Pattern], Expression)]
         deriving (Show, Data, Typeable)
 
 
@@ -362,6 +362,8 @@ bind2 f a b = do
 shadowingError v1 v2 =
     Left (renderError v1 <> " shadows " <> renderError v2)
 
+curryLambda ps e =
+    foldr (\p -> LambdaExpression [p]) e ps
 
 intToDouble :: Int -> Double
 intToDouble = fromIntegral

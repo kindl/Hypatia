@@ -160,27 +160,38 @@ inferDecls gen =
 -- A version of onException that works with ReaderT
 onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
 
+inferDecl gen (FunctionDeclaration v alts) next = do
+    env <- getEnv
+    ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
+    let binds' = fromList [(v, ty)]
+    let exprs = fmap (uncurry curryLambda) alts
+    traverse_ (\e -> typecheckDecl binds' (VariablePattern v) e ty) exprs
+    typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p@(VariablePattern v) e) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
-    typecheckDecl gen [(v, ty)] p e ty next
+    let binds' = fromList [(v, ty)]
+    typecheckDecl binds' p e ty
+    typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do
     ty <- newTyVar
     binds <- typecheckPattern p ty
-    typecheckDecl gen binds p e ty next
+    let binds' = fromList binds
+    typecheckDecl binds' p e ty
+    typecheckNextWith gen binds' next
 inferDecl _ _ next = next
 
-typecheckDecl gen binds p e ty next = do
-    let binds' = fromList binds
+typecheckDecl binds p e ty = do
     -- If an error occurs, show in which declaration it happened
-    onException' (with binds' (typecheck e ty))
+    onException' (with binds (typecheck e ty))
         (putStrLn ("When typechecking declaration " ++ renderError p))
 
+typecheckNextWith gen binds next = do
     -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
     -- NOTE if binds contain signatures then those are not generalized
     -- because they are already in the form forall x1 ... xn . t
     -- also in LetExpressions gen is just 'return' and does nothing
-    generalized <- traverse gen binds'
+    generalized <- traverse gen binds
 
     nextTys <- with generalized next
     return (mappend generalized nextTys)

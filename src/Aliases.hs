@@ -52,8 +52,8 @@ aliasOperatorsMod (ModuleDeclaration modName imports decls) =
         aliases = fromList [(op, alias) |
             FixityDeclaration _ _ op alias <- decls]
 
-        -- This requires that `FunctionDeclaration` have already been changed
-        -- to `ExpressionDeclaration`
+        k (FunctionDeclaration op alts) | isOperator op =
+            fmap (\al -> FunctionDeclaration al alts) (findEither op aliases)
         k (ExpressionDeclaration (VariablePattern op) e) | isOperator op =
             fmap (\al -> ExpressionDeclaration (VariablePattern al) e) (findEither op aliases)
         k (TypeSignature op t) | isOperator op =

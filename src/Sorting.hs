@@ -60,12 +60,17 @@ getDepsE e =
         f _ cs = mconcat cs
     in para f e
 
-getDepsD (ExpressionDeclaration _ e) = getDepsE e
-getDepsD _ = mempty
+getDepsD (ExpressionDeclaration _ e) =
+    getDepsE e
+getDepsD (FunctionDeclaration _ alts) =
+    foldMap' (\(ps, e) -> Set.difference (getDepsE e) (foldMap' getDefsP ps)) alts
+getDepsD _ =
+    mempty
 
 getDefsP p = Set.fromList (getBindings p)
 
 -- Type signatures are not considered for sorting
 getDefsD (ExpressionDeclaration p _) = getDefsP p
+getDefsD (FunctionDeclaration v _) = Set.singleton v
 getDefsD (TypeDeclaration _ _ cs) = foldMap' (Set.singleton . fst) cs
 getDefsD _ = mempty

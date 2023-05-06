@@ -1,14 +1,15 @@
 module Viewer.Tests
 
-import Native((+), (-), (*), (^), (++), write, words, length)
-import Common.Base((==), boolToString, Tuple2)
+import Native((+), (-), (*), (^), (++), write, length)
+import Common.Base((==), boolToString)
+import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix, transpose, multiply)
 import Common.Array(inspect)
-import Viewer.Obj
+import Viewer.Obj as Obj
 
 
-testLoad = test "Viewer.Obj.load" (Viewer.Obj.load "cube.obj")
+testLoad = test "Viewer.Obj.load" (Obj.load "cube.obj")
 
 test name result = write (name ++ " " ++ inspect result)
 

@@ -4,7 +4,7 @@ import Native((++), (+), (-),
     True, Array, Text,
     textLength, toNumber, unsafeCoerce)
 import Common.Base((==), (!=), (>>),
-    Tuple2, Tuple3,
+    Tuple2,
     not_)
 import Common.Text(safeSubstring)
 import Common.Array(elem, flat)

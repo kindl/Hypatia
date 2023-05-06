@@ -1,7 +1,6 @@
 module Common.List
 
 import Native((+), (-), unsafeInsert)
-import Common.Base(Tuple2, Tuple3)
 
 
 type List a = Empty | Element a (List a)

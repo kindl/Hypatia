@@ -1,7 +1,6 @@
 module Common.Option
 
 import Native
-import Common.Base(Tuple2, Tuple3)
 
 type Option a = None | Some a
 

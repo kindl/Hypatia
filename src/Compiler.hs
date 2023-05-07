@@ -124,16 +124,16 @@ toJsS (Assign x e) =
 toJsS (Ret e) =
     text "return" <+> toJsE e <> semi
 toJsS (If e th []) = vcat [
-    text "if" <> parens (toJsE e) <+> text "{",
+    text "if" <+> parens (toJsE e) <+> text "{",
     indent 4 (vcatMap toJsS th),
     text "}"]
 -- This shortcut exists for pattern matches in let expressions
 toJsS (If e [] th) = vcat [
-    text "if" <> parens (text "!" <> parens (toJsE e)) <+> text "{",
+    text "if" <+> parens (text "!" <> parens (toJsE e)) <+> text "{",
     indent 4 (vcatMap toJsS th),
     text "}"]
 toJsS (If e th el) = vcat [
-    text "if" <> parens (toJsE e) <+> text "{",
+    text "if" <+> parens (toJsE e) <+> text "{",
     indent 4 (vcatMap toJsS th),
     text "}" <+> text "else" <+> text "{",
     indent 4 (vcatMap toJsS el),

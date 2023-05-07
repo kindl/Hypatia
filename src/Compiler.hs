@@ -69,6 +69,11 @@ toLuaS (If e [] th) = vcat [
     text "if not" <+> parens (toLuaE e) <+> text "then",
     indent 4 (vcatMap toLuaS th),
     text "end"]
+-- Render elseif
+toLuaS (If e th [s@(If _ _ _)]) = vcat [
+    text "if" <+> toLuaE e <+> text "then",
+    indent 4 (vcatMap toLuaS th),
+    text "else" <> toLuaS s]
 toLuaS (If e th el) = vcat [
     text "if" <+> toLuaE e <+> text "then",
     indent 4 (vcatMap toLuaS th),
@@ -132,6 +137,11 @@ toJsS (If e [] th) = vcat [
     text "if" <+> parens (text "!" <> parens (toJsE e)) <+> text "{",
     indent 4 (vcatMap toJsS th),
     text "}"]
+-- Render else if
+toJsS (If e th [s@(If _ _ _)]) = vcat [
+    text "if" <+> parens (toJsE e) <+> text "{",
+    indent 4 (vcatMap toJsS th),
+    text "}" <+> text "else" <+> toJsS s]
 toJsS (If e th el) = vcat [
     text "if" <+> parens (toJsE e) <+> text "{",
     indent 4 (vcatMap toJsS th),

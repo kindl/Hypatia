@@ -4,7 +4,8 @@ import Native((++), (+),
     isArray, unsafeCoerce, toString,
     unsafeInsert, unsafeIndex, length, True, False)
 import Common.Option(Some, None, unsafeFromOption)
-import Common.Base((==), (<), (>), Tuple2, identity)
+import Common.Base((==), (<), (>), (>=), (&&),
+    Tuple2, identity)
 
 
 filterWithIndex p a = foldlWithIndex (fun i z e ->
@@ -52,7 +53,10 @@ all p xs = foldl (\z e -> if p e then z else False) True xs
 
 elem x xs = any ((==) x) xs
 
-safeIndex i a = if length a < i then Some (unsafeIndex i a) else None
+safeIndex i a =
+    if i < length a && i >= 0
+        then Some (unsafeIndex i a)
+        else None
 
 intercalate _ [] = ""
 intercalate sep a = foldl1 (\x r -> x ++ sep ++ r) a

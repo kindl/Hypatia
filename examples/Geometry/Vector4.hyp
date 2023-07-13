@@ -18,6 +18,17 @@ add (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
 subtract (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
     Vector4 (x1 - x2) (y1 - y2) (z1 - z2) (w1 - w2)
 
+multiply (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
+    Vector4 (x1 * x2) (y1 * y2) (z1 * z2) (w1 * w2)
+
+cross (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2) =
+    let
+        w = w1 * w2
+        x = (y1 * z2 - z1 * y2) / w
+        y = (z1 * x2 - x1 * z2) / w
+        z = (x1 * y2 - y1 * x2) / w
+    in Vector4 x y z 1
+
 length v = sqrt (dot v v)
 
 normalize v = scale (1 / length v) v

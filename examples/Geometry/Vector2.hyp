@@ -18,6 +18,9 @@ add (Vector2 x1 y1) (Vector2 x2 y2) =
 subtract (Vector2 x1 y1) (Vector2 x2 y2) =
     Vector2 (x1 - x2) (y1 - y2)
 
+multiply (Vector2 x1 y1) (Vector2 x2 y2) =
+    Vector2 (x1 * x2) (y1 * y2)
+
 length v = sqrt (dot v v)
 
 normalize v = scale (1 / length v) v

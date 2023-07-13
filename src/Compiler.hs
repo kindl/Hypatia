@@ -251,7 +251,7 @@ compileD (ExpressionDeclaration (Wildcard w) e) =
 Compile pattern matches in let expressions like
 let
     Tuple2 a b = Tuple2 2 3
-in write (toString a)
+in print (toString a)
 -}
 compileD (ExpressionDeclaration p pe) =
     let

@@ -141,7 +141,7 @@ Native.False = false
 
 Native.sin = math.sin
 Native.cos = math.cos
-Native.write = print
+Native.print = print
 
 Native.toString = tostring
 

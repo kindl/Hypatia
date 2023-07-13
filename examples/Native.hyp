@@ -83,7 +83,7 @@ le : e -> e -> Bool
 ge : e -> e -> Bool
 
 # IO
-write : Text -> Void
+print : Text -> Void
 
 # Strings
 toString : a -> Text

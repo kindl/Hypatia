@@ -65,5 +65,5 @@ flat a = foldl (++) "" a
 
 // Useful for debugging
 inspect x = if isArray x
-    then "{" ++ intercalate ", " (unsafeCoerce x) ++ "}"
+    then "{" ++ intercalate ", " (map inspect (unsafeCoerce x)) ++ "}"
     else toString x

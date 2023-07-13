@@ -6,7 +6,7 @@ Native.eq = function (v1) {
     };
 };
 
-Native.times = function (v1) {
+Native.multiply = function (v1) {
     return function (v2) {
         return v1 * v2;
     };
@@ -75,7 +75,7 @@ Native.toString = function (x) {
     return x.toString();
 };
 
-Native.write = function (x) {
+Native.print = function (x) {
     console.log(x);
 };
 

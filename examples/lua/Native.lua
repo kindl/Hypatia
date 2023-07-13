@@ -32,7 +32,7 @@ function Native.ge(v1)
     end
 end
 
-function Native.times(v1)
+function Native.multiply(v1)
     return function(v2)
         return v1 * v2
     end

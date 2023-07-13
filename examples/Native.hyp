@@ -16,7 +16,7 @@ type Bool = True | False
 infixl 6 + plus
 infixl 6 - minus
 
-infixl 7 * times
+infixl 7 * multiply
 infixl 7 / divide
 infixl 7 % modulo
 

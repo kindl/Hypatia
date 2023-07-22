@@ -10,10 +10,10 @@ import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
 import Data.List(sortOn)
-import Control.Monad(when, unless, zipWithM, zipWithM_)
+import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend)
-import Data.Foldable(traverse_, foldMap')
+import Data.Foldable(traverse_, foldMap', foldl')
 import Control.Exception(onException)
 import Control.Applicative((<|>))
 
@@ -67,10 +67,10 @@ typecheck (Variable x) ty =
     typecheckVar x ty
 typecheck (ConstructorExpression c) ty =
     typecheckVar c ty
-typecheck (FunctionApplication e es) ty = do
-    vars <- traverse inferExpression es
-    let t = foldr TypeArrow ty vars
-    typecheck e t
+typecheck (FunctionApplication e1 e2) ty = do
+    alpha <- newTyVar
+    typecheck e1 (TypeArrow alpha ty)
+    typecheck e2 alpha
 typecheck (CaseExpression expr alts) ty = do
     patternTy <- newTyVar
     traverse_ (uncurry (typecheckAlt patternTy ty)) alts
@@ -104,7 +104,7 @@ typecheck (IfExpression condtition thenBranch elseBranch) ty = do
 typecheck (ArrayExpression es) ty = do
     elementTy <- newTyVar
     traverse_ (flip typecheck elementTy) es
-    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) [elementTy]) ty
+    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy) ty
 typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 
 typecheckVar x ty = do
@@ -132,7 +132,7 @@ Vec2 is a constructor and Vector a type constructor
 gatherConstructor (TypeDeclaration tyIdent vars constructors) = do
     vars' <- toSetUniqueM vars
     let resultTy = TypeConstructor tyIdent
-    let tyCon = makeTypeApplication resultTy (fmap TypeVariable vars)
+    let tyCon = foldl' TypeApplication resultTy (fmap TypeVariable vars)
     fmap fromList (traverse (traverse (constructorToType tyCon vars')) constructors)
 gatherConstructor _ = pure mempty
 
@@ -196,11 +196,6 @@ typecheckNextWith gen binds next = do
     nextTys <- with generalized next
     return (mappend generalized nextTys)
 
-inferExpression e = do
-    t <- newTyVar
-    typecheck e t
-    return t
-
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty = do
     return [(x, ty)]
@@ -230,7 +225,7 @@ typecheckPattern (ConstructorPattern c ps) ty = do
 typecheckPattern (ArrayPattern ps) ty = do
     elementTy <- newTyVar
     binds <- traverse (\p -> typecheckPattern p elementTy) ps
-    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) [elementTy]) ty
+    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy) ty
     return (mconcat binds)
 typecheckPattern other _ =
     fail ("Cannot typecheck pattern " ++ renderError other)
@@ -256,18 +251,10 @@ unify' ty s@(ForAll _ _) =
     fail ("Cannot unify:\n" ++ renderError ty ++ "\nand scheme\n" ++ renderError s)
 unify' (TypeVariable x) ty = unifyVar x ty
 unify' ty (TypeVariable x) = unifyVar x ty
-unify' (TypeApplication f1 es1) (TypeApplication f2 es2) = do
-    unify' f1 f2
-    when (length es1 /= length es2)
-        (fail ("Cannot unify:\nType " ++ renderError f1
-            ++ " was given wrong number of arguments\n"
-            ++ renderError es1
-            ++ "\nand\n"
-            ++ renderError es2))
-
+unify' (TypeApplication f1 e1) (TypeApplication f2 e2) = do
 -- After unifying f1 and f2 the substitution might have changed.
 -- Therefore, unify is used instead of unify'
-    zipWithM_ unify es1 es2
+    unify' f1 f2 *> unify e1 e2
 unify' (TypeArrow a1 b1) (TypeArrow a2 b2) =
     unify' a1 a2 *> unify b1 b2
 unify' a b =

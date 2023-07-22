@@ -4,6 +4,7 @@ module Parser where
 import Syntax
 import qualified Data.Text.IO as Text
 import Data.List(uncons)
+import Data.Foldable(foldl')
 import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
@@ -184,7 +185,7 @@ otype = do
         Nothing -> b)
 {-# INLINE otype #-}
 
-btype = liftA2 makeTypeApplication atype (many' atype)
+btype = liftA2 (foldl' TypeApplication) atype (many' atype)
 {-# INLINE btype #-}
 
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
@@ -286,7 +287,7 @@ caseExpression = do
     return (CaseExpression e als)
 {-# INLINE caseExpression #-}
 
-fexpr = liftA2 makeFunctionApplication aexpr (many' aexpr)
+fexpr = liftA2 (foldl' FunctionApplication) aexpr (many' aexpr)
 {-# INLINE fexpr #-}
 
 aexpr = variable <|> constructorExpression <|> literalExpression

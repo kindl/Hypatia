@@ -19,17 +19,6 @@ splitLambdas m =
         f e = e
     in transformBi f m
 
-mergeApplications m =
-    let
-        f (FunctionApplication (FunctionApplication e es1) es2) =
-            FunctionApplication e (es1 ++ es2)
-        f e = e
-
-        h (TypeApplication (TypeApplication t ts1) ts2) =
-            TypeApplication t (ts1 ++ ts2)
-        h t = t
-    in (transformBi f . transformBi h) m
-
 removeParens m = (transformBi f . transformBi g . transformBi h) m
   where
     f (ParenthesizedExpression e) = e

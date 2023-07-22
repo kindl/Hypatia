@@ -25,7 +25,7 @@ aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBi
 aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM h
   where
     f (PrefixNegation e) =
-        Right (FunctionApplication (Variable (fromText "Native.negate")) [e])
+        Right (FunctionApplication (Variable (fromText "Native.negate")) e)
     f (InfixOperator a op b) =
         fmap (\al -> makeOp al a b) (findEither op aliases)
     f (Variable x) | isOperator x =

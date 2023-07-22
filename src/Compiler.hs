@@ -5,7 +5,7 @@ import Syntax
 import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
-import Data.Foldable(foldMap', foldl')
+import Data.Foldable(foldMap')
 import qualified Data.HashSet as Set
 
 
@@ -181,10 +181,12 @@ compile m =
         imports = importedModules m
     in Mod (getName m) (Set.toList imports) compiledDecls
 
-compileE (Variable v) = Var v
-compileE (ConstructorExpression c) = Var c
-compileE (FunctionApplication f es) =
-    curryCalls (compileE f) (fmap compileE es)
+compileE (Variable v) =
+    Var v
+compileE (ConstructorExpression c) =
+    Var c
+compileE (FunctionApplication f e) =
+    Call (compileE f) [compileE e]
 compileE (LambdaExpression [VariablePattern v] e) =
     Func [toId v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
@@ -203,8 +205,6 @@ compileE e@(LetExpression _ _) =
 compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
-
-curryCalls = foldl' (\x y -> Call x [y])
 
 {-
 Compiles an expression in a statement context

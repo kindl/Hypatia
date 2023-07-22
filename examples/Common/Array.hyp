@@ -16,6 +16,8 @@ filter p a = foldl (fun z e -> if p e then unsafeInsert z e else z) [] a
 // Insert all elements into a fresh array
 copy a = foldl unsafeInsert [] a
 
+infixr 5 <> append
+
 // The first array is copied to avoid inserting the elements into a
 append a b = foldl unsafeInsert (copy a) b
 

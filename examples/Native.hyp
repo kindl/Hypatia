@@ -22,9 +22,6 @@ infixl 7 % modulo
 
 infixr 8 ^ power
 
-// combining arrays
-infixr 5 <> append
-
 // combining strings
 infixr 5 ++ concat
 

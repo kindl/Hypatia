@@ -1,17 +1,14 @@
 module Common.Array
 
 import Native((++), (+),
+    True, False,
     isArray, unsafeCoerce, toString,
-    unsafeInsert, unsafeIndex, length, True, False)
+    unsafeInsert, unsafeIndex, length,
+    error)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), (>), (>=), (&&),
     Tuple2, identity)
 
-
-filterWithIndex p a = foldlWithIndex (fun i z e ->
-    if p i e then unsafeInsert z e else z) [] a
-
-filter p a = foldl (fun z e -> if p e then unsafeInsert z e else z) [] a
 
 // Insert all elements into a fresh array
 copy a = foldl unsafeInsert [] a
@@ -25,17 +22,17 @@ append a b = foldl unsafeInsert (copy a) b
 prepend a b = foldl unsafeInsert [a] b
 
 
-map f a = foldl (fun z e -> unsafeInsert z (f e)) [] a
+map f a = foldl (\z e -> unsafeInsert z (f e)) [] a
 
-mapWithIndex f a = foldlWithIndex (fun i z e -> unsafeInsert z (f i e)) [] a
+mapWithIndex f a = foldlWithIndex (\i z e -> unsafeInsert z (f i e)) [] a
 
-foldMap f a = foldl (fun z e -> append z (f e)) [] a
+foldMap f a = foldl (\z e -> append z (f e)) [] a
 
-foldr f z xs = foldl (fun k x y -> k (f x y)) identity xs z
+foldr f z xs = foldl (\k x y -> k (f x y)) identity xs z
 
-foldMapWithIndex f a = foldlWithIndex (fun i z e -> append z (f i e)) [] a
+foldMapWithIndex f a = foldlWithIndex (\i z e -> append z (f i e)) [] a
 
-foldl f z a = foldlWithIndex (fun _ x y -> f x y) z a
+foldl f z a = foldlWithIndex (\_ x y -> f x y) z a
 
 foldlWithIndex f z a = foldlWithRangeAndIndex 0 (length a) f z a
 
@@ -43,7 +40,7 @@ foldlWithRangeAndIndex i maxN f z a =
     if i == maxN then z else
         foldlWithRangeAndIndex (i + 1) maxN f (f i z (unsafeIndex i a)) a
 
-foldl1 f a = unsafeFromOption (foldl (fun o y -> case o of
+foldl1 f a = unsafeFromOption (foldl (\o y -> case o of
         Some x -> Some (f x y)
         None -> Some y
     ) None a)
@@ -54,6 +51,11 @@ any p xs = foldl (\z e -> if p e then True else z) False xs
 all p xs = foldl (\z e -> if p e then z else False) True xs
 
 elem x xs = any ((==) x) xs
+
+filterWithIndex p a = foldlWithIndex (\i z e ->
+    if p i e then unsafeInsert z e else z) [] a
+
+filter p a = foldl (\z e -> if p e then unsafeInsert z e else z) [] a
 
 safeIndex i a =
     if i < length a && i >= 0

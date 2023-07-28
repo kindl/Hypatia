@@ -165,13 +165,13 @@ inferDecl gen (FunctionDeclaration v alts) next = do
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
     let binds' = fromList [(v, ty)]
     let exprs = fmap (uncurry curryLambda) alts
-    traverse_ (\e -> typecheckDecl binds' (VariablePattern v) e ty) exprs
+    traverse_ (\e -> typecheckDecl binds' v e ty) exprs
     typecheckNextWith gen binds' next
-inferDecl gen (ExpressionDeclaration p@(VariablePattern v) e) next = do
+inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
     let binds' = fromList [(v, ty)]
-    typecheckDecl binds' p e ty
+    typecheckDecl binds' v e ty
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do
     ty <- newTyVar
@@ -181,10 +181,14 @@ inferDecl gen (ExpressionDeclaration p e) next = do
     typecheckNextWith gen binds' next
 inferDecl _ _ next = next
 
-typecheckDecl binds p e ty = do
-    -- If an error occurs, show in which declaration it happened
-    onException' (with binds (typecheck e ty))
-        (putStrLn ("When typechecking declaration " ++ renderError p))
+typecheckDecl binds errInfo e ty = do
+    onException' (with binds (typecheck e ty)) (
+        let baseError = "When typechecking declaration " ++ renderError errInfo
+        in case e of
+            -- If an error occurs in a function declaration,
+            -- also show in which pattern it happened
+            LambdaExpression p _ -> putStrLn (baseError ++ "\n   specifically at " ++ renderError p)
+            _ -> putStrLn baseError)
 
 typecheckNextWith gen binds next = do
     -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1

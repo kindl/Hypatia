@@ -1,27 +1,74 @@
 module Geometry.Matrix
 
-import Native((+), (*), (/), (-), negate, sin, cos)
-import Common.Base(sqrt)
-import Geometry.Vector4(Vector4, dot, normalize)
+import Native((+), (*), (/), (-), sin, cos)
+import Geometry.Vector4(Vector4)
 
 
-type Matrix a = Matrix (Vector4 a) (Vector4 a) (Vector4 a) (Vector4 a)
+type Matrix a =
+    Matrix
+        a a a a
+        a a a a
+        a a a a
+        a a a a
 
-transform (Matrix a b c d) v =
-    Vector4 (dot a v) (dot b v) (dot c v) (dot d v)
 
-transpose (Matrix (Vector4 x1 x2 x3 x4) (Vector4 y1 y2 y3 y4)
-    (Vector4 z1 z2 z3 z4) (Vector4 w1 w2 w3 w4)) =
-        Matrix (Vector4 x1 y1 z1 w1) (Vector4 x2 y2 z2 w2)
-             (Vector4 x3 y3 z3 w3) (Vector4 x4 y4 z4 w4)
+transform
+    (Matrix a b c d e f g h i j k l m n o p)
+    (Vector4 x y z w) =
+        Vector4
+            (a * x + b * y + c * z + d * w)
+            (e * x + f * y + g * z + h * w)
+            (i * x + j * y + k * z + l * w)
+            (m * x + n * y + o * z + p * w)
 
-multiply (Matrix a b c d) m =
-    case transpose m of
-        Matrix e f g h -> Matrix
-            (Vector4 (dot a e) (dot a f) (dot a g) (dot a h))
-            (Vector4 (dot b e) (dot b f) (dot b g) (dot b h))
-            (Vector4 (dot c e) (dot c f) (dot c g) (dot c h))
-            (Vector4 (dot d e) (dot d f) (dot d g) (dot d h))
+transpose (Matrix a b c d e f g h i j k l m n o p) =
+    Matrix
+        a e i m
+        b f j n
+        c g k o
+        d h l p
+
+add
+    (Matrix a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1 l1 m1 n1 o1 p1)
+    (Matrix a2 b2 c2 d2 e2 f2 g2 h2 i2 j2 k2 l2 m2 n2 o2 p2) =
+        Matrix
+            (a1 + a2) (b1 + b2) (c1 + c2) (d1 + d2)
+            (e1 + e2) (f1 + f2) (g1 + g2) (h1 + h2)
+            (i1 + i2) (j1 + j2) (k1 + k2) (l1 + l2)
+            (m1 + m2) (n1 + n2) (o1 + o2) (p1 + p2)
+
+subtract
+    (Matrix a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1 l1 m1 n1 o1 p1)
+    (Matrix a2 b2 c2 d2 e2 f2 g2 h2 i2 j2 k2 l2 m2 n2 o2 p2) =
+        Matrix
+            (a1 - a2) (b1 - b2) (c1 - c2) (d1 - d2)
+            (e1 - e2) (f1 - f2) (g1 - g2) (h1 - h2)
+            (i1 - i2) (j1 - j2) (k1 - k2) (l1 - l2)
+            (m1 - m2) (n1 - n2) (o1 - o2) (p1 - p2)
+
+multiply
+    (Matrix a1 b1 c1 d1 e1 f1 g1 h1 i1 j1 k1 l1 m1 n1 o1 p1)
+    (Matrix a2 b2 c2 d2 e2 f2 g2 h2 i2 j2 k2 l2 m2 n2 o2 p2) =
+        Matrix
+            (a1 * a2 + b1 * e2 + c1 * i2 + d1 * m2)
+            (a1 * b2 + b1 * f2 + c1 * j2 + d1 * n2)
+            (a1 * c2 + b1 * g2 + c1 * k2 + d1 * o2)
+            (a1 * d2 + b1 * h2 + c1 * l2 + d1 * p2)
+            (e1 * a2 + f1 * e2 + g1 * i2 + h1 * m2)
+            (e1 * b2 + f1 * f2 + g1 * j2 + h1 * n2)
+            (e1 * c2 + f1 * g2 + g1 * k2 + h1 * o2)
+            (e1 * d2 + f1 * h2 + g1 * l2 + h1 * p2)
+            (i1 * a2 + j1 * e2 + k1 * i2 + l1 * m2)
+            (i1 * b2 + j1 * f2 + k1 * j2 + l1 * n2)
+            (i1 * c2 + j1 * g2 + k1 * k2 + l1 * o2)
+            (i1 * d2 + j1 * h2 + k1 * l2 + l1 * p2)
+            (m1 * a2 + n1 * e2 + o1 * i2 + p1 * m2)
+            (m1 * b2 + n1 * f2 + o1 * j2 + p1 * n2)
+            (m1 * c2 + n1 * g2 + o1 * k2 + p1 * o2)
+            (m1 * d2 + n1 * h2 + o1 * l2 + p1 * p2)
+
+toArray (Matrix a b c d e f g h i j k l m n o p) =
+    [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p]
 
 perspectiveMatrix top right near far =
     let
@@ -31,63 +78,61 @@ perspectiveMatrix top right near far =
         d = -(2 * far * near) / (far - near)
         e = -1
     in Matrix
-            (Vector4 a 0 0 0)
-            (Vector4 0 b 0 0)
-            (Vector4 0 0 c d)
-            (Vector4 0 0 e 0)
+        a 0 0 0
+        0 b 0 0
+        0 0 c d
+        0 0 e 0
 
 simpleProjectionMatrix c =
     let
         d = -1 / c
     in Matrix
-            (Vector4 1 0 0 0)
-            (Vector4 0 1 0 0)
-            (Vector4 0 0 1 0)
-            (Vector4 0 0 d 1)
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+        0 0 d 1
 
 scaleMatrix f =
     Matrix
-        (Vector4 f 0 0 0)
-        (Vector4 0 f 0 0)
-        (Vector4 0 0 f 0)
-        (Vector4 0 0 0 1)
+        f 0 0 0
+        0 f 0 0
+        0 0 f 0
+        0 0 0 1
 
 translateMatrix x y z =
     Matrix
-        (Vector4 1 0 0 x)
-        (Vector4 0 1 0 y)
-        (Vector4 0 0 1 z)
-        (Vector4 0 0 0 1)
+        1 0 0 x
+        0 1 0 y
+        0 0 1 z
+        0 0 0 1
 
 rotationX angle =
     let
         s = sin angle
         c = cos angle
-        x = -s
     in Matrix
-        (Vector4 1 0 0 0)
-        (Vector4 0 c x 0)
-        (Vector4 0 s c 0)
-        (Vector4 0 0 0 1)
+        1 0 0 0
+        0 c (-s) 0
+        0 s c 0
+        0 0 0 1
 
 rotationY angle =
     let
         s = sin angle
         c = cos angle
-        x = -s
     in Matrix
-        (Vector4 c 0 s 0)
-        (Vector4 0 1 0 0)
-        (Vector4 x 0 c 0)
-        (Vector4 0 0 0 1)
+        c 0 s 0
+        0 1 0 0
+        (-s) 0 c 0
+        0 0 0 1
 
 rotationZ angle =
     let
         s = sin angle
         c = cos angle
-        x = -s
     in Matrix
-        (Vector4 c x 0 0)
-        (Vector4 s c 0 0)
-        (Vector4 0 0 1 0)
-        (Vector4 0 0 0 1)
+        c (-s) 0 0
+        s c 0 0
+        0 0 1 0
+        0 0 0 1
+

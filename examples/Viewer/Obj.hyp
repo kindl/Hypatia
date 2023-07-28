@@ -41,14 +41,9 @@ getTextureCoordinates = foldMap toTextureCoordinate
 
 load filePath = map parseLine (lines (file filePath))
 
-// words splits a line at every space
-// However "v -1.0 -1.0 -1.0"
-// splits into ["v", "-1.0", "-1.0", "-1.0", ""]
-// because of an invisible \r at the end. Ouch!
-// Therefore the "" is filtered out
 parseLine line =
     let
-        splitted = filter ((!=) "") (words line)
+        splitted = words line
     in case unsafeIndex 0 splitted of
         "v" -> Vertex (readVector splitted)
         "vn" -> Normal (readVector splitted)

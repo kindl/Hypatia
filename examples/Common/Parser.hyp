@@ -117,7 +117,8 @@ split sep s =
     unsafeFromOption (parseTilEnd (sepBy (takeWhile ((!=) sep)) (text sep)) s)
 
 words s =
-    unsafeFromOption (parseTilEnd (sepBy (takeWhile (not_ >> isAnySpace)) (takeWhile1 isAnySpace)) s)
+    unsafeFromOption (parseTilEnd
+        (skipAnySpace *> sepBy (takeWhile1 (not_ >> isAnySpace)) (takeWhile1 isAnySpace) <* skipAnySpace) s)
 
 lines s = split "\n" s
 

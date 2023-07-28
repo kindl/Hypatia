@@ -1,7 +1,7 @@
 module Viewer.Tests
 
 import Native((+), (-), (*), (^), (++),
-    print, length)
+    print)
 import Common.Base((==), (&&), boolToString)
 import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
@@ -101,7 +101,7 @@ testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
-testWords = test "words should be 3" (length (words "Hello Little World!"))
+testWords = test "words should be true" (words " \nHello Little World! " == ["Hello", "Little", "World!"])
 
 testMultiplyAssoc =
     let

@@ -1,7 +1,5 @@
 module Viewer.Obj
 
-#A module for parsing obj files
-
 import Native(Array, Number, Text,
     toNumber, unsafeIndex)
 import Native.Love(file)
@@ -22,7 +20,7 @@ type ObjElement
     | TextureCoordinate (Vector4 Number)
     | Normal (Vector4 Number)
     | Face (Array VertexIndex)
-    | Comment (Array Text)
+    | Comment Text
 
 toFace (Face f) = [f]
 toFace _ = []
@@ -33,26 +31,30 @@ toVertex _ = []
 toNormal (Normal n) = [n]
 toNormal _ = []
 
+toTextureCoordinate (TextureCoordinate t) = [t]
+toTextureCoordinate _ = []
+
 getFaces = foldMap toFace
 getVertices = foldMap toVertex
 getNormals = foldMap toNormal
-
-# words splits a line at every space
-# However "v -1.0 -1.0 -1.0"
-# splits into ["v", "-1.0", "-1.0", "-1.0", ""]
-# because of an invisible \r at the end. Ouch!
-# Therefore the "" is filtered out
-parseLine s = matchLine (filter ((!=) "") (words s))
+getTextureCoordinates = foldMap toTextureCoordinate
 
 load filePath = map parseLine (lines (file filePath))
 
-matchLine es =
-    case unsafeIndex 0 es of
-        "v" -> Vertex (readVector es)
-        "vn" -> Normal (readVector es)
-        "vt" -> TextureCoordinate (readVector es)
-        "f" -> Face (map readVI (filter ((!=) "f") es))
-        v -> Comment [v]
+// words splits a line at every space
+// However "v -1.0 -1.0 -1.0"
+// splits into ["v", "-1.0", "-1.0", "-1.0", ""]
+// because of an invisible \r at the end. Ouch!
+// Therefore the "" is filtered out
+parseLine line =
+    let
+        splitted = filter ((!=) "") (words line)
+    in case unsafeIndex 0 splitted of
+        "v" -> Vertex (readVector splitted)
+        "vn" -> Normal (readVector splitted)
+        "vt" -> TextureCoordinate (readVector splitted)
+        "f" -> Face (map readVI (filter ((!=) "f") splitted))
+        _ -> Comment line
 
 readVector [_, v1, v2, v3, v4] =
     Vector4 (toNumber v1) (toNumber v2) (toNumber v3) (toNumber v4)

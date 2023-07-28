@@ -1,47 +1,50 @@
 module Viewer.Tests
 
-import Native((+), (-), (*), (^), (++), write, length)
-import Common.Base((==), boolToString)
+import Native((+), (-), (*), (^), (++),
+    print, length)
+import Common.Base((==), (&&), boolToString)
 import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
-import Geometry.Matrix(Matrix, transpose, multiply)
+import Geometry.Matrix(Matrix,
+    transpose, multiply, subtract,
+    rotationX, rotationY, rotationZ, rotationXYZ)
 import Common.Array(inspect)
 import Viewer.Obj as Obj
 
 
 testLoad = test "Viewer.Obj.load" (Obj.load "cube.obj")
 
-test name result = write (name ++ " " ++ inspect result)
+test name result = print (name ++ " " ++ inspect result)
 
 m1 = Matrix
-    (Vector4 2 3 5 7)
-    (Vector4 11 13 17 19)
-    (Vector4 23 29 31 37)
-    (Vector4 41 43 47 53)
+    2 3 5 7
+    11 13 17 19
+    23 29 31 37
+    41 43 47 53
 
 m2 = Matrix
-    (Vector4 59 61 67 71)
-    (Vector4 73 79 83 89)
-    (Vector4 97 101 103 107)
-    (Vector4 109 113 127 131)
+    59 61 67 71
+    73 79 83 89
+    97 101 103 107
+    109 113 127 131
 
 testTranspose =
-    let {
+    let
         m1t = Matrix
-            (Vector4 2 11 23 41)
-            (Vector4 3 13 29 43)
-            (Vector4 5 17 31 47)
-            (Vector4 7 19 37 53)
-    } in test "transpose" (boolToString (transpose m1 == m1t))
+            2 11 23 41
+            3 13 29 43
+            5 17 31 47
+            7 19 37 53
+    in test "transpose" (boolToString (transpose m1 == m1t))
 
 testMultiply =
-    let {
+    let
         m = Matrix
-            (Vector4 1585 1655 1787 1861)
-            (Vector4 5318 5562 5980 6246)
-            (Vector4 10514 11006 11840 12378)
-            (Vector4 15894 16634 17888 18710)
-    } in test "multiply" (boolToString (multiply m1 m2 == m))
+            1585 1655 1787 1861
+            5318 5562 5980 6246
+            10514 11006 11840 12378
+            15894 16634 17888 18710
+    in test "multiply" (boolToString (multiply m1 m2 == m))
 
 testDot =
     let
@@ -86,16 +89,34 @@ testNegate =
             _ -> "false"})
 
 testEq =
-    let {
+    let
         m = Matrix
-            (Vector4 2 3 5 7)
-            (Vector4 11 13 17 19)
-            (Vector4 23 29 31 37)
-            (Vector4 41 43 47 53)
-    } in test "eq" (boolToString (m1 == m))
+            2 3 5 7
+            11 13 17 19
+            23 29 31 37
+            41 43 47 53
+    in test "eq" (boolToString (m1 == m))
 
 testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
 testWords = test "words should be 3" (length (words "Hello Little World!"))
+
+testMultiplyAssoc =
+    let
+        x = 101
+        y = 151
+        z = 11
+        combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
+        combined2 = multiply (rotationX x) (multiply (rotationY y) (rotationZ z))
+    in test "matrix multiply all should be almost 0" (subtract combined1 combined2)
+
+testRotate =
+    let
+        x = 101
+        y = 151
+        z = 11
+        combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
+        combined2 = rotationXYZ x y z
+    in test "matrix rotate all should be almost 0" (subtract combined1 combined2)

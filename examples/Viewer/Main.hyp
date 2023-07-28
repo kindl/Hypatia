@@ -1,29 +1,28 @@
 module Viewer.Main
 
 import Native((/), (*), (+), (-),
-    uncurry2, uncurry5, Number, Array, unsafeIndex)
+    Number, Array,
+    uncurry2, uncurry5, unsafeIndex)
 import Native.Love(polygon)
-import Common.Base((>>), pi)
-import Viewer.Obj(getFaces, getVertices, getNormals, load,
-    VTNI, VNI, VTI, VI)
+import Common.Base((>>))
+import Viewer.Obj(VTNI, VNI, VTI, VI,
+    getFaces, getVertices, getNormals, load)
 import Viewer.Obj as Obj
 import Geometry.Vector2(Vector2, toArray)
 import Geometry.Vector4(Vector4, to2d, normalize)
 import Geometry.Matrix(Matrix,
     translateMatrix, scaleMatrix, simpleProjectionMatrix,
-    rotationZ, rotationY, rotationX,
-    multiply, transform)
+    rotationXYZ, multiply, transform)
 import Common.Array(map, foldMap)
-import Common.Stateful(Ref, unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
+import Common.Stateful(Ref,
+    unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 
 
-alias Points = Array (Array Number)
-alias Rotation = Matrix Number
 alias Scale = Number
 
-type GameState = MkGameState Points Rotation Scale
+type GameState = MkGameState Number Number Scale
 
-gameState = unsafeMakeRef (MkGameState [] (scaleMatrix 1) (screenHeight / 2))
+gameState = unsafeMakeRef (MkGameState 0 0 (screenHeight / 4))
 
 modifyState f = unsafeRun (modifyRef gameState f)
 
@@ -33,8 +32,10 @@ model = Obj.load "cube.obj"
 
 screenWidth = 800
 screenHeight = 600
-t = translateMatrix (screenWidth / 2) (screenHeight / 2) 0
-r = rotationZ pi
+
+speed = 5
+
+translation = translateMatrix (screenWidth / 2) (screenHeight / 2) 0
 
 projection = simpleProjectionMatrix 5000
 
@@ -56,33 +57,32 @@ transformPoint modelview rotation vector =
         rotated = transform rotation vector
         transformed = transform modelview rotated
         projected = transform projection transformed
-        divided = to2d projected
-    in divided
+    in to2d projected
 
 mousemoved = uncurry5 mousemovedC
 
-mousemovedC x y dx dy isTouch = modifyState (fun (MkGameState _ _ scale) ->
+mousemovedC x y dx dy isTouch = modifyState (\(MkGameState _ _ scale) ->
     let
-        rotY = rotationY (x / screenWidth * 5)
-        rotX = rotationX (y / screenHeight * 5)
-        rotation = multiply rotY rotX
-        points = map (foldMap toArray >> transformFace rotation scale) faces
-    in MkGameState points rotation scale)
+        rotY = x / screenWidth * speed
+        rotX = y / screenHeight * speed
+    in MkGameState rotX rotY scale)
 
 wheelmoved = uncurry2 wheelmovedC
 
-# y is either -1 or 1 depending on scroll direction
-wheelmovedC _ y = modifyState (fun (MkGameState _ rotation oldScale) ->
+// y is either -1 or 1 depending on scroll direction
+wheelmovedC _ y = modifyState (\(MkGameState rotX rotY oldScale) ->
     let
-        scale = oldScale + y * 5
-        points = map (foldMap toArray >> transformFace rotation scale) faces
-    in MkGameState points rotation scale)
+        scale = oldScale + y * speed
+    in MkGameState rotX rotY scale)
 
-transformFace rotation scale face =
+transformFace modelview rotation face =
+    map (transformPoint modelview rotation >> getPoint) face
+
+draw _ = onState (\(MkGameState rotX rotY scale) ->
     let
-        modelview = multiply t (multiply r (scaleMatrix scale))
-    in map (transformPoint modelview rotation >> getPoint) face
-
-draw _ = onState (fun (MkGameState ps _ _) -> map (polygon "line") ps)
+        rotation = rotationXYZ rotX rotY 0
+        modelview = multiply translation (scaleMatrix scale)
+        points = map (foldMap toArray >> transformFace modelview rotation) faces
+    in map (polygon "line") points)
 
 to2d (Vector4 x y _ w) = Vector2 (x / w) (y / w)

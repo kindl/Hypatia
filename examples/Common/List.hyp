@@ -24,7 +24,7 @@ foldr f z (Element x xs) = f x (foldr f z xs)
 foldl f z Empty = z
 foldl f z (Element x xs) = foldl f (f z x) xs
 
-foldMap f = foldl (fun z e -> append z (f e)) Empty
+foldMap f = foldl (\z e -> append z (f e)) Empty
 
 listToArray = foldl unsafeInsert []
 

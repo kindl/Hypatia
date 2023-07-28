@@ -75,7 +75,7 @@ perspectiveMatrix top right near far =
         a = near / right
         b = near / top
         c = -(far + near) / (far - near)
-        d = -(2 * far * near) / (far - near)
+        d = -2 * far * near / (far - near)
         e = -1
     in Matrix
         a 0 0 0
@@ -136,3 +136,16 @@ rotationZ angle =
         0 0 1 0
         0 0 0 1
 
+rotationXYZ angleX angleY angleZ =
+    let
+        sx = sin angleX
+        cx = cos angleX
+        sy = sin angleY
+        cy = cos angleY
+        sz = sin angleZ
+        cz = cos angleZ
+    in Matrix
+        (cy * cz) (-cy * sz) sy 0
+        (cx * sz + sx * sy * cz) (cx * cz - sx * sy * sz) (-sx * cy) 0
+        (sx * sz - cx * sy * cz) (sx * cz + cx * sy * sz) (cx * cy)  0
+        0 0 0 1

@@ -57,6 +57,10 @@ filterWithIndex p a = foldlWithIndex (\i z e ->
 
 filter p a = foldl (\z e -> if p e then unsafeInsert z e else z) [] a
 
+drop n a = filterWithIndex (\i _ -> i >= n) a
+
+take n a = filterWithIndex (\i _ -> i < n) a
+
 safeIndex i a =
     if i < length a && i >= 0
         then Some (unsafeIndex i a)

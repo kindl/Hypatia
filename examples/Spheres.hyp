@@ -48,8 +48,8 @@ addSphere spheres =
 load _ =
     let
         state = []
-        _ = repeatN (fun _ -> addSphere state) 10
-    in modifyState (fun _ -> state)
+        _ = repeatN (\_ -> addSphere state) 10
+    in modifyState (\_ -> state)
 
 update dt = modifyState (map (updateSphere dt))
 
@@ -82,4 +82,4 @@ hideSphere screenPos (s alias Sphere p v c r) =
         then Sphere p v c 0
         else s
 
-draw _ = modifyState (fun s -> let { _ = map drawSphere s } in s)
+draw _ = modifyState (\s -> let { _ = map drawSphere s } in s)

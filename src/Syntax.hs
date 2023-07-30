@@ -6,13 +6,13 @@ import Data.Word(Word64)
 import Data.Data(Data, Typeable)
 import Data.Text(Text)
 import qualified Data.Text as Text
-import Data.Char(isUpper, isSymbol)
+import Data.Char(isUpper, isSymbol, isPrint)
 import Data.Hashable(Hashable, hashWithSalt)
 import Data.HashMap.Strict(lookup, keys, foldrWithKey,
     filterWithKey, fromListWith, unionWith, keysSet)
 import qualified Data.HashSet as Set
 import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
-    parens, brackets, layoutPretty, defaultLayoutOptions)
+    dquotes, parens, brackets, layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text(renderStrict)
 import Data.Generics.Uniplate.Data(universe, universeBi)
 import Data.Foldable(foldMap', foldl')
@@ -245,8 +245,20 @@ prettyNumber d =
         then pretty (round d :: Int)
         else pretty d
 
--- `show` escapes and creates double quotes
-prettyEscaped = text . Text.pack  . show
+prettyEscaped = dquotes . text . Text.concatMap escape
+
+escape '\a' = "\\a"
+escape '\f' = "\\f"
+escape '\n' = "\\n"
+escape '\r' = "\\r"
+escape '\t' = "\\t"
+escape '\v' = "\\v"
+escape '\"' = "\\\""
+escape '\'' = "\\\'"
+escape '\\' = "\\\\"
+escape c = if isPrint c
+    then Text.singleton c
+    else Text.pack (show c)
 
 render d = renderStrict (layoutPretty defaultLayoutOptions d)
 

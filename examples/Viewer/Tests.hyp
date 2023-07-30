@@ -101,7 +101,12 @@ testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
 
-testWords = test "words should be true" (words " \nHello Little World! " == ["Hello", "Little", "World!"])
+testWords =
+    let
+        general = words " \nHello Little Wörld! " == ["Hello", "Little", "Wörld!"]
+        empty1 = words "" == []
+        empty2 = words " \n" == []
+    in test "words should be true" (general && empty1 && empty2)
 
 testMultiplyAssoc =
     let

@@ -99,14 +99,14 @@ scaleMatrix f =
         0 0 f 0
         0 0 0 1
 
-translateMatrix x y z =
+translationMatrix x y z =
     Matrix
         1 0 0 x
         0 1 0 y
         0 0 1 z
         0 0 0 1
 
-rotationX angle =
+rotationMatrixX angle =
     let
         s = sin angle
         c = cos angle
@@ -116,7 +116,7 @@ rotationX angle =
         0 s c 0
         0 0 0 1
 
-rotationY angle =
+rotationMatrixY angle =
     let
         s = sin angle
         c = cos angle
@@ -126,7 +126,7 @@ rotationY angle =
         (-s) 0 c 0
         0 0 0 1
 
-rotationZ angle =
+rotationMatrixZ angle =
     let
         s = sin angle
         c = cos angle
@@ -136,7 +136,7 @@ rotationZ angle =
         0 0 1 0
         0 0 0 1
 
-rotationXYZ angleX angleY angleZ =
+rotationMatrix angleX angleY angleZ =
     let
         sx = sin angleX
         cx = cos angleX

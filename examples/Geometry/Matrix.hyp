@@ -2,6 +2,8 @@ module Geometry.Matrix
 
 import Native((+), (*), (/), (-), sin, cos)
 import Geometry.Vector4(Vector4)
+import Geometry.Vector3(Vector3)
+import Geometry.Vector3 as Vector3
 
 
 type Matrix a =
@@ -148,4 +150,20 @@ rotationMatrix angleX angleY angleZ =
         (cy * cz) (-cy * sz) sy 0
         (cx * sz + sx * sy * cz) (cx * cz - sx * sy * sz) (-sx * cy) 0
         (sx * sz - cx * sy * cz) (sx * cz + cx * sy * sz) (cx * cy)  0
+        0 0 0 1
+
+lookAtMatrix eye at up =
+    let
+        forward = Vector3.normalize (Vector3.subtract at eye)
+        (right alias Vector3 a b c) = Vector3.normalize (Vector3.cross up forward)
+        (upward alias Vector3 e f g) = Vector3.cross forward right
+        (backward alias Vector3 i j k) = Vector3.scale -1 forward
+
+        d = -(Vector3.dot right eye)
+        h = -(Vector3.dot upward eye)
+        l = -(Vector3.dot forward eye)
+    in Matrix
+        a b c d
+        e f g h
+        i j k l
         0 0 0 1

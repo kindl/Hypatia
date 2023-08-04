@@ -258,7 +258,7 @@ compileD (ExpressionDeclaration p pe) =
         v = prefixedId builtinLocation "d"
         err = Ret (makeError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
-        withEarlyOut = makeIf (getConditions v [] p) assignments [err]
+        withEarlyOut = makeIf (getConditions v [] p) [] [err] <> assignments
     in Assign (fromId v) (compileE pe) : withEarlyOut
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []

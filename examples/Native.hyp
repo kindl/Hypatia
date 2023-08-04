@@ -41,9 +41,12 @@ negate : Number -> Number
 
 (%) : Number -> Number -> Number
 
+
 sin : Number -> Number
 
 cos : Number -> Number
+
+tan : Number -> Number
 
 
 # Primitive

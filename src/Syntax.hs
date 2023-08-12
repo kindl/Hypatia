@@ -106,12 +106,16 @@ data Type
     | SkolemConstant Id
         deriving (Show, Data, Typeable)
 
+data TagInfo =
+    TaggedRepresentation
+    | ArrayRepresentation
+        deriving (Show, Data, Typeable)
 
 data Pattern
     = VariablePattern Binding
     | LiteralPattern Literal
     | Wildcard Id
-    | ConstructorPattern Name [Pattern]
+    | ConstructorPattern TagInfo Name [Pattern]
     | ParenthesizedPattern Pattern
     | ArrayPattern [Pattern]
     | PatternInfixOperator Pattern Name Pattern
@@ -183,9 +187,9 @@ instance Pretty Pattern where
     pretty (VariablePattern v) = pretty v
     pretty (LiteralPattern l) = pretty l
     pretty (Wildcard _) = text "_"
-    pretty (ConstructorPattern name []) =
+    pretty (ConstructorPattern _ name []) =
         pretty name
-    pretty (ConstructorPattern name ps) =
+    pretty (ConstructorPattern _ name ps) =
         parens (pretty name
             <+> mintercalate (text " ") (fmap pretty ps))
     pretty (PatternInfixOperator a op b) =
@@ -331,7 +335,7 @@ makeOp op a b =
         else Variable op) [a, b]
 
 makeOpPat op a b =
-    ConstructorPattern op [a, b]
+    ConstructorPattern TaggedRepresentation op [a, b]
 
 makeOpTyp op a b =
     foldl' TypeApplication (TypeConstructor op) [a, b]

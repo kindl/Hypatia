@@ -14,7 +14,7 @@ aliasConstructors aliasTable = transformBiM f >=> transformBiM g >=> transformBi
         (findEither c aliasTable >>= toConstructor) <> Right e
     f e = Right e
 
-    g e@(ConstructorPattern c ps) =
+    g e@(ConstructorPattern _ c ps) =
         (findEither c aliasTable >>= toConstructorPattern ps) <> Right e
     g e = Right e
 
@@ -36,8 +36,8 @@ aliasOperators aliases = transformBiM f >=> transformBiM g >=> transformBiM h
 
     g (PatternInfixOperator a op b) =
         fmap (\al -> makeOpPat al a b) (findEither op aliases)
-    g (ConstructorPattern c ps) | isOperator c =
-        fmap (flip ConstructorPattern ps) (findEither c aliases)
+    g (ConstructorPattern info c ps) | isOperator c =
+        fmap (\op -> ConstructorPattern info op ps) (findEither c aliases)
     g p = Right p
 
     h (TypeInfixOperator a op b) =
@@ -86,6 +86,6 @@ toConstructor other =
     Left ("Cannot convert " ++ renderError other ++ " to a constructor")
 
 toConstructorPattern ps (TypeConstructor c) =
-    Right (ConstructorPattern c ps)
+    Right (ConstructorPattern TaggedRepresentation c ps)
 toConstructorPattern _ other =
     Left ("Cannot convert " ++ renderError other ++ " to pattern")

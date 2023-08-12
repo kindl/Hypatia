@@ -340,7 +340,7 @@ lpat = appliedConstructorPattern <|> apat
 appliedConstructorPattern = do
     c <- qcon
     ps <- many1' apat
-    return (ConstructorPattern c ps)
+    return (ConstructorPattern TaggedRepresentation c ps)
 {-# INLINE appliedConstructorPattern #-}
 
 apat = aliasPattern <|> wildcard <|> variablePattern
@@ -372,7 +372,7 @@ variablePattern = (VariablePattern . fromId) <$!> var
 
 constructorPattern = do
     c <- qcon
-    return (ConstructorPattern c [])
+    return (ConstructorPattern TaggedRepresentation c [])
 {-# INLINE constructorPattern #-}
 
 literalPattern = LiteralPattern <$!> literal

@@ -2,7 +2,7 @@ module Qualification where
 
 import Syntax
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, mapKeys, fromList)
+import Data.HashMap.Strict(lookup, mapKeys, fromList, lookupDefault)
 import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
 import Control.Applicative(liftA2, liftA3)
@@ -46,8 +46,8 @@ qualifyP quals pat =
             fmap VariablePattern (findName quals v)
         f (AliasPattern v p) =
             fmap (flip AliasPattern p) (findName quals v)
-        f (ConstructorPattern c ps) =
-            fmap (flip ConstructorPattern ps) (findName quals c)
+        f (ConstructorPattern info c ps) =
+            fmap (\q -> ConstructorPattern info q ps) (findName quals c)
         f (PatternInfixOperator p1 op p2) =
             fmap (\q -> PatternInfixOperator p1 q p2) (findName quals op)
         f p = Right p
@@ -152,8 +152,8 @@ changeQualifiedImports quals =
             InfixOperator ea (changeQualifier name quals) eb
         f e = e
 
-        g (ConstructorPattern c ps) =
-            ConstructorPattern (changeQualifier c quals) ps
+        g (ConstructorPattern info c ps) =
+            ConstructorPattern info (changeQualifier c quals) ps
         g (PatternInfixOperator p1 op p2) =
             PatternInfixOperator p1 (changeQualifier op quals) p2
         g p = p
@@ -173,3 +173,14 @@ changeQualifier n@(Name modNames identifier) quals =
     case lookup modNames quals of
         Nothing -> n
         Just renamedModNames -> Name renamedModNames identifier
+
+-- Tag info annotation for optimiziation
+annotateTagInfo tagInfos =
+    let
+        g (ConstructorPattern _ c ps) =
+            ConstructorPattern (lookupDefault TaggedRepresentation c tagInfos) c ps
+        g p = p
+    in transformBi g
+
+captureTagInfo (ModuleDeclaration _ _ decls) =
+    fromList [(c, ArrayRepresentation) | TypeDeclaration _ _ [(c, _)] <- decls]

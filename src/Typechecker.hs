@@ -211,7 +211,7 @@ typecheckPattern (Wildcard _) _ =
 typecheckPattern (LiteralPattern l) ty = do
     typecheckLiteral l ty
     return mempty
-typecheckPattern (ConstructorPattern c ps) ty = do
+typecheckPattern (ConstructorPattern _ c ps) ty = do
     env <- getEnv
     scheme <- mfind c env
     consTy <- instantiate scheme

@@ -17,7 +17,10 @@ import qualified Data.Text.IO as Text
 transformProgram ms = either fail return (transformations ms)
 
 -- The lowest function in this list is the first step of the transformations
-transformations = traverse sortDeclsMod
+transformations =
+    traverse sortDeclsMod
+    -- Annotations
+    <=< annotateTagInfoProgram
     -- Aliases
     <=< aliasConstructorsProgram
     <=< aliasOperatorsProgram
@@ -63,6 +66,9 @@ aliasOperatorsProgram =
 aliasConstructorsProgram =
     feedbackM (simpleActionA aliasConstructors filterNames (return . captureAliases))
 
+annotateTagInfoProgram =
+    feedbackM (simpleActionA (\env m -> return (annotateTagInfo env m)) filterNames (return . captureTagInfo))
+
 -- Run action with captured local env and imported envs
 -- but return only the local environment
 simpleActionA action filterEnvs capture envs m = do
@@ -81,6 +87,7 @@ feedbackM action mods = fmap fst (mapAccumM step mempty mods)
             (result, captured) <- action envs m
             return (result, insert (getName m) captured envs)
 
+-- TODO Remove with base-4.18
 mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
 
 filterIds imports envs =

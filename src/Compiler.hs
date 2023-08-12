@@ -231,8 +231,10 @@ compileL (Number n) = LitD n
 compileL (Text t) = LitT t
 
 -- Compile top level declarations
+compileTop (TypeDeclaration _ _ [c]) =
+    [compileConstructor ArrayRepresentation c]
 compileTop (TypeDeclaration _ _ cs) =
-    fmap compileConstructor cs
+    fmap (compileConstructor TaggedRepresentation) cs
 compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
 
@@ -264,12 +266,17 @@ compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
-compileConstructor (c, []) =
+compileConstructor _ (c, []) =
     Assign c (Func [] [])
-compileConstructor (c, variables) =
+compileConstructor ArrayRepresentation (c, [_]) =
+    Assign c (Var (fromText "Native.unsafeCoerce"))
+compileConstructor info (c, variables) =
     let
+        getTag ArrayRepresentation = []
+        getTag TaggedRepresentation = [c]
+
         parameters = nNewVars (length variables)
-        body = Arr (fmap Var (c:fmap fromId parameters))
+        body = Arr (fmap Var (getTag info ++ fmap fromId parameters))
     in Assign c (curryFunc parameters body)
 
 curryFunc vs sts = foldr (\v r -> Func [v] [Ret r]) sts vs
@@ -330,28 +337,47 @@ makeIf cs s elseBranch = [If (foldr1 And cs) s elseBranch]
 
 getConditions v i (AliasPattern _ p) =
     getConditions v i p
-getConditions v i (ConstructorPattern c []) =
+getConditions v i (ConstructorPattern _ c []) =
     [Eq (Access v i) (Var c)]
-getConditions v i (ConstructorPattern c ps) =
+-- Constructors with only one variable are not wrapped in an array
+getConditions v i (ConstructorPattern ArrayRepresentation _ [p]) =
+    getConditions v i p
+-- Compare as array for constructors without tag
+getConditions v i (ConstructorPattern ArrayRepresentation _ ps) =
+    getConditionsArray v i ps
+-- Compare as array and also the tag for constructors with tag
+getConditions v i (ConstructorPattern TaggedRepresentation c ps) =
     [makeIsArray (Access v i),
+    -- + 1 to account for length of tag
     Eq (makeLength (Access v i)) (LitI (length ps + 1)),
+    -- Compare tag
     Eq (Access v (i ++ [0])) (Var c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
-    [makeIsArray (Access v i),
-    Eq (makeLength (Access v i)) (LitI (length ps))]
-    ++ descendAccess (getConditions v) i 0 ps
+    getConditionsArray v i ps
 getConditions v i (LiteralPattern l) =
     [Eq (Access v i) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ renderError p)
 
+getConditionsArray v i ps =
+    [makeIsArray (Access v i),
+    Eq (makeLength (Access v i)) (LitI (length ps))]
+    ++ descendAccess (getConditions v) i 0 ps
+
 getAssignments v i (VariablePattern x) =
     [Assign x (Access v i)]
 getAssignments v i (AliasPattern x p) =
     Assign x (Access v i):getAssignments v i p
-getAssignments v i (ConstructorPattern _ ps) =
+-- Identity constructor
+getAssignments v i (ConstructorPattern ArrayRepresentation _ [p]) =
+    getAssignments v i p
+-- Untagged constructor
+getAssignments v i (ConstructorPattern ArrayRepresentation _ ps) =
+    descendAccess (getAssignments v) i 0 ps
+-- Tagged constructor
+getAssignments v i (ConstructorPattern TaggedRepresentation _ ps) =
     descendAccess (getAssignments v) i 1 ps
 getAssignments v i (ArrayPattern ps) =
     descendAccess (getAssignments v) i 0 ps

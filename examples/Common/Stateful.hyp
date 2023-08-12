@@ -1,62 +1,52 @@
 module Common.Stateful
 
-import Native(unsafeCoerce, unsafeSet, Array)
-import Common.Base(Unit, compose, flip)
+import Native(unsafeSet, Array)
+import Common.Base(Unit, compose, always)
 
 
-type Stateful s
+// Similar to purescript-effect a stateful computation
+// is modeled after a function of type Unit -> s
+type Stateful s = InternalStateful (Unit -> s)
 
-# Similar to purescript-effect the computation is modeled
-# after a function of type Unit -> s
-unsafeStateful : (Unit -> s) -> Stateful s
-unsafeStateful = unsafeCoerce
+unsafeStateful = InternalStateful
 
-unsafeRun : Stateful s -> s
-unsafeRun f = unsafeCoerce f Unit
+unsafeRun (InternalStateful f) = f Unit
 
-# Sequential composition
-# andThen f g = unsafeRun (f (unsafeRun g))
-# Would run the computation directly
-# The following version returns a function
-andThen f g = unsafeStateful (fun _ ->
+// Sequential composition
+// `andThen f g = unsafeRun (f (unsafeRun g))`
+// Would run the computation directly
+// The following version returns a function
+andThen f g = unsafeStateful (\_ ->
     unsafeRun (f (unsafeRun g)))
 
 bind m f = andThen f m
 
 map f = andThen (compose point f)
 
-# Usually called return, but renamed
-# because return is a reserved word in Lua
-point x = unsafeStateful (fun _ -> x)
+// Usually called return, but renamed
+// because return is a reserved word in Lua
+point x = unsafeStateful (\_ -> x)
 
-# Refs
-# Objects and arrays in JS, as well as tables in Lua are passed by reference,
-# meaning if different functions receive an object in JS
-# then both modify the same object.
-# Here, a Ref is a type constructor with one value
-# which is represented as the array [Mkref, t]
-# and will therefore be passed by reference.
-# (In purescript-refs references are JS objects.)
-type Ref t = MkRef t
+// Refs
+// Objects and arrays in JS, as well as tables in Lua are passed by reference,
+// meaning if different functions receive an object in JS
+// then both modify the same object.
+// Here, a Ref is a type constructor with an array
+// that will be passed by reference.
+type Ref t = InternalRef (Array t)
 
-# The constructor MkRef should not be imported.
-# If necessary, import `unsafeMakeRef` instead.
-unsafeMakeRef x = MkRef x
+// The constructor InternalRef should not be imported.
+// If necessary, import `unsafeMakeRef` instead.
+unsafeMakeRef x = InternalRef [x]
 
-unsafeUnpackRef (MkRef x) = x
+unsafeUnpackRef (InternalRef [x]) = x
+
 
 newRef x = point (unsafeMakeRef x)
 
 readRef r = point (unsafeUnpackRef r)
 
-# Because the type constructor (Mkref t) is represented as the array [Mkref, t],
-# writing a reference means reinterpreting it as an array
-# and setting the inner value
-writeRef r x = unsafeStateful (fun _ ->
-    let
-        toArray : Ref t -> Array t
-        toArray = unsafeCoerce
-        _ = unsafeSet (toArray r) 1 x
-    in Unit)
+writeRef (InternalRef r) x = unsafeStateful (\_ ->
+    always Unit (unsafeSet r 0 x))
 
 modifyRef r f = writeRef r (f (unsafeUnpackRef r))

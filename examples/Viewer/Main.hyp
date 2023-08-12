@@ -22,9 +22,7 @@ gameState = unsafeMakeRef (Vector3 0 0 10)
 
 modifyState f = unsafeRun (modifyRef gameState f)
 
-onState f = f (unsafeUnpackRef gameState)
-
-model = Obj.load "cube.obj"
+model = Obj.load "assets/cube.obj"
 
 screenWidth = unsafeRun (getWidth)
 screenHeight = unsafeRun (getHeight)
@@ -68,8 +66,8 @@ mousemoved = uncurry5 mousemovedC
 
 mousemovedC x y dx dy isTouch = modifyState (\(Vector3 _ _ tr) ->
     let
-        rotY = x / screenWidth * speed
-        rotX = y / screenHeight * speed
+        rotX = x / screenWidth * speed
+        rotY = y / screenHeight * speed
     in Vector3 rotX rotY tr)
 
 wheelmoved = uncurry2 wheelmovedC
@@ -80,16 +78,17 @@ wheelmovedC _ y = modifyState (\(Vector3 rotX rotY oldTr) ->
         tr = oldTr + y * speed
     in Vector3 rotX rotY tr)
 
-draw _ = onState (\(Vector3 rotX rotY tr) ->
+draw _ =
     let
+        Vector3 rotX rotY tr = unsafeUnpackRef gameState
         translation = translationMatrix tr 0 0
-        rotation = rotationMatrix rotX rotY 0
+        rotation = rotationMatrix 0 rotY rotX
         scale = scaleMatrix 1
         modelMatrix = multiply translation (multiply scale rotation)
 
         viewMatrix = lookAtMatrix (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
 
         points = map (foldMap toArray >> transformFace modelMatrix viewMatrix) faces
-    in map (polygon "line") points)
+    in map (polygon "line") points
 
 to2d (Vector4 x y _ w) = Vector2 (x / w) (y / w)

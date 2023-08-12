@@ -13,7 +13,7 @@ import Common.Array(inspect)
 import Viewer.Obj as Obj
 
 
-testLoad = test "Viewer.Obj.load" (Obj.load "cube.obj")
+testLoad = test "Viewer.Obj.load" (Obj.load "assets/cube.obj")
 
 test name result = print (name ++ " " ++ inspect result)
 

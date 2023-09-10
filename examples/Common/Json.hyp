@@ -4,10 +4,10 @@ import Native(Number, Text, Array,
     (++), (+), (-),
     toString, Bool, True, False)
 import Common.Base(Tuple2)
-import Common.Parser((*>), (<*), (<|>), ($>),
+import Common.Parser((*>), (<*), (<|>),
     parse, parseTilEnd, token, text,
     string, double, array, skipAnySpace, toArray,
-    map2, map, sepBy)
+    map2, map, sepBy, point)
 import Common.Array(intercalate, foldl)
 import Common.Array as Array
 import Abstract.State(defer)
@@ -24,11 +24,11 @@ type JsonValue = JsonNumber Number
     | JsonNull
 
 
-pretty (JsonObject o) =
-    "{" ++ intercalate ", " (Array.map (\(Tuple2 k v) -> prettyString k ++ ": " ++ pretty v) o) ++ "}"
 pretty (JsonNumber n) = toString n
 pretty (JsonArray a) = "[" ++ intercalate ", " (Array.map pretty a) ++ "]"
 pretty (JsonString s) = prettyString s
+pretty (JsonObject o) =
+    "{" ++ intercalate ", " (Array.map (\(Tuple2 k v) -> prettyString k ++ ": " ++ pretty v) o) ++ "}"
 
 prettyString s = "\"" ++ escape s ++ "\""
 
@@ -49,5 +49,5 @@ value = defer (\_ ->
         map JsonObject (object (keyValuePair value)) <|> map JsonArray (array value))
     <|> map JsonString string
     <|> map JsonNumber double
-    <|> map JsonBool (token "true" $> True <|> token "false" $> False)
-    <|> token "null" $> JsonNull
+    <|> map JsonBool ((token "true" *> point True) <|> (token "false" *> point False))
+    <|> (token "null" *> point JsonNull)

@@ -2,7 +2,7 @@ module Common.Parser
 
 import Native((++), (+), (-),
     True, Array, Text,
-    textLength, toNumber, unsafeCoerce)
+    textLength, toNumber)
 import Common.Base((==), (!=), (>>),
     Tuple2,
     not_)
@@ -63,17 +63,6 @@ infixl 4 *> applySecond
 (*>) = Applicative.applySecond map2
 
 (<*) = Applicative.applyFirst map2
-
-
-infixl 4 <$> map
-
-infixl 4 <$ mapAlways
-
-infixl 4 $> reverseMapAlways
-
-(<$) = Functor.mapAlways map
-
-($>) = Functor.reverseMapAlways map
 
 
 parse p s = runStateT p (Tuple2 s 0)
@@ -143,10 +132,10 @@ array p = token "[" *> sepBy p (token ",") <* token "]"
 
 parens p = token "(" *> p <* token ")"
 
-escapeCharacter = (text "\\\\" $> "\\")
-    <|> (text "\\n" $> "\n")
-    <|> (text "\\r" $> "\r")
-    <|> (text "\\t" $> "\t")
+escapeCharacter = (text "\\\\" *> point "\\")
+    <|> (text "\\n" *> point "\n")
+    <|> (text "\\r" *> point "\r")
+    <|> (text "\\t" *> point "\t")
 
 string =
     token "\""

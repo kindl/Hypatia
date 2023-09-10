@@ -113,6 +113,7 @@ renderJs statements = render (toJsM statements)
 toJsM (Mod modName imports statements) = vcat [
     vcatMap toJsI imports,
     text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
+    hardline,
     vcatMap toJsS statements,
     text "module.exports" <+> equals <+> flatModName modName <> semi]
 
@@ -125,7 +126,7 @@ toJsS (Assign (Name [] (Id "_" _)) e) =
 toJsS (Assign (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
 toJsS (Assign x e) =
-    flatName x <+> equals <+> toJsE e <> semi
+    flatName x <+> equals <+> toJsE e <> semi <> hardline
 toJsS (Ret e) =
     text "return" <+> toJsE e <> semi
 toJsS (If e th []) = vcat [

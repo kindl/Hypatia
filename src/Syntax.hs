@@ -297,8 +297,11 @@ firstIs f = Text.foldr (const . f) False
 
 -- these are not symbols in unicode, but in the language
 -- otherwise e.g 2 - 2 would not be lexed as minus
-isSym x = isSymbol x || Text.elem x "!%&*/?@\\-:"
+isSym x = (isSymbol x && not (isExcludedSym x)) || Text.elem x "!%&*/?@\\-:"
 {-# INLINE isSym #-}
+
+isExcludedSym x = Text.elem x "$"
+{-# INLINE isExcludedSym #-}
 
 builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
@@ -339,6 +342,10 @@ makeOpPat op a b =
 
 makeOpTyp op a b =
     foldl' TypeApplication (TypeConstructor op) [a, b]
+
+makeInterpolatedString start expressions end =
+    let vars = ArrayExpression (start : expressions ++ [end])
+    in FunctionApplication (Variable (fromText "format")) vars
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]

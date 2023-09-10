@@ -6,15 +6,17 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
 import Prettyprinter(pretty)
-import Control.Applicative((<|>))
+import Control.Applicative((<|>), liftA2)
 import Data.Functor(($>))
 import Data.Char(isSpace, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
 -- NOTE strict combinators are used
 -- however <$!> instead of fmap would decrease performance
-import Data.Attoparsec.Text(char, satisfy, takeWhile, takeWhile1,
-    many', sepBy1', match, parse, endOfInput, parseOnly,
+import Data.Attoparsec.Combinator(many', many1', sepBy1', endOfInput)
+import Data.Attoparsec.Text(char, satisfy,
+    takeWhile, takeWhile1,
+    match, parse, parseOnly,
     hexadecimal, double)
 
 {-
@@ -143,12 +145,15 @@ extractLexeme (LocatedLexeme l _) = l
 prettyLocated (LocatedLexeme l p) =
     show l ++ " " ++ show (pretty p)
 
+data StringType = Regular | Start | Mid | End
+    deriving (Show, Eq)
+
 data Lexeme
     = Reserved Text
     | Whitespace Text
     | Double Double
     | Integer Int
-    | String Text
+    | String StringType Text
     | Varid [Text] Text
     | Varsym [Text] Text
     | Conid [Text] Text
@@ -170,16 +175,28 @@ located path lexemes = snd (mapAccumL (\startPosition (parsed, result) ->
     in (endPosition, locatedLexeme)) initialPosition lexemes)
 {-# INLINE located #-}
 
-program path = fmap (located path)
-    (many' (match (whitespace <|> lexeme)) <* endOfInput)
+program path = fmap (located path . concat)
+    (many' matchedLexeme <* endOfInput)
 
-lexeme = literal <|> special <|> qident
+-- matched is used to retrieve the parsed text for location info
+matchedLexeme = fmap return (match lexeme) <|> interpolatedMultilineString
+{-# INLINE matchedLexeme #-}
+
+lexeme = lexemeWithoutBrackets <|> brackets
 {-# INLINE lexeme #-}
+
+-- The distinction between with or without brackets
+-- is made to make parsing of format string easier
+lexemeWithoutBrackets = whitespace <|> literal <|> special <|> qident
+{-# INLINE lexemeWithoutBrackets #-}
 
 -- NOTE . was addded
 -- it is part of for example forall a. a
-special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
+special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`.")
 {-# INLINE special #-}
+
+brackets = fmap (Reserved . Text.singleton) (oneOf "{}")
+{-# INLINE brackets #-}
 
 -- TODO multi-line comments
 whitespace = whitechars <|> hashcomment <|> slashcomment
@@ -222,7 +239,7 @@ varsym = takeWhile1 isSym
 {-# INLINE varsym #-}
 
 {- Literal -}
-literal = number <|> hexdecimal <|> verbatim
+literal = number <|> hexdecimal <|> stringLiteral
 {-# INLINE literal #-}
 
 hexdecimal = fmap Integer
@@ -235,13 +252,39 @@ hexdecimal = fmap Integer
 number = fmap Double double
 {-# INLINE number #-}
 
-verbatim = fmap (String . Text.pack)
-    (char '"' *> many' (stringChar <|> escapeSeq) <* char '"')
-{-# INLINE verbatim #-}
+stringLiteral = fmap (String Regular)
+    (char '"' *> escapedCharSequence charPred escapeSeq <* char '"')
+{-# INLINE stringLiteral #-}
 
-stringChar = satisfy (\x -> x /='"' && x /= '\\')
-{-# INLINE stringChar #-}
+interpolatedStringPart l r pos = fmap (String pos)
+    (char l *> escapedCharSequence interpolatedCharPred interpolatedEscapeSeq <* char r)
+{-# INLINE interpolatedStringPart #-}
+
+escapedCharSequence p e =
+    fmap Text.concat (many' (takeWhile1 p <|> fmap Text.singleton e))
+{-# INLINE escapedCharSequence #-}
+
+-- TODO return regular string if there is no interpolation
+interpolatedMultilineString = do
+    start <- match (char '$' *> interpolatedStringPart '"' '{' Start)
+    mid <- alternating1 (many1' (match lexemeWithoutBrackets)) (fmap return (match (interpolatedStringPart '}' '{' Mid)))
+    end <- match (interpolatedStringPart '}' '"' End)
+    return (start : concat mid ++ [end])
+{-# INLINE interpolatedMultilineString #-}
+
+alternating1 a sep =
+    liftA2 (\x y -> x : concat y) a (many' (liftA2 (\x y -> [x, y]) sep a))
+{-# INLINE alternating1 #-}
+
+charPred x = x /='"' && x /= '\\'
+{-# INLINE charPred #-}
+
+interpolatedCharPred x = charPred x && x /= '{' && x /= '}'
+{-# INLINE interpolatedCharPred #-}
 
 escapeSeq = char '\\' *> (char '\\' <|> char '\"' <|>
     char 'n' $> '\n' <|> char 'r' $> '\r' <|> char 't' $> '\t')
 {-# INLINE escapeSeq #-}
+
+interpolatedEscapeSeq = escapeSeq <|> (char '\\' *> (char '{' <|> char '}'))
+{-# INLINE interpolatedEscapeSeq #-}

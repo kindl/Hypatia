@@ -9,7 +9,8 @@ import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
-import Lexer(Lexeme(..), lexlex, prettyLocated,
+import Lexer(Lexeme(..), StringType(..),
+    lexlex, prettyLocated, alternating1,
     extractLexeme, extractLocation)
 import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP, option)
 
@@ -22,9 +23,9 @@ parse path s = do
     case runStateT modDecl lexemes of
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
-        Just (_, rest:_) ->
-            Left ("Could not parse until end. Next lexeme is: "
-                ++ prettyLocated rest)
+        Just (_, rest) ->
+            Left ("Could not parse until end. Next lexemes are: "
+                <> renderError (fmap prettyLocated (take 10 rest)))
 {-# INLINE parse #-}
 
 parseFile path = do
@@ -292,6 +293,7 @@ fexpr = liftA2 (foldl' FunctionApplication) aexpr (many' aexpr)
 
 aexpr = variable <|> constructorExpression <|> literalExpression
     <|> parenthesizedExpression <|> listExpression
+    <|> interpolatedStringExpression
 {-# INLINE aexpr #-}
 
 variable = Variable <$!> qvar
@@ -310,6 +312,19 @@ parenthesizedExpression =
 listExpression =
     ArrayExpression <$!> bracketed (sepBy' expr (token ","))
 {-# INLINE listExpression #-}
+
+interpolatedStringExpression = do
+    start <- positionedStringExpr Start
+    expressions <- alternating1 expr (positionedStringExpr Mid)
+    end <- positionedStringExpr End
+    return (makeInterpolatedString start expressions end)
+{-# INLINE interpolatedStringExpression #-}
+
+positionedStringExpr pos = do
+    String p s <- nextLexeme
+    guard (p == pos)
+    return (LiteralExpression (Text s))
+{-# INLINE positionedStringExpr #-}
 
 alts = curlyBraces (sepBy' alt (token ";"))
 {-# INLINE alts #-}
@@ -478,7 +493,7 @@ integer = do
 {-# INLINE integer #-}
 
 string = do
-    String s <- nextLexeme
+    String Regular s <- nextLexeme
     return s
 {-# INLINE string #-}
 

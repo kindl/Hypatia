@@ -71,6 +71,8 @@ intercalate sep a = foldl1 (\x r -> x ++ sep ++ r) a
 
 flat a = foldl (++) "" a
 
+format = flat
+
 // Useful for debugging
 inspect x = if isArray x
     then "{" ++ intercalate ", " (map inspect (unsafeCoerce x)) ++ "}"

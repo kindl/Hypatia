@@ -8,7 +8,8 @@ type StateT s f a = StateT (s -> f (Tuple2 a s))
 
 runStateT (StateT f) = f
 
-ask innerPoint = StateT (\input -> innerPoint (Tuple2 input input))
+getEnv innerPoint =
+    StateT (\input -> innerPoint (Tuple2 input input))
 
 
 defer f =

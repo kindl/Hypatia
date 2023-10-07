@@ -8,10 +8,9 @@ type ReaderT r f a = ReaderT (r -> f a)
 
 runReaderT (ReaderT f) = f
 
-// Modifies the environment
-local f r = ReaderT (\input -> runReaderT r (f input))
+modifyEnv f r = ReaderT (\input -> runReaderT r (f input))
 
-ask innerPoint = ReaderT innerPoint
+getEnv innerPoint = ReaderT innerPoint
 
 
 defer f = ReaderT (\input -> runReaderT (f Unit) input)

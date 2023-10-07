@@ -151,9 +151,11 @@ Native.textLength = function(s)
 end
 
 Native.substring = function(s)
-    return function(i)
-        return function(j)
-            return utf8.char(utf8.codepoint(s, i + 1, j + 1))
+    return function(startIndex)
+        return function(endIndex)
+            local startOffset = utf8.offset(s, startIndex + 1)
+            local endOffset = utf8.offset(s, endIndex + 2) - 1
+            return string.sub(s, startOffset, endOffset)
         end
     end
 end

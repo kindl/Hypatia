@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable, OverloadedStrings #-}
 module Compiler where
 
 import Syntax
@@ -7,17 +7,20 @@ import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 import Data.Foldable(foldMap')
 import qualified Data.HashSet as Set
+import Data.Data(Data, Typeable)
+import Data.Generics.Uniplate.Data(universeBi, transformBi)
 
 
 type Import = Name
 
 data Mod = Mod Name [Import] [Statement]
+    deriving (Show, Typeable, Data)
 
 data Statement
     = Ret Expr
     | Assign Binding Expr
     | If Expr [Statement] [Statement]
-        deriving (Show)
+        deriving (Show, Typeable, Data)
 
 data Expr
     = Var Name
@@ -30,18 +33,28 @@ data Expr
     | Arr [Expr]
     | And Expr Expr
     | Eq Expr Expr
-        deriving (Show)
+        deriving (Show, Typeable, Data)
 
 
 -- Render simplified language as Lua
-renderLua statements = render (toLuaM statements)
+renderLua m = render (toLuaM (optimizeNames luaKeywords m))
 
-toLuaM (Mod modName imports statements) = vcat [
+toLuaM (Mod _ imports statements) = vcat [
     vcatMap toLuaI imports,
-    text "local" <+> flatModName modName <+> equals <+> text "{}",
     hardline,
-    vcatMap toLuaS statements,
-    text "return" <+> flatModName modName]
+    mintercalate (hardline <> hardline) (fmap toLuaS statements),
+    hardline,
+    text "return {",
+    indent 4 (mintercalate (text "," <> hardline) (fmap exports (getIdentifiers statements))),
+    text "}"
+    ]
+
+exports x = pretty x <+> text "=" <+> pretty x
+
+getIdentifiers statements =
+    [i | Assign (Name _ (Id i _)) _ <- statements, not (isWildcard i)]
+
+isWildcard i = i == "_"
 
 toLuaI modName =
     text "local" <+> flatModName modName <+> equals
@@ -50,14 +63,13 @@ toLuaI modName =
 -- local functions need to be declared beforehand for recursion
 -- `local fix = function(f) return f(fix(f)) end`
 -- would result in an error because `fix` is undefined
-toLuaS (Assign (Name [] x) e@(Func _ _)) = vcat [
-    text "local" <+> pretty x,
-    pretty x <+> equals <+> toLuaE e]
 toLuaS (Assign (Name [] x) e) =
-    text "local" <+> pretty x <+> equals <+> toLuaE e
--- Qualified names do not need "local"
-toLuaS (Assign x e) =
-    flatName x <+> equals <+> toLuaE e <> hardline
+    if elem x [ident | Name [] ident <- universeBi e]
+-- TODO better handling of recursive names so that we can do local x = function() ... directly
+        then vcat [text "local" <+> pretty x, pretty x <+> equals <+> toLuaE e]
+        else text "local" <+> pretty x <+> equals <+> toLuaE e
+toLuaS (Assign x _) =
+    error ("Unexpected qualified name " <> renderError x)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
 toLuaS (If e th []) = vcat [
@@ -108,14 +120,17 @@ toLuaPath modName = dquotes (flatModName modName)
 
 
 -- Render simplified language as Js
-renderJs statements = render (toJsM statements)
+renderJs m = render (toJsM (optimizeNames jsKeywords m))
 
-toJsM (Mod modName imports statements) = vcat [
+toJsM (Mod _ imports statements) = vcat [
     vcatMap toJsI imports,
-    text "const" <+> flatModName modName <+> equals <+> text "{}" <> semi,
     hardline,
-    vcatMap toJsS statements,
-    text "module.exports" <+> equals <+> flatModName modName <> semi]
+    mintercalate (hardline <> hardline) (fmap toJsS statements),
+    hardline,
+    text "module.exports = {",
+    indent 4 (mintercalate (text "," <> hardline) (fmap pretty (getIdentifiers statements))),
+    text "}"
+    ]
 
 toJsI modName =
     text "const" <+> flatModName modName <+> equals <+>
@@ -125,8 +140,8 @@ toJsS (Assign (Name [] (Id "_" _)) e) =
     toJsE e <> semi
 toJsS (Assign (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
-toJsS (Assign x e) =
-    flatName x <+> equals <+> toJsE e <> semi <> hardline
+toJsS (Assign x _) =
+    error ("Unexpected qualified name " <> renderError x)
 toJsS (Ret e) =
     text "return" <+> toJsE e <> semi
 toJsS (If e th []) = vcat [
@@ -154,6 +169,7 @@ toJsE (Var x) = flatName x
 toJsE (LitI i) = pretty i
 toJsE (LitD d) = prettyNumber d
 toJsE (LitT t) = prettyEscaped t
+toJsE (Func [] []) = text "function() {}"
 toJsE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
     indent 4 (vcatMap toJsS statements),
@@ -174,6 +190,38 @@ toJsE (Eq e1 e2) =
 -- js needs the leading dot for local modules
 toJsPath modName = dquotes ("./" <> flatModName modName)
 
+-- TODO handling of imported names:
+-- If they shadow a variable, use full qualified name, otherwise short name
+-- For example there is both, `Array.map` and `Reader.map` they become
+-- `Array_map` and `Reader_map` otherwise just map.
+optimizeNames keywords (Mod modName imports statements) =
+    let
+        optimizeName n@(Name qs ident) =
+            if qs == nameToList modName then Name [] ident else n
+    in Mod modName imports ((transformBi optimizeName . transformBi (renameKeywords keywords)) statements)
+
+renameKeywords keywords ident@(Id i loc) =
+    if elem i keywords then Id ("__" <> i) loc else ident
+
+allKeywords = jsKeywords ++ luaKeywords
+
+luaKeywords = [
+    "and", "break", "do", "else", "elseif",
+    "end", "false", "for", "function", "if",
+    "in", "local", "nil", "not", "or",
+    "repeat", "return", "then", "true", "until", "while"
+    ]
+
+jsKeywords = [
+    "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete",
+    "do", "else", "export", "extends", "false", "finally", "for", "function", "if",
+    "import", "in", "instanceof", "new", "null", "return", "super", "switch",
+    "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
+    "let", "static", "yield", "await",
+    "enum", "implements", "interface", "package", "private", "protected", "public",
+    -- These are not reserved words, but should not be overriden in strict mode
+    "eval", "arguments"
+    ]
 
 -- Compile to simplified language
 compile m =

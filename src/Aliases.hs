@@ -18,8 +18,9 @@ aliasConstructors aliasTable =
             findConstructorPattern ps c aliasTable <> Right e
         g e = Right e
 
+        -- TODO preserve location information
         h e@(TypeConstructor c) =
-            findTypeConstructor c aliasTable <> Right e
+            findEither c aliasTable <> Right e
         h e = Right e
     in transformBiM f >=> transformBiM g >=> transformBiM h
 
@@ -82,13 +83,12 @@ captureAliases (ModuleDeclaration _ _ decls) =
 captureOperatorAliases (ModuleDeclaration _ _ decls) =
     fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
+-- TODO allow parameters for constructors
+-- For example:
+-- `alias Empty = Element 0 []`
 findConstructor c aliasTable = do
     found <- findConstructorAlias c aliasTable
     return (ConstructorExpression found)
-
-findTypeConstructor c aliasTable = do
-    found <- findConstructorAlias c aliasTable
-    return (TypeConstructor found)
 
 findConstructorPattern ps c aliasTable = do
     found <- findConstructorAlias c aliasTable

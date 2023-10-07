@@ -1,9 +1,15 @@
 module Common.Text
 
-import Native(textLength, substring)
+import Native((+), textLength, substring, unsafeInsert)
 import Common.Base((||), (==))
 import Common.Option(None, Some)
 
 
 safeSubstring s i j = let { len = textLength s } in
     if len == i || len == j then None else Some (substring s i j)
+
+foldlWithRangeAndIndex i length f z t =
+    if i == length then z else
+        foldlWithRangeAndIndex (i + 1) length f (f i z (substring t i i)) t
+
+toArray t = foldlWithRangeAndIndex 0 (textLength t) (\_ acc e -> unsafeInsert acc e) [] t

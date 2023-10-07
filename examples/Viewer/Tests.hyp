@@ -11,6 +11,7 @@ import Geometry.Matrix(Matrix,
     rotationMatrixZ, rotationMatrix)
 import Common.Array(inspect)
 import Viewer.Obj as Obj
+import Common.Text as Text
 
 
 testLoad = test "Viewer.Obj.load" (Obj.load "assets/cube.obj")
@@ -101,6 +102,8 @@ testEq =
 testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
+
+testToArray = test "Text.toArray" (Text.toArray "Wörld!" == ["W", "ö", "r", "l", "d", "!"])
 
 testWords =
     let

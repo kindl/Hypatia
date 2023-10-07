@@ -4,9 +4,10 @@ import Native(Number, Text, Array,
     (++), (+), (-),
     toString, Bool, True, False)
 import Common.Base(Tuple2)
+import Common.Text(toArray)
 import Common.Parser((*>), (<*), (<|>),
     parse, parseTilEnd, token, text,
-    string, double, array, skipAnySpace, toArray,
+    string, double, array, skipAnySpace,
     map2, map, sepBy, point)
 import Common.Array(intercalate, foldl)
 import Common.Array as Array

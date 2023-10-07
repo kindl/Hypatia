@@ -6,7 +6,7 @@ import Native((++), (+), (-),
 import Common.Base((==), (!=), (>>),
     Tuple2,
     not_)
-import Common.Text(safeSubstring)
+import Common.Text(safeSubstring, toArray)
 import Common.Array(elem, flat)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Option as Option
@@ -98,10 +98,7 @@ satisfy p = StateT (fun (Tuple2 input position) ->
         None -> None
     )
 
-// Helpers for splitting strings into arrays
-toArray s =
-    unsafeFromOption (parseTilEnd (many (satisfy (\_ -> True))) s)
-
+// Helpers for splitting text
 split sep s =
     unsafeFromOption (parseTilEnd (sepBy (takeWhile ((!=) sep)) (text sep)) s)
 

@@ -5,7 +5,7 @@ import Native((++), (+), (-),
     textLength, toNumber)
 import Common.Base((==), (!=), (>>),
     Tuple2,
-    not_)
+    not)
 import Common.Text(safeSubstring, toArray)
 import Common.Array(elem, flat)
 import Common.Option(Some, None, unsafeFromOption)
@@ -104,7 +104,7 @@ split sep s =
 
 words s =
     unsafeFromOption (parseTilEnd
-        (skipAnySpace *> sepBy (takeWhile1 (not_ >> isAnySpace)) (takeWhile1 isAnySpace) <* skipAnySpace) s)
+        (skipAnySpace *> sepBy (takeWhile1 (not >> isAnySpace)) (takeWhile1 isAnySpace) <* skipAnySpace) s)
 
 lines s = split "\n" s
 

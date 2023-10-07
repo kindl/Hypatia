@@ -22,7 +22,7 @@ infix 4 >= greaterThanOrEqual
 
 equals l r = genComp eq l r
 
-notEquals a b = not_ (equals a b)
+notEquals a b = not (equals a b)
 
 lessThan l r = genComp lt l r
 
@@ -78,23 +78,20 @@ repeatN f n =
     if eq n 0 then Unit
         else let { _ = f Unit } in repeatN f (n - 1)
 
-// TODO build a keyword rename mechanism
-// not has to be appended with _ because `not` is a keyword in lua
-// and would result in a syntax error
-not_ True = False
-not_ False = True
+not True = False
+not False = True
 
 // TODO create lazy variants
-infixr 3 && and_
-infixr 2 || or_
+infixr 3 && and
+infixr 2 || or
 
-and_ : Bool -> Bool -> Bool
-and_ False _ = False
-and_ True a = a
+and : Bool -> Bool -> Bool
+and False _ = False
+and True a = a
 
-or_ : Bool -> Bool -> Bool
-or_ True _ = True
-or_ False a = a
+or : Bool -> Bool -> Bool
+or True _ = True
+or False a = a
 
 boolToString False = "False"
 boolToString True = "True"

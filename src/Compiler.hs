@@ -60,12 +60,14 @@ toLuaI modName =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
 
--- local functions need to be declared beforehand for recursion
--- `local fix = function(f) return f(fix(f)) end`
+-- local functions need a forward declaration for recursion
+-- Otherwise `local fix = function(f) return f(fix(f)) end`
 -- would result in an error because `fix` is undefined
+-- TODO decide if a forward declaration is necessary without looking
+-- at all names appearing in the function body. Maybe the result of
+-- sorting LetExpressions could be reused.
 toLuaS (Assign (Name [] x) e) =
     if elem x [ident | Name [] ident <- universeBi e]
--- TODO better handling of recursive names so that we can do local x = function() ... directly
         then vcat [text "local" <+> pretty x, pretty x <+> equals <+> toLuaE e]
         else text "local" <+> pretty x <+> equals <+> toLuaE e
 toLuaS (Assign x _) =
@@ -191,9 +193,9 @@ toJsE (Eq e1 e2) =
 toJsPath modName = dquotes ("./" <> flatModName modName)
 
 -- TODO handling of imported names:
--- If they shadow a variable, use full qualified name, otherwise short name
+-- If they shadow another name, use full qualified name, otherwise short name
 -- For example there is both, `Array.map` and `Reader.map` they become
--- `Array_map` and `Reader_map` otherwise just map.
+-- `Array_map` and `Reader_map` otherwise `Array.map` just becomes `map`.
 optimizeNames keywords (Mod modName imports statements) =
     let
         optimizeName n@(Name qs ident) =
@@ -202,8 +204,6 @@ optimizeNames keywords (Mod modName imports statements) =
 
 renameKeywords keywords ident@(Id i loc) =
     if elem i keywords then Id ("__" <> i) loc else ident
-
-allKeywords = jsKeywords ++ luaKeywords
 
 luaKeywords = [
     "and", "break", "do", "else", "elseif",

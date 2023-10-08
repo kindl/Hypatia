@@ -6,21 +6,27 @@ import Data.Generics.Uniplate.Data(transformBiM)
 import Data.HashMap.Strict(fromList)
 import Control.Monad((>=>))
 import Control.Applicative(liftA2)
-
+import Prelude hiding (lookup)
+import Data.HashMap.Strict(lookup)
 
 aliasConstructors aliasTable =
     let
         f e@(ConstructorExpression c) =
-            findConstructor c aliasTable <> Right e
+            case lookup c aliasTable of
+                Nothing -> Right e
+                Just found -> aliasToExpression c found
         f e = Right e
 
         g e@(ConstructorPattern _ c ps) =
-            findConstructorPattern ps c aliasTable <> Right e
+            case lookup c aliasTable of
+                Nothing -> Right e
+                Just found -> aliasToPattern c ps found
         g e = Right e
 
-        -- TODO preserve location information
         h e@(TypeConstructor c) =
-            findEither c aliasTable <> Right e
+            case lookup c aliasTable of
+                Nothing -> Right e
+                Just found -> aliasToType c found
         h e = Right e
     in transformBiM f >=> transformBiM g >=> transformBiM h
 
@@ -48,7 +54,6 @@ aliasOperators aliases =
             fmap TypeConstructor (findAlias c aliases)
         h t = Right t
     in transformBiM f >=> transformBiM g >=> transformBiM h
-
 
 aliasOperatorsMod (ModuleDeclaration modName imports decls) =
     let
@@ -83,24 +88,24 @@ captureAliases (ModuleDeclaration _ _ decls) =
 captureOperatorAliases (ModuleDeclaration _ _ decls) =
     fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
--- TODO allow parameters for constructors
--- For example:
--- `alias Empty = Element 0 []`
-findConstructor c aliasTable = do
-    found <- findConstructorAlias c aliasTable
-    return (ConstructorExpression found)
+-- TODO allow forall?
+aliasToType original (TypeApplication t1 t2) =
+    liftA2 TypeApplication (aliasToType original t1) (aliasToType original t2)
+aliasToType original (TypeConstructor c) =
+    Right (TypeConstructor (switchWithLocation original c))
+aliasToType _ other = Left ("Cannot convert " ++ renderError other ++ " to a type")
 
-findConstructorPattern ps c aliasTable = do
-    found <- findConstructorAlias c aliasTable
-    return (ConstructorPattern TaggedRepresentation found ps)
+aliasToExpression original (TypeApplication t1 t2) =
+    liftA2 FunctionApplication (aliasToExpression original t1) (aliasToExpression original t2)
+aliasToExpression original (TypeConstructor c) =
+    Right (ConstructorExpression (switchWithLocation original c))
+aliasToExpression _ other = Left ("Cannot convert " ++ renderError other ++ " to an expression")
 
-findConstructorAlias c aliasTable =  do
-    found <- findEither c aliasTable
-    tc <- unpackTypeConstructor found
-    return (switchWithLocation c tc)
-
-unpackTypeConstructor (TypeConstructor c) = Right c
-unpackTypeConstructor other = Left ("Cannot convert " ++ renderError other ++ " to a constructor")
+aliasToPattern original ps t = case typeApplicationToList t of
+    (TypeConstructor c:ts) -> do
+        patterns <- traverse (aliasToPattern original []) ts
+        return (ConstructorPattern TaggedRepresentation (switchWithLocation original c) (patterns ++ ps))
+    other -> Left ("Cannot convert " ++ renderError other ++ " to a pattern")
 
 -- finds alias e.g. eq for == but preserves location info
 findAlias name m = do

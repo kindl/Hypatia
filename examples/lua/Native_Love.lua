@@ -6,14 +6,6 @@ function Native_Love.polygon(mode)
     end
 end
 
-function Native_Love.draw(img)
-    return function(x)
-        return function(y)
-            love.graphics.draw(img, x, y)
-        end
-    end
-end
-
 function Native_Love.unsafeRandom(mini)
     return function(maxi)
         return love.math.random(mini, maxi)
@@ -47,11 +39,19 @@ Native_Love.newQuad = function(x)
     end
 end
 
-function Native_Love.drawImage(img)
+function Native_Love.drawImage(image)
+    return function(x)
+        return function(y)
+            love.graphics.draw(image, x, y)
+        end
+    end
+end
+
+function Native_Love.drawQuad(texture)
     return function(quad)
         return function(x)
             return function(y)
-                love.graphics.draw(img, quad, x, y)
+                love.graphics.draw(texture, quad, x, y)
             end
         end
     end
@@ -85,6 +85,44 @@ Native_Love.rectangle = function(f)
             end
         end
     end
+end
+
+Native_Love.newShader = function(t)
+    return love.graphics.newShader(t)
+end
+
+Native_Love.setShader = function(s)
+    return love.graphics.setShader(s)
+end
+
+Native_Love.resetShader = function()
+    return love.graphics.setShader()
+end
+
+Native_Love.setTexture = function(mesh)
+    return function(texture)
+        mesh:setTexture(texture)
+    end
+end
+
+Native_Love.sendShader = function(shader)
+    return function(key)
+        return function(value)
+            shader:send(key, value)
+        end
+    end
+end
+
+Native_Love.newMesh = function(format)
+    return function(vertices)
+        return function(mode)
+            return love.graphics.newMesh(format, vertices, mode)
+        end
+    end
+end
+
+Native_Love.drawMesh = function(mesh)
+    love.graphics.draw(mesh)
 end
 
 return Native_Love

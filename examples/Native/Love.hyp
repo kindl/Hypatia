@@ -2,37 +2,77 @@ module Native.Love
 
 import Native(Number, Array, Void, Text)
 import Common.Stateful(Stateful)
+import Common.Base(Tuple3)
 
-type Image
 
-type Quad
+alias Path = Text
 
-//     Path -> Content
-file : Text -> Text
+alias Mode = Text
+
+alias Width = Number
+
+alias Height = Number
+
+
+alias X = Number
+
+alias Y = Number
+
+alias Radius = Number
+
+
+file : Path -> Text
 
 unsafeRandom : Number -> Number -> Number
 
-getWidth : Stateful Number
+getWidth : Stateful Width
 
-getHeight : Stateful Number
+getHeight : Stateful Height
 
-// Drawing
-polygon : Text -> Array Number -> Void
-
+// Shapes
 setColor : Number -> Number -> Number -> Void
 
-circle : Text -> Number -> Number -> Number -> Void
+polygon : Mode -> Array Number -> Void
 
-rectangle : Text -> Number -> Number -> Number -> Number -> Void
+circle : Mode -> X -> Y -> Radius -> Void
+
+rectangle : Mode -> X -> Y -> Width -> Height -> Void
+
+// Images
+type Image
 
 newImage : Text -> Image
 
-imageWidth : Image -> Number
+imageWidth : Image -> Width
 
-imageHeight : Image -> Number
+imageHeight : Image -> Height
 
-// TODO switch to transform based?
-drawImage : Image -> Quad -> Number -> Number -> Void
+drawImage : Image -> X -> Y -> Void
 
-//        X       -> Y       -> Width   -> Height  -> Sw      -> Sh      -> Quad
-newQuad : Number -> Number -> Number -> Number -> Number -> Number -> Quad
+// Quads
+type Quad
+
+drawQuad : Image -> Quad -> X -> Y -> Void
+
+// The other width and height belong to the texture
+newQuad : X -> Y -> Width -> Height -> Width -> Height -> Quad
+
+// Shaders
+type Shader
+
+newShader : Text -> Shader
+
+setShader : Shader -> Void
+
+resetShader : Stateful Void
+
+setTexture : Mesh -> Image -> Void
+
+sendShader : Shader -> Text -> a -> Void
+
+// Meshes
+type Mesh
+
+newMesh : Array (Tuple3 Text Text Number) -> Array (Array Number) -> Mode -> Mesh
+
+drawMesh : Mesh -> Void

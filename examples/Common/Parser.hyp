@@ -133,6 +133,7 @@ escapeCharacter = (text "\\\\" *> point "\\")
     <|> (text "\\n" *> point "\n")
     <|> (text "\\r" *> point "\r")
     <|> (text "\\t" *> point "\t")
+    <|> (text "\\\"" *> point "\"")
 
 string =
     token "\""

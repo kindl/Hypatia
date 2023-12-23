@@ -1,6 +1,6 @@
 module Common.Array
 
-import Native((++), (+),
+import Native((++), (+), (-),
     True, False,
     isArray, unsafeCoerce, toString,
     unsafeInsert, unsafeIndex, length,
@@ -65,6 +65,8 @@ safeIndex i a =
     if i < length a && i >= 0
         then Some (unsafeIndex i a)
         else None
+
+nth n = unsafeIndex (n - 1)
 
 intercalate _ [] = ""
 intercalate sep a = foldl1 (\x r -> x ++ sep ++ r) a

@@ -14,7 +14,7 @@ import Geometry.Vector4(Vector4, to2d, normalize)
 import Geometry.Matrix(Matrix,
     translationMatrix, scaleMatrix, simpleProjectionMatrix,
     rotationMatrix, multiply, transform, lookAtMatrix)
-import Common.Array(map, foldMap)
+import Common.Array(map, foldMap, nth)
 import Common.Stateful(Ref,
     unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 
@@ -44,12 +44,10 @@ faces = getFaces model
 
 vertices = getVertices model
 
-getn n = unsafeIndex (n - 1)
-
-getPoint (VTNI v _ _) = getn v vertices
-getPoint (VNI v _) = getn v vertices
-getPoint (VTI v _) = getn v vertices
-getPoint (VI v) = getn v vertices
+getPoint (VTNI v _ _) = nth v vertices
+getPoint (VNI v _) = nth v vertices
+getPoint (VTI v _) = nth v vertices
+getPoint (VI v) = nth v vertices
 
 transformPoint modelMatrix viewMatrix vertex =
     let

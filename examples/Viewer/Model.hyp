@@ -1,5 +1,6 @@
 module Viewer.Model
 
+import Native
 import Common.Base(Tuple3)
 import Common.Array((<>), map, foldMap, nth)
 import Viewer.Obj(VI, VNI, VTNI, VTI,

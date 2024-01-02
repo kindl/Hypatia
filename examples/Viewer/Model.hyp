@@ -1,0 +1,58 @@
+module Viewer.Model
+
+import Common.Base(Tuple3)
+import Common.Array((<>), map, foldMap, nth)
+import Viewer.Obj(VI, VNI, VTNI, VTI,
+    getFaces, getNormals, getVertices, getTextureCoordinates)
+import Geometry.Vector4(Vector4)
+import Native.Love(Mesh,
+    setShader, resetShader, sendShader,
+    drawMesh, newMesh, setTexture)
+import Common.Stateful(unsafeRun)
+
+
+toArray3 (Vector4 x y z _) = [x, y, z]
+toArray2 (Vector4 x y _ _) = [x, y]
+
+objToVertexData obj =
+    let
+        faces = getFaces obj
+        normals = getNormals obj
+        vertices = getVertices obj
+        textureCoordinates = getTextureCoordinates obj
+
+        getPoint (VI vi) = toArray3 (nth vi vertices) <> [0, 0, 0, 0, 0]
+        getPoint (VTI vi vt) = toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> [0, 0, 0]
+        getPoint (VNI vi vn) = toArray3 (nth vi vertices) <> [0, 0] <> toArray3 (nth vn normals)
+        getPoint (VTNI vi vt vn) = toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> toArray3 (nth vn normals)
+
+    in foldMap (map getPoint) (foldMap triangulate faces)
+
+// TODO simple fan triangulation
+triangulate [a, b, c, d] = [[a, b, c], [a, c, d]]
+triangulate f = [f]
+
+// The format is necessary to have z for VertexPosition and VertexNormal
+vertexFormat =
+    [
+        Tuple3 "VertexPosition" "float" 3,
+        Tuple3 "VertexTexCoord" "float" 2,
+        Tuple3 "VertexNormal" "float" 3,
+        Tuple3 "VertexColor" "byte" 4
+    ]
+
+toTexturedMesh obj texture =
+    let
+        vertexData = objToVertexData obj
+        mesh = newMesh vertexFormat vertexData "triangles"
+        _ = setTexture mesh texture
+    in mesh
+
+drawModel modelMatrix viewMatrix projectionMatrix shader mesh =
+    let
+        _ = setShader shader
+        _ = sendShader shader "modelMatrix" modelMatrix
+        _ = sendShader shader "viewMatrix" viewMatrix
+        _ = sendShader shader "projectionMatrix" projectionMatrix
+        _ = drawMesh mesh
+    in unsafeRun resetShader

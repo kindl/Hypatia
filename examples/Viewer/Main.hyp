@@ -3,90 +3,97 @@ module Viewer.Main
 import Native((/), (*), (+), (-),
     Number, Array,
     uncurry2, uncurry5, unsafeIndex)
-import Native.Love(polygon, getWidth, getHeight)
+import Native.Love(polygon, getWidth, getHeight,
+    newImage, newShader, file)
 import Common.Base((>>))
 import Viewer.Obj(VTNI, VNI, VTI, VI,
     getFaces, getVertices, getNormals, load)
 import Viewer.Obj as Obj
 import Geometry.Vector2(Vector2, toArray)
 import Geometry.Vector3(Vector3)
-import Geometry.Vector4(Vector4, to2d, normalize)
-import Geometry.Matrix(Matrix,
-    translationMatrix, scaleMatrix, simpleProjectionMatrix,
-    rotationMatrix, multiply, transform, lookAtMatrix)
+import Geometry.Vector4(Vector4, normalize)
+import Geometry.Matrix as Matrix
+import Geometry.Matrix((@), Matrix,
+    simpleProjection, transform, lookAt)
 import Common.Array(map, foldMap, nth)
 import Common.Stateful(Ref,
     unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
+import Viewer.Model(toTexturedMesh, drawModel)
+
 
 gameState = unsafeMakeRef (Vector3 0 0 10)
 
 modifyState f = unsafeRun (modifyRef gameState f)
 
-model = Obj.load "assets/cube.obj"
 
-screenWidth = unsafeRun (getWidth)
-screenHeight = unsafeRun (getHeight)
+rotationSpeed = 0.01
 
-speed = 5
+scrollSpeed = 5
 
-screenMatrix =
-    Matrix
-        screenWidth 0 0 (screenWidth / 2)
-        0 screenHeight 0 (screenHeight / 2)
-        0 0 1 0
-        0 0 0 1
-
-projection = simpleProjectionMatrix 1
 
 lightDirection = normalize (Vector4 0 0 1 0)
 
-faces = getFaces model
 
-vertices = getVertices model
+// Assets
+pointData = objToPoints model
 
-getPoint (VTNI v _ _) = nth v vertices
-getPoint (VNI v _) = nth v vertices
-getPoint (VTI v _) = nth v vertices
-getPoint (VI v) = nth v vertices
+model = Obj.load "assets/cube.obj"
 
-transformPoint modelMatrix viewMatrix vertex =
+meshData = toTexturedMesh model (newImage "assets/texture.png")
+
+basicShader = newShader (file "assets/example.vert")
+
+
+objToPoints m =
     let
-        world = transform modelMatrix vertex
-        view = transform viewMatrix world
-        viewport = transform projection view
-        screen = transform screenMatrix viewport
-    in to2d screen
+        vertices = getVertices m
 
-transformFace modelMatrix viewMatrix face =
-    map (transformPoint modelMatrix viewMatrix >> getPoint) face
+        getPoint (VTNI v _ _) = nth v vertices
+        getPoint (VNI v _) = nth v vertices
+        getPoint (VTI v _) = nth v vertices
+        getPoint (VI v) = nth v vertices
+    in map (map getPoint) (getFaces m)
+
+
+drawWireframe viewportMatrix modelMatrix viewMatrix projectionMatrix points =
+    let
+        combinedMatrix = viewportMatrix @ projectionMatrix @ viewMatrix @ modelMatrix
+        transformPoint point = to2d (transform combinedMatrix point)
+        transformedPoints = map (foldMap transformPoint) points
+    in map (polygon "line") transformedPoints
 
 mousemoved = uncurry5 mousemovedC
 
-mousemovedC x y dx dy isTouch = modifyState (\(Vector3 _ _ tr) ->
+mousemovedC x y dx dy isTouch = modifyState (\(Vector3 _ _ translation) ->
     let
-        rotX = x / screenWidth * speed
-        rotY = y / screenHeight * speed
-    in Vector3 rotX rotY tr)
+        rotX = x * rotationSpeed
+        rotY = y * rotationSpeed
+    in Vector3 rotX rotY translation)
 
 wheelmoved = uncurry2 wheelmovedC
 
 // y is either -1 or 1 depending on scroll direction
-wheelmovedC _ y = modifyState (\(Vector3 rotX rotY oldTr) ->
+wheelmovedC _ y = modifyState (\(Vector3 rotX rotY oldTranslation) ->
     let
-        tr = oldTr + y * speed
-    in Vector3 rotX rotY tr)
+        translation = oldTranslation + y * scrollSpeed
+    in Vector3 rotX rotY translation)
 
 draw _ =
     let
         Vector3 rotX rotY tr = unsafeUnpackRef gameState
-        translation = translationMatrix tr 0 0
-        rotation = rotationMatrix 0 rotY rotX
-        scale = scaleMatrix 1
-        modelMatrix = multiply translation (multiply scale rotation)
+        translation = Matrix.translation tr 0 0
+        rotation = Matrix.rotation 0 rotY rotX
+        scale = Matrix.scale 1
+        
+        projectionMatrix = simpleProjection 1
+        modelMatrix = translation @ scale @ rotation
+        viewMatrix = lookAt (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
 
-        viewMatrix = lookAtMatrix (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
+        screenWidth = unsafeRun (getWidth)
+        screenHeight = unsafeRun (getHeight)
+        viewportMatrix = Matrix.viewport screenWidth screenHeight
 
-        points = map (foldMap toArray >> transformFace modelMatrix viewMatrix) faces
-    in map (polygon "line") points
+        _ = drawModel modelMatrix viewMatrix projectionMatrix basicShader meshData
+    in drawWireframe viewportMatrix modelMatrix viewMatrix projectionMatrix pointData
 
-to2d (Vector4 x y _ w) = Vector2 (x / w) (y / w)
+to2d (Vector4 x y _ w) = [(x / w), (y / w)]

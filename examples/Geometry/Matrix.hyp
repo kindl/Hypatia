@@ -6,6 +6,9 @@ import Geometry.Vector3(Vector3)
 import Geometry.Vector3 as Vector3
 
 
+infixl 7 @ multiply
+
+
 type Matrix a =
     Matrix
         a a a a
@@ -72,7 +75,9 @@ multiply
 toArray (Matrix a b c d e f g h i j k l m n o p) =
     [a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p]
 
-perspectiveMatrix top right near far =
+identity = scale 1
+
+perspective top right near far =
     let
         a = near / right
         b = near / top
@@ -85,7 +90,7 @@ perspectiveMatrix top right near far =
         0 0 c d
         0 0 e 0
 
-simpleProjectionMatrix c =
+simpleProjection c =
     let
         d = -1 / c
     in Matrix
@@ -94,21 +99,21 @@ simpleProjectionMatrix c =
         0 0 1 0
         0 0 d 1
 
-scaleMatrix f =
+scale f =
     Matrix
         f 0 0 0
         0 f 0 0
         0 0 f 0
         0 0 0 1
 
-translationMatrix x y z =
+translation x y z =
     Matrix
         1 0 0 x
         0 1 0 y
         0 0 1 z
         0 0 0 1
 
-rotationMatrixX angle =
+rotationX angle =
     let
         s = sin angle
         c = cos angle
@@ -118,7 +123,7 @@ rotationMatrixX angle =
         0 s c 0
         0 0 0 1
 
-rotationMatrixY angle =
+rotationY angle =
     let
         s = sin angle
         c = cos angle
@@ -128,7 +133,7 @@ rotationMatrixY angle =
         (-s) 0 c 0
         0 0 0 1
 
-rotationMatrixZ angle =
+rotationZ angle =
     let
         s = sin angle
         c = cos angle
@@ -138,7 +143,7 @@ rotationMatrixZ angle =
         0 0 1 0
         0 0 0 1
 
-rotationMatrix angleX angleY angleZ =
+rotation angleX angleY angleZ =
     let
         sx = sin angleX
         cx = cos angleX
@@ -152,7 +157,7 @@ rotationMatrix angleX angleY angleZ =
         (sx * sz - cx * sy * cz) (sx * cz + cx * sy * sz) (cx * cy)  0
         0 0 0 1
 
-lookAtMatrix eye at up =
+lookAt eye at up =
     let
         forward = Vector3.normalize (Vector3.subtract at eye)
         (right alias Vector3 a b c) = Vector3.normalize (Vector3.cross up forward)
@@ -166,4 +171,14 @@ lookAtMatrix eye at up =
         a b c d
         e f g h
         i j k l
+        0 0 0 1
+
+viewport width height =
+    let
+        depth = 1
+    in Matrix
+        (width / 2) 0 0 (width / 2)
+        // flipped y-axis
+        0 (-height / 2) 0 (height / 2)
+        0 0 (depth / 2) (depth / 2)
         0 0 0 1

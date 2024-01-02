@@ -7,8 +7,8 @@ import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix,
     transpose, multiply, subtract,
-    rotationMatrixX, rotationMatrixY,
-    rotationMatrixZ, rotationMatrix)
+    rotationX, rotationY,
+    rotationZ, rotation)
 import Common.Array(inspect)
 import Viewer.Obj as Obj
 import Common.Text as Text
@@ -117,8 +117,8 @@ testMultiplyAssoc =
         x = 101
         y = 151
         z = 11
-        combined1 = multiply (multiply (rotationMatrixX x) (rotationMatrixY y)) (rotationMatrixZ z)
-        combined2 = multiply (rotationMatrixX x) (multiply (rotationMatrixY y) (rotationMatrixZ z))
+        combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
+        combined2 = multiply (rotationX x) (multiply (rotationY y) (rotationZ z))
     in test "matrix multiply all should be almost 0" (subtract combined1 combined2)
 
 testRotate =
@@ -126,6 +126,6 @@ testRotate =
         x = 101
         y = 151
         z = 11
-        combined1 = multiply (multiply (rotationMatrixX x) (rotationMatrixY y)) (rotationMatrixZ z)
-        combined2 = rotationMatrix x y z
+        combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
+        combined2 = rotation x y z
     in test "matrix rotate all should be almost 0" (subtract combined1 combined2)

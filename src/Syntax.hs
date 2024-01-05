@@ -372,7 +372,7 @@ unionUnique m1 m2 = sequenceA (unionWith (bind2 shadowingError) (fmap Right m1) 
 
 fromListUnique l = sequenceA (fromListWith (bind2 shadowingError) (fmap ((,) <*> Right) l))
 
-toSetUniqueM l = either fail return (fmap keysSet (fromListUnique l))
+toSetUniqueM l = either fail (return . keysSet) (fromListUnique l)
 
 bind2 f a b = do
     a' <- a

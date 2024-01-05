@@ -84,14 +84,15 @@ index
     n (Element _ es) = index (n - 1) es
 ```
 -}
-removeFunctionDeclaration m = (transformBi f) (k m)
-  where
-    f (LetExpression decls e) =
-        LetExpression (groupBinds decls) e
-    f e = e
+removeFunctionDeclaration m =
+    let
+        f (LetExpression decls e) =
+            LetExpression (groupBinds decls) e
+        f e = e
 
-    k (ModuleDeclaration name imports decls) =
-        ModuleDeclaration name imports (groupBinds decls)
+        k (ModuleDeclaration name imports decls) =
+            ModuleDeclaration name imports (groupBinds decls)
+    in transformBi f (k m)
 
 groupBinds decls =
     let

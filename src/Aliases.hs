@@ -3,11 +3,11 @@ module Aliases where
 
 import Syntax
 import Data.Generics.Uniplate.Data(transformBiM)
-import Data.HashMap.Strict(fromList)
+import Data.HashMap.Strict(fromList, lookup)
 import Control.Monad((>=>))
 import Control.Applicative(liftA2)
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup)
+
 
 aliasConstructors aliasTable =
     let

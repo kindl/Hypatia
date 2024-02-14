@@ -28,7 +28,7 @@ infixr 3 <|> alternative
     case runStateT p1 s of
         None -> runStateT p2 s
         r -> r
-        )
+    )
 
 many = Alternative.many point map2 alternative State.defer
 
@@ -129,13 +129,6 @@ spaceArray = toArray " \t\n\r"
 isAnySpace c = elem c spaceArray
 
 
-token t = skipAnySpace *> text t
-
-
-array p = token "[" *> sepBy p (token ",") <* token "]"
-
-parens p = token "(" *> p <* token ")"
-
 escapeCharacter = (text "\\\\" *> point "\\")
     <|> (text "\\n" *> point "\n")
     <|> (text "\\r" *> point "\r")
@@ -143,9 +136,8 @@ escapeCharacter = (text "\\\\" *> point "\\")
     <|> (text "\\\"" *> point "\"")
 
 string =
-    token "\""
-    *> map flat (many (escapeCharacter <|> satisfy ((!=) "\"")))
-    // This uses text on purpose to not consume any spaces before a double quote
+    text "\""
+    *> map flat (many (escapeCharacter <|> takeWhile1 ((!=) "\"")))
     <* text "\""
 
 double = map4 (\x y z u -> toNumber (x ++ y ++ z ++ u))

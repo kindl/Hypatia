@@ -6,15 +6,15 @@ import Native(Number, Text, Array,
 import Common.Base(Tuple2)
 import Common.Text(toArray)
 import Common.Parser((*>), (<*), (<|>),
-    parse, parseTilEnd, token, text,
-    string, double, array, skipAnySpace,
+    parse, parseTilEnd, text,
+    string, double, skipAnySpace,
     map2, map, sepBy, point)
 import Common.Array(intercalate, foldl)
 import Common.Array as Array
 import Abstract.State(defer)
 
 
-parseJson s = parseTilEnd (value <* skipAnySpace) s
+parseJson s = parseTilEnd (skipAnySpace *> value <* skipAnySpace) s
 
 
 type JsonValue = JsonNumber Number
@@ -35,20 +35,26 @@ prettyString s = "\"" ++ escape s ++ "\""
 
 escape s = foldl (\acc c -> acc ++ (escapeSingle c)) "" (toArray s)
 
+array v =
+    text "[" *> skipAnySpace
+    *> sepBy (skipAnySpace *> v <* skipAnySpace) (text ",")
+    <* text "]"
+
 escapeSingle "\n" = "\\n"
 escapeSingle "\t" = "\\t"
 escapeSingle "\r" = "\\r"
 escapeSingle "\\" = "\\\\"
 escapeSingle c = c
 
-object kv = token "{" *> sepBy kv (token ",") <* token "}"
+object v = text "{" *> skipAnySpace *> sepBy (keyValuePair v) (text ",") <* text "}"
 
-keyValuePair v = map2 Tuple2 string (text ":" *> v)
+keyValuePair v =
+    map2 Tuple2 string (skipAnySpace *> text ":" *> skipAnySpace *> v <* skipAnySpace)
 
 // The defer is necessary, because value depends on itself
-value = defer (\_ ->
-        map JsonObject (object (keyValuePair value)) <|> map JsonArray (array value))
+value = map JsonObject (object (defer (\_ -> value)))
+    <|> map JsonArray (array (defer (\_ -> value)))
     <|> map JsonString string
     <|> map JsonNumber double
-    <|> map JsonBool ((token "true" *> point True) <|> (token "false" *> point False))
-    <|> (token "null" *> point JsonNull)
+    <|> map JsonBool ((text "true" *> point True) <|> (text "false" *> point False))
+    <|> (text "null" *> point JsonNull)

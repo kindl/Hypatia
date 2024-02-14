@@ -58,6 +58,9 @@ curlyBraces p = token "{" *> p <* token "}"
 bracketed p = token "[" *> p <* token "]"
 {-# INLINE bracketed #-}
 
+sepByTrailing p sep = option [] (sepBy1' p sep <* optional sep)
+{-# INLINE sepByTrailing #-}
+
 
 {- Module -}
 modDecl = do
@@ -75,7 +78,7 @@ impdecl = do
     return (ImportDeclaration name imps asAlias)
 {-# INLINE impdecl #-}
 
-impspec = parenthesized (sepBy' spec (token ","))
+impspec = parenthesized (sepByTrailing spec (token ","))
 {-# INLINE impspec #-}
 
 {- Declarations -}
@@ -292,7 +295,7 @@ fexpr = liftA2 (foldl' FunctionApplication) aexpr (many' aexpr)
 {-# INLINE fexpr #-}
 
 aexpr = variable <|> constructorExpression <|> literalExpression
-    <|> parenthesizedExpression <|> listExpression
+    <|> parenthesizedExpression <|> arrayExpression
     <|> interpolatedStringExpression
 {-# INLINE aexpr #-}
 
@@ -309,9 +312,9 @@ parenthesizedExpression =
     ParenthesizedExpression <$!> parenthesized expr
 {-# INLINE parenthesizedExpression #-}
 
-listExpression =
-    ArrayExpression <$!> bracketed (sepBy' expr (token ","))
-{-# INLINE listExpression #-}
+arrayExpression =
+    ArrayExpression <$!> bracketed (sepByTrailing expr (token ","))
+{-# INLINE arrayExpression #-}
 
 interpolatedStringExpression = do
     start <- positionedStringExpr Start
@@ -396,7 +399,7 @@ literalPattern = LiteralPattern <$!> literal
 parenthesizedPattern = ParenthesizedPattern <$!> parenthesized pat
 {-# INLINE parenthesizedPattern #-}
 
-arrayPattern = ArrayPattern <$!> bracketed (sepBy' pat (token ","))
+arrayPattern = ArrayPattern <$!> bracketed (sepByTrailing pat (token ","))
 {-# INLINE arrayPattern #-}
 
 {-

@@ -7,14 +7,13 @@ import Common.Base((==), (!=), (>>), (>=), (||),
     Tuple2, Tuple3,
     not)
 import Common.Text(toArray)
-import Common.Array(elem, flat)
+import Common.Array(elem, flat, prepend)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Option as Option
 import Abstract.State(StateT, runStateT)
 import Abstract.State as State
 import Abstract.Applicative as Applicative
 import Abstract.Functor as Functor
-import Abstract.Alternative as Alternative
 
 
 point = State.point Option.point
@@ -30,17 +29,18 @@ infixr 3 <|> alternative
         r -> r
     )
 
-many = Alternative.many point map2 alternative State.defer
+many p = option [] (many1 p)
 
-many1 = Alternative.many1 point map2 alternative State.defer
+-- TODO many1 is really slow and prepend as well
+many1 p = map2 prepend p (option [] (State.defer (\_ -> many1 p)))
 
-sepBy = Alternative.sepBy point map2 alternative State.defer
+sepBy p sep = option [] (sepBy1 p sep)
 
-sepBy1 = Alternative.sepBy1 point map2 alternative State.defer
+sepBy1 p sep = map2 prepend p (many (sep *> p))
 
-optional = Alternative.optional point map alternative
+option a p = p <|> point a
 
-option = Alternative.option point alternative
+optional p = map Some p <|> point None
 
 
 map = Applicative.map point map2

@@ -3,10 +3,10 @@ module Common.Parser
 import Native((++), (+), (-),
     True, Array, Text,
     textLength, toNumber, substring)
-import Common.Base((==), (!=), (>>),
-    Tuple2,
+import Common.Base((==), (!=), (>>), (>=), (||),
+    Tuple2, Tuple3,
     not)
-import Common.Text(safeSubstring, toArray)
+import Common.Text(toArray)
 import Common.Array(elem, flat)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Option as Option
@@ -64,45 +64,48 @@ infixl 4 *> applySecond
 (<*) = Applicative.applyFirst map2
 
 
-parse p s = runStateT p (Tuple2 s 0)
+parse p s = runStateT p (Tuple3 s 0 (textLength s))
 
 parseTilEnd p s = case parse p s of
-    Some (Tuple2 result (Tuple2 _ position)) ->
-        if position == textLength s
+    Some (Tuple2 result (Tuple3 _ position len)) ->
+        if position == len
             then Some result
             else None
     None -> None
 
 
 // Combinators
-text t = StateT (\(Tuple2 input position) ->
-    let { l = position + textLength t } in
-        case safeSubstring input position (l - 1) of
-            Some part -> if t == part
-                then Some (Tuple2 part (Tuple2 input l))
-                else None
-            None -> None
-        )
+text t = StateT (\(Tuple3 input position len) ->
+    let
+        partLength = position + textLength t - 1
+    in if position >= len || partLength >= len then None else
+        let
+            part = substring input position partLength
+        in (if t == part
+            then Some (Tuple2 part (Tuple3 input (partLength + 1) len))
+            else None)
+    )
 
 takeWhile pred = takeWhileAux (many (satisfy pred))
 
 takeWhile1 pred = takeWhileAux (many1 (satisfy pred))
 
-takeWhileAux p = StateT (\(Tuple2 input position) ->
-    case runStateT p (Tuple2 input position) of
-        Some (Tuple2 _ (Tuple2 _ newPosition)) ->
+takeWhileAux p = StateT (\(Tuple3 input position len) ->
+    case runStateT p (Tuple3 input position len) of
+        Some (Tuple2 _ (Tuple3 _ newPosition _)) ->
             let
                 part = substring input position (newPosition - 1)
-            in Some (Tuple2 part (Tuple2 input newPosition))
+            in Some (Tuple2 part (Tuple3 input newPosition len))
         None -> None
     )
 
-satisfy p = StateT (\(Tuple2 input position) ->
-    case safeSubstring input position position of
-        Some part -> if p part
-            then Some (Tuple2 part (Tuple2 input (position + 1)))
-            else None
-        None -> None
+satisfy p = StateT (\(Tuple3 input position len) ->
+    if position >= len then None else
+        let
+            part = substring input position position
+        in (if p part
+            then Some (Tuple2 part (Tuple3 input (position + 1) len))
+            else None)
     )
 
 // Helpers for splitting text

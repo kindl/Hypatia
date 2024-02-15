@@ -1,6 +1,6 @@
 module Native.Love
 
-import Native(Number, Array, Void, Text)
+import Native(Number, Array, Void, Text, Bool)
 import Common.Stateful(Stateful)
 import Common.Base(Tuple3)
 
@@ -76,3 +76,11 @@ type Mesh
 newMesh : Array (Tuple3 Text Text Number) -> Array (Array Number) -> Mode -> Mesh
 
 drawMesh : Mesh -> Void
+
+// Mouse
+captureMouse : Bool -> Void
+
+// Keyboard
+alias Key = Text
+
+isDown : Text -> Bool

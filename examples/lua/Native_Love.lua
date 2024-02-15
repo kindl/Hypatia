@@ -125,4 +125,8 @@ Native_Love.drawMesh = function(mesh)
     love.graphics.draw(mesh)
 end
 
+Native_Love.captureMouse = love.mouse.setRelativeMode
+
+Native_Love.isDown = love.keyboard.isDown
+
 return Native_Love

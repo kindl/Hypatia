@@ -160,6 +160,10 @@ rotation angleX angleY angleZ =
 lookAt eye at up =
     let
         forward = Vector3.normalize (Vector3.subtract at eye)
+    in look eye forward up
+
+look eye forward up =
+    let
         (right alias Vector3 a b c) = Vector3.normalize (Vector3.cross up forward)
         (upward alias Vector3 e f g) = Vector3.cross forward right
         (backward alias Vector3 i j k) = Vector3.scale -1 forward

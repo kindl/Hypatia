@@ -9,7 +9,7 @@ import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty, liftA2)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
-import Lexer(Lexeme(..), StringType(..),
+import Lexer(Lexeme(..),
     lexlex, prettyLocated, alternating1,
     extractLexeme, extractLocation)
 import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP, option)
@@ -317,15 +317,14 @@ arrayExpression =
 {-# INLINE arrayExpression #-}
 
 interpolatedStringExpression = do
-    start <- positionedStringExpr Start
-    expressions <- alternating1 expr (positionedStringExpr Mid)
-    end <- positionedStringExpr End
-    return (makeInterpolatedString start expressions end)
+    InterpolatedStringStart <- nextLexeme
+    expressions <- alternating1 positionedStringExpr expr
+    InterpolatedStringEnd <- nextLexeme
+    return (makeInterpolatedString expressions)
 {-# INLINE interpolatedStringExpression #-}
 
-positionedStringExpr pos = do
-    String p s <- nextLexeme
-    guard (p == pos)
+positionedStringExpr = do
+    InterpolatedStringMid s <- nextLexeme
     return (LiteralExpression (Text s))
 {-# INLINE positionedStringExpr #-}
 
@@ -496,7 +495,7 @@ integer = do
 {-# INLINE integer #-}
 
 string = do
-    String Regular s <- nextLexeme
+    String s <- nextLexeme
     return s
 {-# INLINE string #-}
 

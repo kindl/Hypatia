@@ -145,15 +145,15 @@ extractLexeme (LocatedLexeme l _) = l
 prettyLocated (LocatedLexeme l p) =
     show l ++ " " ++ show (pretty p)
 
-data StringType = Regular | Start | Mid | End
-    deriving (Show, Eq)
-
 data Lexeme
     = Reserved Text
     | Whitespace Text
     | Double Double
     | Integer Int
-    | String StringType Text
+    | String Text
+    | InterpolatedStringStart
+    | InterpolatedStringMid Text
+    | InterpolatedStringEnd
     | Varid [Text] Text
     | Varsym [Text] Text
     | Conid [Text] Text
@@ -179,7 +179,7 @@ program path = fmap (located path . concat)
     (many' matchedLexeme <* endOfInput)
 
 -- matched is used to retrieve the parsed text for location info
-matchedLexeme = fmap return (match lexeme) <|> interpolatedMultilineString
+matchedLexeme = fmap return (match lexeme) <|> interpolatedString
 {-# INLINE matchedLexeme #-}
 
 lexeme = lexemeWithoutBrackets <|> brackets
@@ -252,25 +252,29 @@ hexdecimal = fmap Integer
 number = fmap Double double
 {-# INLINE number #-}
 
-stringLiteral = fmap (String Regular)
-    (char '"' *> escapedCharSequence charPred escapeSeq <* char '"')
+stringLiteral =
+    fmap String (char '"' *> escapedCharSequence charPred escapeSeq <* char '"')
 {-# INLINE stringLiteral #-}
-
-interpolatedStringPart l r pos = fmap (String pos)
-    (char l *> escapedCharSequence interpolatedCharPred interpolatedEscapeSeq <* char r)
-{-# INLINE interpolatedStringPart #-}
 
 escapedCharSequence p e =
     fmap Text.concat (many' (takeWhile1 p <|> fmap Text.singleton e))
 {-# INLINE escapedCharSequence #-}
 
 -- TODO return regular string if there is no interpolation
-interpolatedMultilineString = do
-    start <- match (char '$' *> interpolatedStringPart '"' '{' Start)
-    mid <- alternating1 (many1' (match lexemeWithoutBrackets)) (fmap return (match (interpolatedStringPart '}' '{' Mid)))
-    end <- match (interpolatedStringPart '}' '"' End)
-    return (start : concat mid ++ [end])
-{-# INLINE interpolatedMultilineString #-}
+-- TODO better error handling and messages
+-- `$"{}"` and `$""` will return in a meaniningless "empty input".
+interpolatedString = do
+    start <- match (char '$' *> return InterpolatedStringStart)
+    startPart <- match (interpolatedStringPart '"' '{')
+    midParts <- alternating1 (many1' (match lexemeWithoutBrackets)) (fmap return (match (interpolatedStringPart '}' '{')))
+    endPart <- match (interpolatedStringPart '}' '"')
+    end <- match (return InterpolatedStringEnd)
+    return (start : startPart : concat midParts ++ [endPart, end])
+{-# INLINE interpolatedString #-}
+
+interpolatedStringPart s e =
+    fmap InterpolatedStringMid (char s *> escapedCharSequence interpolatedCharPred interpolatedEscapeSeq <* char e)
+{-# INLINE interpolatedStringPart #-}
 
 alternating1 a sep =
     liftA2 (\x y -> x : concat y) a (many' (liftA2 (\x y -> [x, y]) sep a))

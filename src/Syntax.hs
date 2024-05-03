@@ -343,9 +343,14 @@ makeOpPat op a b =
 makeOpTyp op a b =
     foldl' TypeApplication (TypeConstructor op) [a, b]
 
-makeInterpolatedString start expressions end =
-    let vars = ArrayExpression (start : expressions ++ [end])
-    in FunctionApplication (Variable (fromText "format")) vars
+-- Turns an interpolated string in the form $"{x} {y}" into a call
+-- format ["", toString x, " ", toString y, ""]
+makeInterpolatedString expressions =
+    FunctionApplication (Variable (fromText "format")) (ArrayExpression (fmap makeInterpolatedStringPart expressions))
+
+makeInterpolatedStringPart (LiteralExpression (Text l)) = LiteralExpression (Text l)
+makeInterpolatedStringPart e = FunctionApplication (Variable (fromText "toString")) e
+
 
 arrowsToList (TypeArrow x xs) = x:arrowsToList xs
 arrowsToList x = [x]

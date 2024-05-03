@@ -129,4 +129,8 @@ Native_Love.captureMouse = love.mouse.setRelativeMode
 
 Native_Love.isDown = love.keyboard.isDown
 
+Native_Love.print = function(text)
+    love.graphics.print(text)
+end
+
 return Native_Love

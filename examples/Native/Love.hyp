@@ -49,6 +49,9 @@ imageHeight : Image -> Height
 
 drawImage : Image -> X -> Y -> Void
 
+// Text
+print : Text -> Void
+
 // Quads
 type Quad
 

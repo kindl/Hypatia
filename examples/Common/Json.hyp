@@ -24,7 +24,7 @@ type JsonValue = JsonNumber Number
     | JsonBool Bool
     | JsonNull
 
-
+pretty (JsonBool b) = toString b
 pretty (JsonNumber n) = toString n
 pretty (JsonArray a) = "[" ++ intercalate ", " (Array.map pretty a) ++ "]"
 pretty (JsonString s) = prettyString s
@@ -46,7 +46,10 @@ escapeSingle "\r" = "\\r"
 escapeSingle "\\" = "\\\\"
 escapeSingle c = c
 
-object v = text "{" *> skipAnySpace *> sepBy (keyValuePair v) (text ",") <* text "}"
+object v =
+    text "{" *> skipAnySpace
+    *> sepBy (skipAnySpace *> keyValuePair v) (text ",")
+    <* text "}"
 
 keyValuePair v =
     map2 Tuple2 string (skipAnySpace *> text ":" *> skipAnySpace *> v <* skipAnySpace)

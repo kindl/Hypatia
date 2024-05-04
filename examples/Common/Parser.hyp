@@ -2,12 +2,12 @@ module Common.Parser
 
 import Native((++), (+), (-),
     True, Array, Text,
-    textLength, toNumber, substring)
+    textLength, toNumber, substring, unsafeInsert)
 import Common.Base((==), (!=), (>>), (>=), (||),
     Tuple2, Tuple3,
     not)
 import Common.Text(toArray)
-import Common.Array(elem, flat, prepend)
+import Common.Array(elem, flat)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Option as Option
 import Abstract.State(StateT, runStateT)
@@ -29,14 +29,35 @@ infixr 3 <|> alternative
         r -> r
     )
 
+// Be careful when calling manyAux:
+// `many = manyAux []`
+// would reuse the same array for calls of `many`
+manyAux start p = StateT (\input ->
+    case runStateT p input of
+        None -> Some (Tuple2 start input)
+        Some (Tuple2 result nextInput) ->
+            runStateT (manyAux (unsafeInsert start result) p) nextInput
+    )
+
 many p = option [] (many1 p)
 
-// TODO many1 is really slow and prepend as well
-many1 p = map2 prepend p (option [] (State.defer (\_ -> many1 p)))
+many1 p = StateT (\input ->
+    case runStateT p input of
+        None -> None
+        Some (Tuple2 result nextInput) ->
+            runStateT (manyAux [result] p) nextInput
+    )
+
 
 sepBy p sep = option [] (sepBy1 p sep)
 
-sepBy1 p sep = map2 prepend p (many (sep *> p))
+sepBy1 p sep = StateT (\input ->
+    case runStateT p input of
+        None -> None
+        Some (Tuple2 result nextInput) ->
+            runStateT (manyAux [result] (sep *> p)) nextInput
+    )
+
 
 option a p = p <|> point a
 

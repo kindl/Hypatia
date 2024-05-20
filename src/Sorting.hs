@@ -2,18 +2,31 @@ module Sorting where
 
 import Syntax
 import Data.List(partition)
-import Data.Generics.Uniplate.Data(transformBiM, para)
+import Data.Generics.Uniplate.Data(para)
 import Data.Foldable(foldMap')
 import qualified Data.HashSet as Set
 
 
--- Sorting of declarations in let bindings and modules
+{-
+Sort declarations in modules, so that order of declarations does not matter.
+This is like a topological ordering, meaning declarations that other declarations depend on,
+will be moved to the beginning.
+
+This could also be enabled for let-expressions as follows:
+```
 sortDeclsMod (ModuleDeclaration modName imports decls) =
     let
         f (LetExpression ds e) =
             fmap (flip LetExpression e) (sortDecls ds)
         f e = Right e
     in transformBiM f =<< fmap (ModuleDeclaration modName imports) (sortDecls decls)
+```
+
+However, to keep let-expressions simple and predictable, this behaviour was disabled.
+-}
+
+sortDeclsMod (ModuleDeclaration modName imports decls) =
+    fmap (ModuleDeclaration modName imports) (sortDecls decls)
 
 sortDecls decls =
     let
@@ -39,13 +52,13 @@ resolve getDefs getDeps done rest =
             next <- resolve getDefs getDeps (doneDefs <> done) ys
             Right (xs <> next)
 
+-- Sort imported modules, so that modules that other modules depend on are compiled first
 sortModules =
     resolve (Set.singleton . getName) importedModules mempty
 
 
--- Gather variables used in an expression
--- The second argument of f contains
--- the dependencies of the child expressions
+-- Gather variables used in an expression.
+-- The second argument of f contains the dependencies of the child expressions
 getDepsE e =
     let
         f (Variable v) _ = Set.singleton v

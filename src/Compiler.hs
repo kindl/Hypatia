@@ -287,6 +287,9 @@ compileTop (TypeDeclaration _ _ cs) =
 compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
 
+-- Preserves variable names
+compileD (FunctionDeclaration x [(ps, e)]) =
+    [Assign x (compileE (curryLambda ps e))]
 compileD (FunctionDeclaration x alts) =
     let
         -- TODO transpose and merge matching variables

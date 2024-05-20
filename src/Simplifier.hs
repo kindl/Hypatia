@@ -9,11 +9,10 @@ import Data.Generics.Uniplate.Data(transformBi)
 -- to simpler equivalent expressions
 
 -- Note that the simplifications run right to left and the order matters.
--- For example removeFunctionDeclaration creates lambdas that are split in splitLambdas
 simplifications m =
-    (splitLambdas . removeAwaitDeclaration . removeFunctionDeclaration) m
+    (curryLambdas . removeAwaitDeclaration . mergeFunctionDeclarations) m
 
-splitLambdas m =
+curryLambdas m =
     let
         f (LambdaExpression ps e) = curryLambda ps e
         f e = e
@@ -37,7 +36,7 @@ Transform declarations with await into bind expressions
 f = let
         filePath = "Test"
         fileEnding = ".txt"
-        fileName = await readFile (filePath & fileEnding)
+        fileName = await readFile (filePath ++ fileEnding)
         content = await readFile fileName
     in printText content
 
@@ -46,7 +45,7 @@ is translated to
 f = let
         filePath = "Test"
         fileEnding ".txt"
-    in bind (readFile (filePath & fileEnding)) (fun fileName ->
+    in bind (readFile (filePath ++ fileEnding)) (fun fileName ->
         bind (readFile fileName) (fun content -> printText content))
 -}
 removeAwaitDeclaration m = transformBi f m
@@ -84,7 +83,7 @@ index
     n (Element _ es) = index (n - 1) es
 ```
 -}
-removeFunctionDeclaration m =
+mergeFunctionDeclarations m =
     let
         f (LetExpression decls e) =
             LetExpression (groupBinds decls) e
@@ -97,13 +96,8 @@ removeFunctionDeclaration m =
 groupBinds decls =
     let
         merged = foldr groupBindsStep [] decls
-        transformed = fmap (fmap (uncurry makeFunctionDeclaration)) merged
+        transformed = fmap (fmap (uncurry FunctionDeclaration)) merged
     in fmap (either id id) transformed
-
-makeFunctionDeclaration v [(ps, e)] =
-    ExpressionDeclaration (VariablePattern v) (LambdaExpression ps e)
-makeFunctionDeclaration v alts =
-    FunctionDeclaration v alts
 
 groupBindsStep (FunctionDeclaration id1 [(ps, e)]) (Right (id2, xs):rest) | id1 == id2 =
     Right (id1, (ps, e):xs):rest

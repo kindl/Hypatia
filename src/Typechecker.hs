@@ -138,16 +138,25 @@ gatherConstructor _ = pure mempty
 
 -- convert a constructor declaration to a type
 constructorToType tyCon vars tys =
-    scopeCheck (makeForAll vars (foldr TypeArrow tyCon tys))
+    let
+        constructorTy = makeForAll vars (foldr TypeArrow tyCon tys)
+        frees = freeVars constructorTy
+    in if null frees
+        then pure constructorTy
+        else fail ("Constructor type variables " ++ renderSetToError frees ++ " have no definition")
+
 
 -- fails type W = Wrapped (a -> a)
 -- works type W a = Wrapped (a -> a)
 -- works type W = Wrapped (forall a. a -> a)
-scopeCheck ty = if null (freeVars ty)
-    then pure ty
-    else fail ("Type variables " ++ renderSetToError (freeVars ty) ++ " have no definition")
 
 -- Typecheck Bindings
+gatherTypeSig (TypeSignature name ty@(ForAll _ _)) =
+    let frees = freeVars ty
+    in if null frees
+        then [(name, ty)]
+        else error ("Type signature " ++ renderError name ++
+            " has following variables " ++ renderSetToError frees ++ " without definition")
 gatherTypeSig (TypeSignature name ty) =
     [(name, makeForAll (freeVars ty) ty)]
 gatherTypeSig _ = mempty

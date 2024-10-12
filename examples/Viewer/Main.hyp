@@ -5,11 +5,10 @@ import Native((/), (*), (+), (-),
     uncurry2, uncurry5, unsafeIndex)
 import Native.Love(polygon, getWidth, getHeight,
     newImage, newShader, file)
-import Common.Base((>>))
+import Common.Base(Unit)
 import Viewer.Obj(VTNI, VNI, VTI, VI,
     getFaces, getVertices, getNormals, load)
 import Viewer.Obj as Obj
-import Geometry.Vector2(Vector2, toArray)
 import Geometry.Vector3(Vector3)
 import Geometry.Vector4(Vector4, normalize)
 import Geometry.Matrix as Matrix
@@ -94,6 +93,7 @@ draw _ =
         viewportMatrix = Matrix.viewport screenWidth screenHeight
 
         _ = drawModel modelMatrix viewMatrix projectionMatrix basicShader meshData
-    in drawWireframe viewportMatrix modelMatrix viewMatrix projectionMatrix pointData
+        _ = drawWireframe viewportMatrix modelMatrix viewMatrix projectionMatrix pointData
+    in Unit
 
 to2d (Vector4 x y _ w) = [(x / w), (y / w)]

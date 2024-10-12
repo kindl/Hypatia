@@ -237,8 +237,8 @@ renderSetToError p = show (text "Set.fromList" <+> prettyError (Set.toList p))
 prettyError p = pretty p <> " at " <> pretty (mergeLocationInfos (locationInfos p))
 
 mergeLocationInfos locations@(Location _ _ filePath:_) =
-    let positions = mconcat [[startPosition, endPosition] | Location startPosition endPosition _ <- locations] in
-        Location (minimum positions) (maximum positions) filePath
+    let positions = mconcat [[startPosition, endPosition] | Location startPosition endPosition _ <- locations]
+    in Location (minimum positions) (maximum positions) filePath
 mergeLocationInfos _ = builtinLocation
 
 text :: Text -> Doc a

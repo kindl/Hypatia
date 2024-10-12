@@ -11,6 +11,9 @@ import System.Environment(getArgs)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.HashSet as Set
+import System.FilePath(takeDirectory)
+import System.Directory(createDirectoryIfMissing, copyFile,
+    doesDirectoryExist, listDirectory, doesFileExist)
 
 
 main = do
@@ -21,13 +24,32 @@ main = do
         _ -> putStrLn "Usage: hypatia compile Module.hyp"
 
 compileProgram path abbreviation renderFun = do
-    program <- loadProgram (normalizePath path)
-    traverse_ (writeResult abbreviation renderFun) program
+    let baseDir = takeDirectory path
+    program <- loadProgram baseDir (normalizePath path)
+    let assetDir = baseDir ++ "/" ++ abbreviation
+    let buildDir = "build/" ++ abbreviation
+    copyDirectory assetDir buildDir
+    traverse_ (writeResult buildDir abbreviation renderFun) program
 
-loadProgram path = do
+copyDirectory srcDir dstDir = do
+    createDirectoryIfMissing True dstDir
+    contents <- listDirectory srcDir
+    traverse_ (copyEntry srcDir dstDir) contents
+
+copyEntry srcDir dstDir name =
+    let
+        srcPath = srcDir ++ "/" ++ name
+        dstPath = dstDir ++ "/" ++ name
+    in do
+        isDirectory <- doesDirectoryExist srcPath
+        if isDirectory
+            then copyDirectory srcPath dstPath
+            else copyFile srcPath dstPath
+
+loadProgram baseDir path = do
     putStrLn ("Compiling module from " ++ path)
     loadedModule <- parseFile path
-    mods <- growModuleEnv [loadedModule]
+    mods <- growModuleEnv baseDir [loadedModule]
     program <- transformProgram mods
     _ <- typecheckProgram program
     return program
@@ -40,8 +62,8 @@ dropPrefix prefix t =
         then Text.drop (Text.length prefix) t
         else t
 
-parseFromName modName = do
-    let path = toPath modName
+parseFromName baseDir modName = do
+    let path = baseDir ++ "/" ++ toPath modName
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     m <- parseFile path
     if getName m == modName
@@ -51,7 +73,7 @@ parseFromName modName = do
             <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
-growModuleEnv env =
+growModuleEnv baseDir env =
     let
         imported = Set.fromList (fmap getName env)
         imports = foldMap' importedModules env
@@ -59,13 +81,15 @@ growModuleEnv env =
     in if null needed
         then return env
         else do
-                mods <- traverse parseFromName (Set.toList needed)
-                growModuleEnv (mods ++ env)
+                mods <- traverse (parseFromName baseDir) (Set.toList needed)
+                growModuleEnv baseDir (mods ++ env)
 
-writeResult abbreviation renderFun modDecl =
+writeResult buildDir abbreviation renderFun modDecl =
     let
         name = render (flatModName (getName modDecl))
         compiled = compile modDecl
+        fileName = Text.unpack name ++ "." ++ abbreviation
+        filePath = buildDir ++ "/" ++ fileName
     in if name == "Native" || name == "Main" || Text.isPrefixOf "Native_" name
 -- A module which name starts with "Native" is a native module by convention
 -- meaning it is a module where the corresponding lua file is created by hand
@@ -76,5 +100,8 @@ writeResult abbreviation renderFun modDecl =
 
 -- Main is also excluded to not override the file main.lua
 -- which is used as an entry point by Love 2D
-        then putStrLn ("Skipped writing native module " ++ Text.unpack name ++ "." ++ abbreviation)
-        else Text.writeFile (abbreviation ++ "/" ++ Text.unpack name ++ "." ++ abbreviation) (renderFun compiled)
+        then do
+            doesExist <- doesFileExist filePath
+            putStrLn ("Native module " ++ fileName ++ " exists: " ++ show doesExist)
+        else
+            Text.writeFile filePath (renderFun compiled)

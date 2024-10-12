@@ -4,7 +4,7 @@ module Typechecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup)
+import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup, singleton)
 import qualified Data.HashSet as Set
 import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
@@ -34,15 +34,15 @@ typecheckModule env m = do
 
 inferModule (ModuleDeclaration _ _ decls) = do
     constructors <- getAp (foldMap' gatherConstructor decls)
-    let signatures = fromList (foldMap' gatherTypeSig decls)
+    signatures <- getAp (foldMap' gatherTypeSig decls)
 
-    let types = mappend constructors signatures
-    binds <- with types (inferDecls generalize decls)
+    let consAndSigs = mappend constructors signatures
+    binds <- with consAndSigs (inferDecls generalize decls)
 
     sanitySkolemCheck binds
     sanityFreeVariableCheck binds
 
-    return (mappend types binds)
+    return (mappend consAndSigs binds)
 
 -- Skolem variables are caught earlier,
 -- so this check is redundant, but makes sure
@@ -94,7 +94,7 @@ typecheck (LambdaExpression [p] e) ty = do
     typecheckAlt patternTy resultTy p e
     subsume (TypeArrow patternTy resultTy) ty
 typecheck (LetExpression decls e) ty = do
-    let signatures = fromList (foldMap' gatherTypeSig decls)
+    signatures <- getAp (foldMap' gatherTypeSig decls)
     binds <- with signatures (inferDecls return decls)
     with (mappend signatures binds) (typecheck e ty)
 typecheck (IfExpression condtition thenBranch elseBranch) ty = do
@@ -136,7 +136,11 @@ gatherConstructor (TypeDeclaration tyIdent vars constructors) = do
     fmap fromList (traverse (traverse (constructorToType tyCon vars')) constructors)
 gatherConstructor _ = pure mempty
 
--- convert a constructor declaration to a type
+-- Convert a constructor declaration to a type
+-- Example for variable scope checks:
+-- fails type W = Wrapped (a -> a)
+-- works type W a = Wrapped (a -> a)
+-- works type W = Wrapped (forall a. a -> a)
 constructorToType tyCon vars tys =
     let
         constructorTy = makeForAll vars (foldr TypeArrow tyCon tys)
@@ -145,21 +149,16 @@ constructorToType tyCon vars tys =
         then pure constructorTy
         else fail ("Constructor type variables " ++ renderSetToError frees ++ " have no definition")
 
-
--- fails type W = Wrapped (a -> a)
--- works type W a = Wrapped (a -> a)
--- works type W = Wrapped (forall a. a -> a)
-
--- Typecheck Bindings
+-- move types from signatures into environment
 gatherTypeSig (TypeSignature name ty@(ForAll _ _)) =
     let frees = freeVars ty
     in if null frees
-        then [(name, ty)]
-        else error ("Type signature " ++ renderError name ++
+        then pure (singleton name ty)
+        else fail ("Type signature " ++ renderError name ++
             " has following variables " ++ renderSetToError frees ++ " without definition")
 gatherTypeSig (TypeSignature name ty) =
-    [(name, makeForAll (freeVars ty) ty)]
-gatherTypeSig _ = mempty
+    pure (singleton name (makeForAll (freeVars ty) ty))
+gatherTypeSig _ = pure mempty
 
 -- Assumes that the let bindings are already sorted
 -- Let bindings have to be sorted for the translation anyway

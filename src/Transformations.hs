@@ -46,8 +46,8 @@ typecheckProgram p = feedbackM typecheckAction p
 typecheckAction envs m = do
     let filtered = filterNames (getImports m) envs
     captured <- typecheckModule filtered m
-    let path = "logs/" ++ renderName (getName m) ++ ".log"
-    Text.writeFile path (renderEnv captured)
+    let logPath = "logs/" ++ renderName (getName m) ++ ".log"
+    Text.writeFile logPath (renderEnv captured)
     return ((), captured)
 
 {- Operators and Aliasing -}

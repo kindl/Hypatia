@@ -13,7 +13,8 @@ import qualified Data.Text.IO as Text
 import qualified Data.HashSet as Set
 import System.FilePath(takeDirectory)
 import System.Directory(createDirectoryIfMissing, copyFile,
-    doesDirectoryExist, listDirectory, doesFileExist)
+    doesDirectoryExist, listDirectory,
+    doesFileExist, getAppUserDataDirectory)
 
 
 main = do
@@ -23,12 +24,20 @@ main = do
         ["compiletojs", path] -> compileProgram path "js" renderJs
         _ -> putStrLn "Usage: hypatia compile Module.hyp"
 
+ensureLibraryDirectory = do
+    libDir <- getAppUserDataDirectory "hypatia/library"
+    createDirectoryIfMissing False libDir
+    return libDir
+
 compileProgram path abbreviation renderFun = do
+    libDir <- ensureLibraryDirectory
     let baseDir = takeDirectory path
-    program <- loadProgram baseDir (normalizePath path)
-    let assetDir = baseDir ++ "/" ++ abbreviation
+    program <- loadProgram libDir baseDir (normalizePath path)
+    let libraryAssetDir = libDir ++ "/" ++ abbreviation
+    let localAssetDir = baseDir ++ "/" ++ abbreviation
     let buildDir = "build/" ++ abbreviation
-    copyDirectory assetDir buildDir
+    copyDirectory libraryAssetDir buildDir
+    copyDirectory localAssetDir buildDir
     traverse_ (writeResult buildDir abbreviation renderFun) program
 
 copyDirectory srcDir dstDir = do
@@ -46,10 +55,10 @@ copyEntry srcDir dstDir name =
             then copyDirectory srcPath dstPath
             else copyFile srcPath dstPath
 
-loadProgram baseDir path = do
+loadProgram libDir baseDir path = do
     putStrLn ("Compiling module from " ++ path)
     loadedModule <- parseFile path
-    mods <- growModuleEnv baseDir [loadedModule]
+    mods <- growModuleEnv libDir baseDir [loadedModule]
     program <- transformProgram mods
     _ <- typecheckProgram program
     return program
@@ -62,8 +71,21 @@ dropPrefix prefix t =
         then Text.drop (Text.length prefix) t
         else t
 
-parseFromName baseDir modName = do
-    let path = baseDir ++ "/" ++ toPath modName
+-- Turns a module name into a path
+-- Tries to find the module locally first and
+-- then looks for the file in the library directory
+parseFromName libDir baseDir modName =
+    let
+        modPath = toPath modName
+        localPath = baseDir ++ "/" ++ modPath
+        libraryPath = libDir ++ "/" ++ modPath
+    in do
+        existsLocally <- doesFileExist localPath
+        if existsLocally
+            then parseFile' modName localPath
+            else parseFile' modName libraryPath
+
+parseFile' modName path = do
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     m <- parseFile path
     if getName m == modName
@@ -73,7 +95,7 @@ parseFromName baseDir modName = do
             <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
-growModuleEnv baseDir env =
+growModuleEnv libDir baseDir env =
     let
         imported = Set.fromList (fmap getName env)
         imports = foldMap' importedModules env
@@ -81,8 +103,8 @@ growModuleEnv baseDir env =
     in if null needed
         then return env
         else do
-                mods <- traverse (parseFromName baseDir) (Set.toList needed)
-                growModuleEnv baseDir (mods ++ env)
+                mods <- traverse (parseFromName libDir baseDir) (Set.toList needed)
+                growModuleEnv libDir baseDir (mods ++ env)
 
 writeResult buildDir abbreviation renderFun modDecl =
     let

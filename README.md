@@ -30,11 +30,13 @@ fill (Rectangle (Vector2 x y) (Vector2 w h)) = rectangle "fill" x y w h
 
 primitives : Array Primitive2d
 primitives = [
-    Rectangle (Vector2 150 100) (Vector2 100 400),
-    Rectangle (Vector2 350 100) (Vector2 100 400),
-    Rectangle (Vector2 250 250) (Vector2 100 100),
-    Rectangle (Vector2 550 300) (Vector2 100 200),
-    Circle (Vector2 550 200) 100]
+        Rectangle (Vector2 150 100) (Vector2 100 400),
+        Rectangle (Vector2 350 100) (Vector2 100 400),
+        Rectangle (Vector2 250 250) (Vector2 100 100),
+        Rectangle (Vector2 550 300) (Vector2 100 200),
+        // Trailing commas are allowed
+        Circle (Vector2 550 200) 100,
+    ]
 
 draw _ =
     let
@@ -63,13 +65,12 @@ Hypatia is a prototype of a functional language of the ML-family that compiles t
 People are writing game engines in functional languages, however functional scripting languages are rarely seen.
 Hypatia could fill this gap and it could reuse parts of the existing lua ecosystem.
 
-Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/) then run
+Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/).
+Copy the `library` folder to `~/.hypatia/library` or inside one of the example folders.
+Then run
 ```
-cd path/of/hypatia
-cabal install hypatia
-cd examples
-hypatia compile Spheres
-love lua
+cabal run hypatia -- compile examples/Spheres/Spheres.hyp
+love build/lua
 ```
 
 Head over to the folder "examples" to see how applications look like.

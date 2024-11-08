@@ -1,4 +1,4 @@
-module Viewer.Obj
+module Obj
 
 import Native(Array, Number, Text,
     toNumber, unsafeIndex)

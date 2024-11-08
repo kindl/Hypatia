@@ -22,11 +22,13 @@ fill (Rectangle (Vector2 x y) (Vector2 w h)) = rectangle "fill" x y w h
 
 primitives : Array Primitive2d
 primitives = [
-    Rectangle (Vector2 150 100) (Vector2 100 400),
-    Rectangle (Vector2 350 100) (Vector2 100 400),
-    Rectangle (Vector2 250 250) (Vector2 100 100),
-    Rectangle (Vector2 550 300) (Vector2 100 200),
-    Circle (Vector2 550 200) 100]
+        Rectangle (Vector2 150 100) (Vector2 100 400),
+        Rectangle (Vector2 350 100) (Vector2 100 400),
+        Rectangle (Vector2 250 250) (Vector2 100 100),
+        Rectangle (Vector2 550 300) (Vector2 100 200),
+        // Trailing commas are allowed
+        Circle (Vector2 550 200) 100,
+    ]
 
 draw _ =
     let

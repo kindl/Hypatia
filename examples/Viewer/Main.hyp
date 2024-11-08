@@ -6,9 +6,8 @@ import Native((/), (*), (+), (-),
 import Native.Love(polygon, getWidth, getHeight,
     newImage, newShader, file)
 import Common.Base(Unit)
-import Viewer.Obj(VTNI, VNI, VTI, VI,
+import Obj(VTNI, VNI, VTI, VI,
     getFaces, getVertices, getNormals, load)
-import Viewer.Obj as Obj
 import Geometry.Vector3(Vector3)
 import Geometry.Vector4(Vector4, normalize)
 import Geometry.Matrix as Matrix
@@ -17,7 +16,7 @@ import Geometry.Matrix((@), Matrix,
 import Common.Array(map, foldMap, nth)
 import Common.Stateful(Ref,
     unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
-import Viewer.Model(toTexturedMesh, drawModel)
+import Model(toTexturedMesh, drawModel)
 
 
 gameState = unsafeMakeRef (Vector3 0 0 10)

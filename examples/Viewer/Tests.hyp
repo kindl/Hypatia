@@ -1,4 +1,4 @@
-module Viewer.Tests
+module Tests
 
 import Native((+), (-), (*), (^), (++),
     print)

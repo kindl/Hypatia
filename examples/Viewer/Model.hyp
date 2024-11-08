@@ -1,9 +1,9 @@
-module Viewer.Model
+module Model
 
 import Native
 import Common.Base(Tuple3)
 import Common.Array((<>), map, foldMap, nth)
-import Viewer.Obj(VI, VNI, VTNI, VTI,
+import Obj(VI, VNI, VTNI, VTI,
     getFaces, getNormals, getVertices, getTextureCoordinates)
 import Geometry.Vector4(Vector4)
 import Native.Love(Mesh,

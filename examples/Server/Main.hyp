@@ -1,0 +1,44 @@
+module Server.Main
+
+import Native(print, length, toString, textLength)
+import Native.Love(file, exists)
+import Native.Socket(accept, receive, send, bind, close, Message)
+import Common.Parser(words, split)
+import Common.Array(map, format)
+import Common.Base(Unit)
+
+
+// This is not a good example, please look away.
+// It is only a proof of concept to check if the socket functions work
+
+server = bind "*" 8080
+
+update _ = let { connection = accept server} in
+    case receive connection of
+        Message message ->
+            let
+                _ = print message
+                respone = build message
+                _ = send connection respone
+            in close connection
+        _ -> close connection
+
+build message =
+    case words message of
+        ["GET", path, version] ->
+            case split "/" path of
+                ["", p] -> case split "." path of
+                    [name, ending] -> if exists path then successMessage (toMimeType ending) (file path) else notFoundMessage
+                    _ -> errorMessage "Invalid path"
+                _ -> errorMessage "Invalid path"
+        _ -> errorMessage "Invalid method"
+
+toMimeType "js" = "application/javascript"
+toMimeType "json" = "application/json"
+toMimeType "pdf" = "application/pdf"
+toMimeType _ = "text/plain"
+
+notFoundMessage = "HTTP/1.0 404 Not Found\r\n\r\nNot Found\r\n"
+errorMessage message = $"HTTP/1.0 500 Internal Server Error\r\n\r\n{message}\r\n"
+
+successMessage mimeType content = $"HTTP/1.0 200 OK\r\nContent-Type: {mimeType}\r\nContent-Length: {textLength content}\r\n\r\n{content}\r\n"

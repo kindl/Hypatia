@@ -13,7 +13,6 @@ import Common.Option as Option
 import Abstract.State(StateT, runStateT)
 import Abstract.State as State
 import Abstract.Applicative as Applicative
-import Abstract.Functor as Functor
 
 
 point = State.point Option.point

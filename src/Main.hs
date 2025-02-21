@@ -13,8 +13,7 @@ import qualified Data.Text.IO as Text
 import qualified Data.HashSet as Set
 import System.FilePath(takeDirectory)
 import System.Directory(createDirectoryIfMissing, copyFile,
-    doesDirectoryExist, listDirectory,
-    doesFileExist, getAppUserDataDirectory)
+    doesFileExist, doesDirectoryExist, listDirectory)
 
 
 main = do
@@ -24,26 +23,28 @@ main = do
         ["compiletojs", path] -> compileProgram path "js" renderJs
         _ -> putStrLn "Usage: hypatia compile Module.hyp"
 
-ensureLibraryDirectory = do
-    libDir <- getAppUserDataDirectory "hypatia/library"
-    createDirectoryIfMissing False libDir
-    return libDir
-
 compileProgram path abbreviation renderFun = do
-    libDir <- ensureLibraryDirectory
-    let baseDir = takeDirectory path
-    program <- loadProgram libDir baseDir (normalizePath path)
+    let normalizedPath = normalizePath path
+    let libDir = "library"
+    let baseDir = takeDirectory normalizedPath
+    program <- loadProgram libDir baseDir normalizedPath
     let libraryAssetDir = libDir ++ "/" ++ abbreviation
     let localAssetDir = baseDir ++ "/" ++ abbreviation
     let buildDir = "build/" ++ abbreviation
-    copyDirectory libraryAssetDir buildDir
-    copyDirectory localAssetDir buildDir
+    copyDirectoryIfExists libraryAssetDir buildDir
+    copyDirectoryIfExists localAssetDir buildDir
     traverse_ (writeResult buildDir abbreviation renderFun) program
 
 copyDirectory srcDir dstDir = do
     createDirectoryIfMissing True dstDir
     contents <- listDirectory srcDir
     traverse_ (copyEntry srcDir dstDir) contents
+
+copyDirectoryIfExists srcDir dstDir = do
+    isDirectory <- doesDirectoryExist srcDir
+    if isDirectory
+        then putStrLn ("Copying directory " <> srcDir) >> copyDirectory srcDir dstDir
+        else putStrLn ("Skipped copying directory " <> srcDir)
 
 copyEntry srcDir dstDir name =
     let

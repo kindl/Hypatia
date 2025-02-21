@@ -23,6 +23,8 @@ alias Radius = Number
 
 file : Path -> Text
 
+exists : Path -> Bool
+
 unsafeRandom : Number -> Number -> Number
 
 getWidth : Stateful Width

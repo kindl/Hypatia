@@ -13,6 +13,12 @@ function Native_Love.unsafeRandom(mini)
 end
 
 Native_Love.file = love.filesystem.read
+
+Native_Love.exists = function(path)
+    -- Use getInfo because `love.filesystem.exists` is being deprecated
+    return love.filesystem.getInfo(path) ~= nil
+end
+
 Native_Love.newImage = love.graphics.newImage
 Native_Love.getWidth = love.graphics.getWidth
 Native_Love.getHeight = love.graphics.getHeight

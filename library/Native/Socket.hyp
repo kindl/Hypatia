@@ -2,14 +2,25 @@ module Native.Socket
 
 import Native(Void, Text, Number)
 
-alias Host = Text
+
+alias Address = Text
 alias Port = Number
-alias Message = Text
+
+alias Client = Socket
+alias Server = Socket
 
 type Socket
 
-tcpConnect : Host -> Port -> Socket
+type Message = Closed | Timeout | Message Text
 
-send : Socket -> Message -> Void
+connect : Address -> Port -> Client
+
+bind : Address -> Port -> Server
+
+accept : Server -> Socket
+
+receive : Socket -> Message
+
+send : Socket -> Text -> Void
 
 close : Socket -> Void

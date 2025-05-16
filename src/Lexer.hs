@@ -13,7 +13,7 @@ import Data.Traversable(mapAccumL)
 import Syntax
 -- NOTE strict combinators are used
 -- however <$!> instead of fmap would decrease performance
-import Data.Attoparsec.Combinator(many', many1', sepBy1', endOfInput)
+import Data.Attoparsec.Combinator(many', sepBy1', endOfInput, manyTill')
 import Data.Attoparsec.Text(char, satisfy,
     takeWhile, takeWhile1,
     match, parse, parseOnly,
@@ -182,21 +182,13 @@ program path = fmap (located path . concat)
 matchedLexeme = fmap return (match lexeme) <|> interpolatedString
 {-# INLINE matchedLexeme #-}
 
-lexeme = lexemeWithoutBrackets <|> brackets
+lexeme = whitespace <|> literal <|> special <|> qident
 {-# INLINE lexeme #-}
-
--- The distinction between with or without brackets
--- is made to make parsing of format string easier
-lexemeWithoutBrackets = whitespace <|> literal <|> special <|> qident
-{-# INLINE lexemeWithoutBrackets #-}
 
 -- NOTE . was addded
 -- it is part of for example forall a. a
-special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`.")
+special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
-
-brackets = fmap (Reserved . Text.singleton) (oneOf "{}")
-{-# INLINE brackets #-}
 
 -- TODO multi-line comments
 whitespace = whitechars <|> hashcomment <|> slashcomment
@@ -253,34 +245,34 @@ number = fmap Double double
 {-# INLINE number #-}
 
 stringLiteral =
-    fmap String (char '"' *> escapedCharSequence charPred escapeSeq <* char '"')
+    fmap String (char '\"' *> escapedCharSequence charPred escapeSeq <* char '\"')
 {-# INLINE stringLiteral #-}
 
 escapedCharSequence p e =
     fmap Text.concat (many' (takeWhile1 p <|> fmap Text.singleton e))
 {-# INLINE escapedCharSequence #-}
 
--- TODO return regular string if there is no interpolation
--- TODO better error handling and messages
--- `$"{}"` and `$""` will return in a meaniningless "empty input".
 interpolatedString = do
-    start <- match (char '$' *> return InterpolatedStringStart)
-    startPart <- match (interpolatedStringPart '"' '{')
-    midParts <- alternating1 (many1' (match lexemeWithoutBrackets)) (fmap return (match (interpolatedStringPart '}' '{')))
-    endPart <- match (interpolatedStringPart '}' '"')
-    end <- match (return InterpolatedStringEnd)
-    return (start : startPart : concat midParts ++ [endPart, end])
+    start <- match (char '$' *> char '\"' *> return InterpolatedStringStart)
+    midParts <- alternating1 (fmap return (match interpolatedStringPart)) expressionPart
+    end <- match (char '\"' *> return InterpolatedStringEnd)
+    return (start : concat midParts ++ [end])
 {-# INLINE interpolatedString #-}
 
-interpolatedStringPart s e =
-    fmap InterpolatedStringMid (char s *> escapedCharSequence interpolatedCharPred interpolatedEscapeSeq <* char e)
+interpolatedStringPart =
+    fmap InterpolatedStringMid (escapedCharSequence interpolatedCharPred interpolatedEscapeSeq)
 {-# INLINE interpolatedStringPart #-}
 
+-- Like sepBy but collects the seperator
 alternating1 a sep =
     liftA2 (\x y -> x : concat y) a (many' (liftA2 (\x y -> [x, y]) sep a))
 {-# INLINE alternating1 #-}
 
-charPred x = x /='"' && x /= '\\'
+-- TODO position will be off, because text consumed by the brackets is not accounted for
+expressionPart = char '{' *> manyTill' (match lexeme) (char '}')
+{-# INLINE expressionPart #-}
+
+charPred x = x /='\"' && x /= '\\'
 {-# INLINE charPred #-}
 
 interpolatedCharPred x = charPred x && x /= '{' && x /= '}'

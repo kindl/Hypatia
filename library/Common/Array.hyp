@@ -7,11 +7,15 @@ import Native((++), (+), (-),
     error)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), (>), (>=), (&&),
-    Tuple2, identity)
-
+    Tuple2, identity, flip)
 
 // Insert all elements into a fresh array
+// Note that functions like copy cannot be eta converted, i.e.
+// their parameters cannot be dropped, because then an empty array would only be
+// created at function definition, but not with every call.
 copy a = foldl unsafeInsert [] a
+
+reverse a = foldr (flip unsafeInsert) [] a
 
 infixr 5 <> append
 

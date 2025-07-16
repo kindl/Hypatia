@@ -231,25 +231,6 @@ compile m =
         imports = importedModules m
     in Mod (getName m) (Set.toList imports) compiledDecls
 
-getOrMakeIds ps = getOrMakeIds' 0 (fmap return ps)
-
-getOrMakeIdsMulti = getOrMakeIds' 0
-
-getOrMakeIds' index (patterns:ps) =
-    case extractVar patterns of
-        Nothing -> 
-            prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
-        Just v ->
-    toId v : getOrMakeIds'(index + 1) ps
-getOrMakeIds' _ [] = []
-
-extractVar [VariablePattern x] = Just x
-extractVar (VariablePattern x : ps) =
-    case extractVar ps of
-        Just v | v == x -> Just v
-        _ -> Nothing
-extractVar _ = Nothing
-
 compileE (Variable v) =
     Var v
 compileE (ConstructorExpression c) =
@@ -273,14 +254,14 @@ compileE e = error ("compileE does not work on " ++ show e)
 compileFunctionDeclaration f x alts =
     let
         ps = fmap fst alts
-        vs = getOrMakeIdsMulti (transpose ps)
+        vs = getOrMakeIds (transpose ps)
         err = Ret (makeError ("No pattern match in function for " <> prettyError ps))
         sts = compileMultiAlts vs [err] alts
     in [Assign x (f vs sts)]
 
 compileLambda f ps e =
     let
-        vs = getOrMakeIds ps
+        vs = getOrMakeIds (fmap return ps)
         err = Ret (makeError ("No pattern match in lambda for " <> prettyError ps))
         sts = compileMultiAlts vs [err] [(ps, e)] 
     in f vs sts
@@ -406,6 +387,23 @@ compileMultiAlts vs = foldr (\(ps, e) rest ->
 
 makeIf [] s _ = s
 makeIf cs s elseBranch = [If (foldr1 And cs) s elseBranch]
+
+getOrMakeIds = getOrMakeIds' 0
+
+getOrMakeIds' index (patterns:ps) =
+    case extractVar patterns of
+        Nothing -> 
+            prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
+        Just v ->
+            toId v : getOrMakeIds'(index + 1) ps
+getOrMakeIds' _ [] = []
+
+extractVar [VariablePattern x] = Just x
+extractVar (VariablePattern x : ps) =
+    case extractVar ps of
+        Just v | v == x -> Just v
+        _ -> Nothing
+extractVar _ = Nothing
 
 getConditions v i (AliasPattern _ p) =
     getConditions v i p

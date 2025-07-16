@@ -2,6 +2,7 @@
 module Compiler where
 
 import Syntax
+import Data.List(transpose)
 import Data.Text(Text, pack)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
@@ -230,13 +231,24 @@ compile m =
         imports = importedModules m
     in Mod (getName m) (Set.toList imports) compiledDecls
 
-getOrMakeIds = getOrMakeIds' (0 :: Int)
+getOrMakeIds ps = getOrMakeIds' 0 (fmap return ps)
 
-getOrMakeIds' index (VariablePattern v:ps) =
+getOrMakeIdsMulti = getOrMakeIds' 0
+
+getOrMakeIds' index (patterns:ps) =
+    case extractVar patterns of
+        Nothing -> 
+            prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
+        Just v ->
     toId v : getOrMakeIds'(index + 1) ps
-getOrMakeIds' index (_:ps) =
-    prefixedId builtinLocation ("l" <> pack (show index)) : getOrMakeIds' (index + 1) ps
 getOrMakeIds' _ [] = []
+
+extractVar [VariablePattern x] = Just x
+extractVar (VariablePattern x : ps) =
+    case extractVar ps of
+        Just v | v == x -> Just v
+        _ -> Nothing
+extractVar _ = Nothing
 
 compileE (Variable v) =
     Var v
@@ -258,13 +270,11 @@ compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
-compileFunctionDeclaration f x [(ps, e)] =
-    [Assign x (compileLambda f ps e)]
 compileFunctionDeclaration f x alts =
     let
-        -- TODO transpose and merge matching variables
-        vs = nNewVars (length (fst (head alts)))
-        err = Ret (makeError ("No pattern match in function for " <> prettyError (fmap fst alts)))
+        ps = fmap fst alts
+        vs = getOrMakeIdsMulti (transpose ps)
+        err = Ret (makeError ("No pattern match in function for " <> prettyError ps))
         sts = compileMultiAlts vs [err] alts
     in [Assign x (f vs sts)]
 
@@ -272,7 +282,8 @@ compileLambda f ps e =
     let
         vs = getOrMakeIds ps
         err = Ret (makeError ("No pattern match in lambda for " <> prettyError ps))
-    in f vs (compileMultiAlts vs [err] [(ps, e)])
+        sts = compileMultiAlts vs [err] [(ps, e)] 
+    in f vs sts
 
 {-
 Compiles an expression in a statement context

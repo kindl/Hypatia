@@ -2,7 +2,7 @@
 module Compiler where
 
 import Syntax
-import Data.Text(Text)
+import Data.Text(Text, pack)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 import Data.Foldable(foldMap')
@@ -230,19 +230,22 @@ compile m =
         imports = importedModules m
     in Mod (getName m) (Set.toList imports) compiledDecls
 
+getOrMakeIds = getOrMakeIds' (0 :: Int)
+
+getOrMakeIds' index (VariablePattern v:ps) =
+    toId v : getOrMakeIds'(index + 1) ps
+getOrMakeIds' index (_:ps) =
+    prefixedId builtinLocation ("l" <> pack (show index)) : getOrMakeIds' (index + 1) ps
+getOrMakeIds' _ [] = []
+
 compileE (Variable v) =
     Var v
 compileE (ConstructorExpression c) =
     Var c
 compileE (FunctionApplication f e) =
     Call (compileE f) [compileE e]
-compileE (LambdaExpression [VariablePattern v] e) =
-    Func [toId v] (compileEtoS e)
 compileE (LambdaExpression [p] e) =
-    let
-        v = prefixedId builtinLocation "l"
-        err = Ret (makeError ("No pattern match in lambda for " <> prettyError p))
-    in Func [v] (compileAlts v [err] [(p, e)])
+    compileLambda Func [p] e
 compileE (ArrayExpression es) =
     Arr (fmap compileE es)
 compileE (LiteralExpression l) =
@@ -254,6 +257,12 @@ compileE e@(LetExpression _ _) =
 compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
+
+compileLambda f ps e =
+    let
+        vs = getOrMakeIds ps
+        err = Ret (makeError ("No pattern match in lambda for " <> prettyError ps))
+    in f vs (compileMultiAlts vs [err] [(ps, e)])
 
 {-
 Compiles an expression in a statement context
@@ -289,7 +298,7 @@ compileTop other = compileD other
 
 -- Preserves variable names
 compileD (FunctionDeclaration x [(ps, e)]) =
-    [Assign x (compileE (curryLambda ps e))]
+    [Assign x (compileLambda curryFuncSts ps e)]
 compileD (FunctionDeclaration x alts) =
     let
         -- TODO transpose and merge matching variables
@@ -328,10 +337,8 @@ compileConstructor info (c, variables) =
         getTag TaggedRepresentation = [c]
 
         parameters = nNewVars (length variables)
-        body = Arr (fmap Var (getTag info ++ fmap fromId parameters))
-    in Assign c (curryFunc parameters body)
-
-curryFunc vs sts = foldr (\v r -> Func [v] [Ret r]) sts vs
+        body = [Ret (Arr (fmap Var (getTag info ++ fmap fromId parameters)))]
+    in Assign c (curryFuncSts parameters body)
 
 curryFuncSts [v] s = Func [v] s
 curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
@@ -418,6 +425,8 @@ getConditionsArray v i ps =
     Eq (makeLength (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 
+getAssignments v [] (VariablePattern (Name [] x)) | v == x =
+    []
 getAssignments v i (VariablePattern x) =
     [Assign x (Access v i)]
 getAssignments v i (AliasPattern x p) =

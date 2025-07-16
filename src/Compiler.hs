@@ -251,13 +251,13 @@ compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
-compileFunctionDeclaration f x alts =
+compileMultiLambda f alts =
     let
         ps = fmap fst alts
         vs = getOrMakeIds (transpose ps)
         err = Ret (makeError ("No pattern match in function for " <> prettyError ps))
         sts = compileMultiAlts vs [err] alts
-    in [Assign x (f vs sts)]
+    in f vs sts
 
 compileLambda f ps e =
     let
@@ -299,7 +299,7 @@ compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
 
 compileD (FunctionDeclaration x alts) =
-    compileFunctionDeclaration curryFuncSts x alts
+    [Assign x (compileMultiLambda curryFuncSts alts)]
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration (Wildcard w) e) =

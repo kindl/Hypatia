@@ -258,6 +258,16 @@ compileE e@(IfExpression _ _ _) =
     immediate (compileEtoS e)
 compileE e = error ("compileE does not work on " ++ show e)
 
+compileFunctionDeclaration f x [(ps, e)] =
+    [Assign x (compileLambda f ps e)]
+compileFunctionDeclaration f x alts =
+    let
+        -- TODO transpose and merge matching variables
+        vs = nNewVars (length (fst (head alts)))
+        err = Ret (makeError ("No pattern match in function for " <> prettyError (fmap fst alts)))
+        sts = compileMultiAlts vs [err] alts
+    in [Assign x (f vs sts)]
+
 compileLambda f ps e =
     let
         vs = getOrMakeIds ps
@@ -296,16 +306,8 @@ compileTop (TypeDeclaration _ _ cs) =
 compileTop (FixityDeclaration _ _ _ _) = []
 compileTop other = compileD other
 
--- Preserves variable names
-compileD (FunctionDeclaration x [(ps, e)]) =
-    [Assign x (compileLambda curryFuncSts ps e)]
 compileD (FunctionDeclaration x alts) =
-    let
-        -- TODO transpose and merge matching variables
-        vs = nNewVars (length (fst (head alts)))
-        err = Ret (makeError ("No pattern match in function for " <> prettyError (fmap fst alts)))
-        sts = compileMultiAlts vs [err] alts
-    in [Assign x (curryFuncSts vs sts)]
+    compileFunctionDeclaration curryFuncSts x alts
 compileD (ExpressionDeclaration (VariablePattern x) e) =
     [Assign x (compileE e)]
 compileD (ExpressionDeclaration (Wildcard w) e) =

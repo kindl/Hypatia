@@ -530,11 +530,22 @@ flattenCall (Call f [e]) es =
     flattenCall f (e:es)
 flattenCall e es = (e, es)
 
--- TODO capture arity from signature
-captureArity m = captureFunctionArity m <> captureConstructorArity m
+captureArity m =
+    captureFunctionArity m
+    <> captureConstructorArity m
+    <> captureSignatureArity m
 
 captureFunctionArity (ModuleDeclaration _ _ decls) =
     fromList [(x, length (fst (head alts))) | (FunctionDeclaration x alts) <- decls]
 
 captureConstructorArity (ModuleDeclaration _ _ decls) =
     fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- decls])
+
+captureSignatureArity (ModuleDeclaration _ _ decls) =
+    fromList (concat [getArityFromType x ty | TypeSignature x ty <- decls])
+
+getArityFromType x ty@(TypeArrow _ _) =
+    let l = length (arrowsToList ty) - 1
+    in [(x, l)]
+getArityFromType x (ForAll _ ty) = getArityFromType x ty
+getArityFromType _ _ = []

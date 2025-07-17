@@ -2,114 +2,82 @@ local utf8 = require("utf8")
 
 local Native = {}
 
-function Native.eq(v1)
-    return function(v2)
-        return v1 == v2
-    end
+Native.eq = function(v1, v2)
+    return v1 == v2
 end
 
-function Native.lt(v1)
-    return function(v2)
-        return v1 < v2
-    end
+Native.lt = function(v1, v2)
+    return v1 < v2
 end
 
-function Native.gt(v1)
-    return function(v2)
-        return v1 > v2
-    end
+Native.gt = function(v1, v2)
+    return v1 > v2
 end
 
-function Native.le(v1)
-    return function(v2)
-        return v1 <= v2
-    end
+Native.le = function(v1, v2)
+    return v1 <= v2
 end
 
-function Native.ge(v1)
-    return function(v2)
-        return v1 >= v2
-    end
+Native.ge = function(v1, v2)
+    return v1 >= v2
 end
 
-function Native.multiply(v1)
-    return function(v2)
-        return v1 * v2
-    end
+Native.multiply = function(v1, v2)
+    return v1 * v2
 end
 
-function Native.divide(v1)
-    return function(v2)
-        return v1 / v2
-    end
+Native.divide = function(v1, v2)
+    return v1 / v2
 end
 
-function Native.modulo(v1)
-    return function(v2)
-        return v1 % v2
-    end
+Native.modulo = function(v1, v2)
+    return v1 % v2
 end
 
-function Native.plus(v1)
-    return function(v2)
-        return v1 + v2
-    end
+Native.plus = function(v1, v2)
+    return v1 + v2
 end
 
-function Native.minus(v1)
-    return function(v2)
-        return v1 - v2
-    end
+Native.minus = function(v1, v2)
+    return v1 - v2
 end
 
-function Native.power(v1)
-    return function(v2)
-        return v1 ^ v2
-    end
+Native.power = function(v1, v2)
+    return v1 ^ v2
 end
 
-function Native.concat(v1)
-    return function(v2)
-        return v1 .. v2
-    end
+Native.concat = function(v1, v2)
+    return v1 .. v2
 end
 
-function Native.negate(v)
+Native.negate = function(v)
     return -v
 end
 
-function Native.length(a)
+Native.length = function(a)
     return #a
 end
 
-function Native.isArray(t)
+Native.isArray = function(t)
     return type(t) == "table"
 end
 
-function Native.unsafeIndex(i)
-    return function(a)
-        return a[i + 1]
-    end
+Native.unsafeIndex = function(i, a)
+    return a[i + 1]
 end
 
-function Native.unsafeCoerce(x)
+Native.unsafeCoerce = function(x)
     return x
 end
 
-function Native.unsafeInsert(a)
-    return function(e)
-        table.insert(a, e)
-        return a
-    end
+Native.unsafeInsert = function(a, e)
+    table.insert(a, e)
+    return a
 end
 
-function Native.unsafeSet(a)
-    return function(i)
-        return function(v)
-            a[i + 1] = v
-            return a
-        end
-    end
+Native.unsafeSet = function(a, i, v)
+    a[i + 1] = v
+    return a
 end
 
 Native.True = true
@@ -126,14 +94,10 @@ Native.textLength = function(s)
     return utf8.len(s)
 end
 
-Native.substring = function(s)
-    return function(startIndex)
-        return function(endIndex)
-            local startOffset = utf8.offset(s, startIndex + 1)
-            local endOffset = utf8.offset(s, endIndex + 2) - 1
-            return string.sub(s, startOffset, endOffset)
-        end
-    end
+Native.substring = function(s, startIndex, endIndex)
+    local startOffset = utf8.offset(s, startIndex + 1)
+    local endOffset = utf8.offset(s, endIndex + 2) - 1
+    return string.sub(s, startOffset, endOffset)
 end
 
 Native.toNumber = function(s)

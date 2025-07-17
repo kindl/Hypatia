@@ -1,15 +1,11 @@
 local Native_Love = {}
 
-function Native_Love.polygon(mode)
-    return function (line)
-        love.graphics.polygon(mode, line)
-    end
+Native_Love.polygon = function(mode, line)
+    love.graphics.polygon(mode, line)
 end
 
-function Native_Love.unsafeRandom(mini)
-    return function(maxi)
-        return love.math.random(mini, maxi)
-    end
+Native_Love.unsafeRandom = function(minNumber, maxNumber)
+    return love.math.random(minNumber, maxnumber)
 end
 
 Native_Love.file = love.filesystem.read
@@ -31,66 +27,28 @@ Native_Love.imageHeight = function(image)
     return image:getHeight()
 end
 
-Native_Love.newQuad = function(x)
-    return function(y)
-        return function(width)
-            return function(height)
-                return function(sw)
-                    return function(sh)
-                        return love.graphics.newQuad(x, y, width, height, sw, sh)
-                    end
-                end
-            end
-        end
-    end
+Native_Love.newQuad = function(x, y, width, height, sw, sh)
+    return love.graphics.newQuad(x, y, width, height, sw, sh)
 end
 
-function Native_Love.drawImage(image)
-    return function(x)
-        return function(y)
-            love.graphics.draw(image, x, y)
-        end
-    end
+Native_Love.drawImage = function(image, x, y)
+    love.graphics.draw(image, x, y)
 end
 
-function Native_Love.drawQuad(texture)
-    return function(quad)
-        return function(x)
-            return function(y)
-                love.graphics.draw(texture, quad, x, y)
-            end
-        end
-    end
+Native_Love.drawQuad = function(texture, quad, x, y)
+    love.graphics.draw(texture, quad, x, y)
 end
 
-Native_Love.setColor = function(c1)
-    return function(c2)
-        return function(c3)
-            love.graphics.setColor(c1, c2, c3)
-        end
-    end
+Native_Love.setColor = function(c1, c2, c3)
+    love.graphics.setColor(c1, c2, c3)
 end
 
-Native_Love.circle = function(f)
-    return function(x)
-        return function(y)
-            return function(r)
-                love.graphics.circle(f, x, y, r)
-            end
-        end
-    end
+Native_Love.circle = function(f, x, y, r)
+    love.graphics.circle(f, x, y, r)
 end
 
-Native_Love.rectangle = function(f)
-    return function(x)
-        return function(y)
-            return function(w)
-                return function(h)
-                    love.graphics.rectangle(f, x, y, w, h)
-                end
-            end
-        end
-    end
+Native_Love.rectangle = function(f, x, y, w, h)
+    love.graphics.rectangle(f, x, y, w, h)
 end
 
 Native_Love.newShader = function(t)
@@ -105,26 +63,16 @@ Native_Love.resetShader = function()
     return love.graphics.setShader()
 end
 
-Native_Love.setTexture = function(mesh)
-    return function(texture)
-        mesh:setTexture(texture)
-    end
+Native_Love.setTexture = function(mesh, texture)
+    mesh:setTexture(texture)
 end
 
-Native_Love.sendShader = function(shader)
-    return function(key)
-        return function(value)
-            shader:send(key, value)
-        end
-    end
+Native_Love.sendShader = function(shader, key, value)
+    shader:send(key, value)
 end
 
-Native_Love.newMesh = function(format)
-    return function(vertices)
-        return function(mode)
-            return love.graphics.newMesh(format, vertices, mode)
-        end
-    end
+Native_Love.newMesh = function(format, vertices, mode)
+    return love.graphics.newMesh(format, vertices, mode)
 end
 
 Native_Love.drawMesh = function(mesh)

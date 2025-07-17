@@ -3,13 +3,15 @@ module Compiler where
 
 import Syntax
 import Data.List(transpose)
-import Data.Text(Text, pack)
+import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 import Data.Foldable(foldMap')
 import qualified Data.HashSet as Set
 import Data.Data(Data, Typeable)
 import Data.Generics.Uniplate.Data(universeBi, transformBi)
+import Data.HashMap.Strict(fromList, lookup)
+import Prelude hiding (lookup)
 
 
 type Import = Name
@@ -25,6 +27,7 @@ data Statement
 
 data Expr
     = Var Name
+    | Tag Name
     | LitI Int
     | LitD Double
     | LitT Text
@@ -38,9 +41,9 @@ data Expr
 
 
 -- Render simplified language as Lua
-renderLua m = render (toLuaM (optimizeNames luaKeywords m))
+renderLua m = render (renderLuaMod m)
 
-toLuaM (Mod _ imports statements) = vcat [
+renderLuaMod (Mod _ imports statements) = vcat [
     vcatMap toLuaI imports,
     hardline,
     mintercalate (hardline <> hardline) (fmap toLuaS statements),
@@ -97,6 +100,7 @@ toLuaS (If e th el) = vcat [
     text "end"]
 
 toLuaE (Var x) = flatName x
+toLuaE (Tag x) = flatName x
 toLuaE (LitI i) = pretty i
 toLuaE (LitD d) = prettyNumber d
 toLuaE (LitT t) = prettyEscaped t
@@ -123,9 +127,9 @@ toLuaPath modName = dquotes (flatModName modName)
 
 
 -- Render simplified language as Js
-renderJs m = render (toJsM (optimizeNames jsKeywords m))
+renderJs m = render (renderJsMod m)
 
-toJsM (Mod _ imports statements) = vcat [
+renderJsMod (Mod _ imports statements) = vcat [
     vcatMap toJsI imports,
     hardline,
     mintercalate (hardline <> hardline) (fmap toJsS statements),
@@ -169,6 +173,7 @@ toJsS (If e th el) = vcat [
     text "}"]
 
 toJsE (Var x) = flatName x
+toJsE (Tag x) = flatName x
 toJsE (LitI i) = pretty i
 toJsE (LitD d) = prettyNumber d
 toJsE (LitT t) = prettyEscaped t
@@ -197,15 +202,61 @@ toJsPath modName = dquotes ("./" <> flatModName modName)
 -- If they shadow another name, use full qualified name, otherwise short name
 -- For example there is both, `Array.map` and `Reader.map` they become
 -- `Array_map` and `Reader_map` otherwise `Array.map` just becomes `map`.
-optimizeNames keywords (Mod modName imports statements) =
+optimizeNames arityMap keywords (Mod modName imports statements) =
+    Mod modName imports
+        ((transformBi (optimizeName modName)
+        . transformBi (renameKeywords keywords)
+        . optimizeApplication arityMap)
+            statements)
+
+optimizeApplication arityMap statements =
+    fmap (removeCurryS arityMap) statements
+
+removeCurryS arityMap (Ret e) =
+    Ret (removeCurryE arityMap e)
+removeCurryS arityMap (Assign n e) =
+    Assign n (removeCurryE arityMap e)
+removeCurryS arityMap (If e thenBranch elseBranch) =
+    If (removeCurryE arityMap e)
+        (fmap (removeCurryS arityMap) thenBranch)
+        (fmap (removeCurryS arityMap) elseBranch)
+
+removeCurryE arityMap e@(Var v) =
+    case lookup v arityMap of
+        Just arity | arity > 1 ->
+            createCurry arity e
+        _ -> e
+removeCurryE arityMap c@(Call f originalEs) =
+    case flattenCall c [] of
+        ((Var v), es) ->
+            case lookup v arityMap of
+                Just arity | arity == length es -> Call (Var v) (fmap (removeCurryE arityMap) es)
+                _ -> Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
+        _ -> Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
+removeCurryE arityMap (Func vs sts) =
+    Func vs (fmap (removeCurryS arityMap) sts)
+removeCurryE arityMap (Arr es) =
+    Arr (fmap (removeCurryE arityMap) es)
+removeCurryE arityMap (And e1 e2) =
+    And (removeCurryE arityMap e1) (removeCurryE arityMap e2)
+removeCurryE arityMap (Eq e1 e2) =
+    Eq (removeCurryE arityMap e1) (removeCurryE arityMap e2)
+removeCurryE _ e =
+    e
+
+createCurry arity e =
     let
-        optimizeName n@(Name qs ident) =
-            if qs == nameToList modName then Name [] ident else n
-    in Mod modName imports ((transformBi optimizeName . transformBi (renameKeywords keywords)) statements)
+        parameters = nNewVars arity
+        body = [Ret (Call e (fmap (Var . fromId) parameters))]
+    in curryFuncSts parameters body
+
+optimizeName modName n@(Name qs ident) =
+    if qs == nameToList modName then Name [] ident else n
 
 renameKeywords keywords ident@(Id i loc) =
     if elem i keywords then Id ("__" <> i) loc else ident
 
+luaKeywords :: [Text]
 luaKeywords = [
     "and", "break", "do", "else", "elseif",
     "end", "false", "for", "function", "if",
@@ -213,6 +264,7 @@ luaKeywords = [
     "repeat", "return", "then", "true", "until", "while"
     ]
 
+jsKeywords :: [Text]
 jsKeywords = [
     "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete",
     "do", "else", "export", "extends", "false", "finally", "for", "function", "if",
@@ -263,7 +315,7 @@ compileLambda f ps e =
     let
         vs = getOrMakeIds (fmap return ps)
         err = Ret (makeError ("No pattern match in lambda for " <> prettyError ps))
-        sts = compileMultiAlts vs [err] [(ps, e)] 
+        sts = compileMultiAlts vs [err] [(ps, e)]
     in f vs sts
 
 {-
@@ -296,6 +348,9 @@ compileTop (TypeDeclaration _ _ [c]) =
 compileTop (TypeDeclaration _ _ cs) =
     fmap (compileConstructor TaggedRepresentation) cs
 compileTop (FixityDeclaration _ _ _ _) = []
+-- Top level function declarations are uncurried
+compileTop (FunctionDeclaration x alts) =
+    [Assign x (compileMultiLambda Func alts)]
 compileTop other = compileD other
 
 compileD (FunctionDeclaration x alts) =
@@ -328,11 +383,11 @@ compileConstructor ArrayRepresentation (c, [_]) =
 compileConstructor info (c, variables) =
     let
         getTag ArrayRepresentation = []
-        getTag TaggedRepresentation = [c]
+        getTag TaggedRepresentation = [Tag c]
 
         parameters = nNewVars (length variables)
-        body = [Ret (Arr (fmap Var (getTag info ++ fmap fromId parameters)))]
-    in Assign c (curryFuncSts parameters body)
+        body = [Ret (Arr (getTag info ++ fmap (Var . fromId) parameters))]
+    in Assign c (Func parameters body)
 
 curryFuncSts [v] s = Func [v] s
 curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
@@ -392,7 +447,7 @@ getOrMakeIds = getOrMakeIds' 0
 
 getOrMakeIds' index (patterns:ps) =
     case extractVar patterns of
-        Nothing -> 
+        Nothing ->
             prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
         Just v ->
             toId v : getOrMakeIds'(index + 1) ps
@@ -408,7 +463,7 @@ extractVar _ = Nothing
 getConditions v i (AliasPattern _ p) =
     getConditions v i p
 getConditions v i (ConstructorPattern _ c []) =
-    [Eq (Access v i) (Var c)]
+    [Eq (Access v i) (Tag c)]
 -- Constructors with only one variable are not wrapped in an array
 getConditions v i (ConstructorPattern ArrayRepresentation _ [p]) =
     getConditions v i p
@@ -421,7 +476,7 @@ getConditions v i (ConstructorPattern TaggedRepresentation c ps) =
     -- + 1 to account for length of tag
     Eq (makeLength (Access v i)) (LitI (length ps + 1)),
     -- Compare tag
-    Eq (Access v (i ++ [0])) (Var c)]
+    Eq (Access v (i ++ [0])) (Tag c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
     getConditionsArray v i ps
@@ -469,5 +524,17 @@ makeError s = Call (Var (fromText "Native.error")) [LitT (render s)]
 makeIsArray a = Call (Var (fromText "Native.isArray")) [a]
 makeLength a = Call (Var (fromText "Native.length")) [a]
 
-
 vcatMap f x = vcat (fmap f x)
+
+flattenCall (Call f [e]) es =
+    flattenCall f (e:es)
+flattenCall e es = (e, es)
+
+-- TODO capture arity from signature
+captureArity m = captureFunctionArity m <> captureConstructorArity m
+
+captureFunctionArity (ModuleDeclaration _ _ decls) =
+    fromList [(x, length (fst (head alts))) | (FunctionDeclaration x alts) <- decls]
+
+captureConstructorArity (ModuleDeclaration _ _ decls) =
+    fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- decls])

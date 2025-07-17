@@ -19,11 +19,11 @@ import System.Directory(createDirectoryIfMissing, copyFile,
 main = do
     args <- getArgs
     case args of
-        ["compile", path] -> compileProgram path "lua" renderLua
-        ["compiletojs", path] -> compileProgram path "js" renderJs
+        ["compile", path] -> compileProgram path "lua"
+        ["compiletojs", path] -> compileProgram path "js"
         _ -> putStrLn "Usage: hypatia compile Module.hyp"
 
-compileProgram path abbreviation renderFun = do
+compileProgram path abbreviation = do
     let normalizedPath = normalizePath path
     let libDir = "library"
     let baseDir = takeDirectory normalizedPath
@@ -33,7 +33,8 @@ compileProgram path abbreviation renderFun = do
     let buildDir = "build/" ++ abbreviation
     copyDirectoryIfExists libraryAssetDir buildDir
     copyDirectoryIfExists localAssetDir buildDir
-    traverse_ (writeResult buildDir abbreviation renderFun) program
+    _ <- writeProgram buildDir abbreviation program
+    return ()
 
 copyDirectory srcDir dstDir = do
     createDirectoryIfMissing True dstDir
@@ -107,12 +108,18 @@ growModuleEnv libDir baseDir env =
                 mods <- traverse (parseFromName libDir baseDir) (Set.toList needed)
                 growModuleEnv libDir baseDir (mods ++ env)
 
-writeResult buildDir abbreviation renderFun modDecl =
+writeProgram buildDir abbreviation =
+    feedbackM (simpleActionA (writeResult buildDir abbreviation) filterNames (return . captureArity))
+
+writeResult buildDir abbreviation arityMap modDecl =
     let
         name = render (flatModName (getName modDecl))
         compiled = compile modDecl
         fileName = Text.unpack name ++ "." ++ abbreviation
         filePath = buildDir ++ "/" ++ fileName
+        keywords = if abbreviation == "js" then jsKeywords else luaKeywords
+        renderFun = if abbreviation == "js" then renderJs else renderLua
+        optimized = optimizeNames arityMap keywords compiled
     in if name == "Native" || name == "Main" || Text.isPrefixOf "Native_" name
 -- A module which name starts with "Native" is a native module by convention
 -- meaning it is a module where the corresponding lua file is created by hand
@@ -127,4 +134,4 @@ writeResult buildDir abbreviation renderFun modDecl =
             doesExist <- doesFileExist filePath
             putStrLn ("Native module " ++ fileName ++ " exists: " ++ show doesExist)
         else
-            Text.writeFile filePath (renderFun compiled)
+            Text.writeFile filePath (renderFun optimized)

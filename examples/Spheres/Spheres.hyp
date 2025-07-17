@@ -1,7 +1,7 @@
 module Spheres
 
 import Native((+), (*), (%), (-), (/),
-    uncurry4, uncurry5, Array, unsafeInsert, Number)
+    Array, unsafeInsert, Number)
 import Native.Love(unsafeRandom, setColor, circle, getWidth, getHeight)
 import Common.Base((<), sqrt, repeatN)
 import Common.Stateful(unsafeMakeRef, unsafeRun, modifyRef, Ref)
@@ -62,14 +62,10 @@ updatePosition (Vector2 x y) (Vector2 vx vy) dt =
         ny = (y + vy * dt) % unsafeRun getHeight
     in Vector2 nx ny
 
-mousepressed = uncurry4 mousepressedC
-
-mousepressedC x y button isTouch =
+mousepressed x y button isTouch =
     modifyState (map (hideSphere (Vector2 x y)))
 
-mousemoved = uncurry5 mousemovedC
-
-mousemovedC x y dx dy isTouch =
+mousemoved x y dx dy isTouch =
     modifyState (map (moveSphere (Vector2 x y)))
 
 moveSphere screenPos (s alias Sphere p v c r) =

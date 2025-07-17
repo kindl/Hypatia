@@ -2,7 +2,7 @@ module Viewer.Main
 
 import Native((/), (*), (+), (-),
     Number, Array,
-    uncurry2, uncurry5, unsafeIndex)
+    unsafeIndex)
 import Native.Love(polygon, getWidth, getHeight,
     newImage, newShader, file)
 import Common.Base(Unit)
@@ -60,18 +60,14 @@ drawWireframe viewportMatrix modelMatrix viewMatrix projectionMatrix points =
         transformedPoints = map (foldMap transformPoint) points
     in map (polygon "line") transformedPoints
 
-mousemoved = uncurry5 mousemovedC
-
-mousemovedC x y dx dy isTouch = modifyState (\(Vector3 _ _ translation) ->
+mousemoved x y dx dy isTouch = modifyState (\(Vector3 _ _ translation) ->
     let
         rotX = x * rotationSpeed
         rotY = y * rotationSpeed
     in Vector3 rotX rotY translation)
 
-wheelmoved = uncurry2 wheelmovedC
-
 // y is either -1 or 1 depending on scroll direction
-wheelmovedC _ y = modifyState (\(Vector3 rotX rotY oldTranslation) ->
+wheelmoved _ y = modifyState (\(Vector3 rotX rotY oldTranslation) ->
     let
         translation = oldTranslation + y * scrollSpeed
     in Vector3 rotX rotY translation)
@@ -82,7 +78,7 @@ draw _ =
         translation = Matrix.translation tr 0 0
         rotation = Matrix.rotation 0 rotY rotX
         scale = Matrix.scale 1
-        
+
         projectionMatrix = simpleProjection 1
         modelMatrix = translation @ scale @ rotation
         viewMatrix = lookAt (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)

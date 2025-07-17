@@ -91,12 +91,3 @@ toString : a -> Text
 concat : Text -> Text -> Text
 
 toNumber : Text -> Number
-
-
-uncurry2 : a -> b -> c -> Native.Fun2 a b c
-
-uncurry3 : a -> b -> c -> d -> Native.Fun3 a b c d
-
-uncurry4 : a -> b -> c -> d -> e -> Native.Fun4 a b c d e
-
-uncurry5 : a -> b -> c -> d -> e -> f -> Native.Fun5 a b c d e f

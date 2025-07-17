@@ -112,30 +112,6 @@ function Native.unsafeSet(a)
     end
 end
 
-Native.uncurry2 = function(f)
-    return function(a, b)
-        return f(a)(b)
-    end
-end
-
-Native.uncurry3 = function(f)
-    return function(a,b,c)
-        return f(a)(b)(c)
-    end
-end
-
-Native.uncurry4 = function(f)
-    return function(a,b,c,d)
-        return f(a)(b)(c)(d)
-    end
-end
-
-Native.uncurry5 = function(f)
-    return function(a,b,c,d,e)
-        return f(a)(b)(c)(d)(e)
-    end
-end
-
 Native.True = true
 Native.False = false
 

@@ -1,7 +1,7 @@
 module Common.Base
 
 import Native(Number, Text, Array, Bool,
-    (^), (-), (+),
+    (^), (-), (+), (&&), (||),
     unsafeIndex, length, isArray, unsafeCoerce,
     eq, lt, gt, le, ge,
     True, False)
@@ -34,37 +34,23 @@ greaterThanOrEqual l r = genComp ge l r
 
 # Generic comparison
 genComp comp l r =
-    if comp l r
-        then True
-        else trySeqComp (genComp comp) l r
+    comp l r || trySeqComp (genComp comp) l r
 
 trySeqComp comp l r =
-    if bothArray l r
-        then seqComp comp (toArray l) (toArray r)
-        else False
+    isArray l && isArray r && seqComp comp (toArray l) (toArray r)
     where
         toArray : a -> Array b
         toArray = unsafeCoerce
-
-bothArray l r =
-    if isArray l
-        then isArray r
-        else False
 
 seqComp comp l r =
     let
         lengthOfL = length l
         lengthOfR = length r
-    in if eq lengthOfL lengthOfR
-        then seqCompAux comp 0 lengthOfL l r
-        else False
+    in eq lengthOfL lengthOfR && seqCompAux comp 0 lengthOfL l r
 
 seqCompAux comp i maxN l r =
-    if eq i maxN
-        then True
-        else (if comp (unsafeIndex i l) (unsafeIndex i r)
-            then seqCompAux comp (i + 1) maxN l r
-            else False)
+    eq i maxN
+    || (comp (unsafeIndex i l) (unsafeIndex i r) && seqCompAux comp (i + 1) maxN l r)
 
 
 min a b = if a <= b then a else b
@@ -80,18 +66,6 @@ repeatN f n =
 
 not True = False
 not False = True
-
-// TODO create lazy variants
-infixr 3 && and
-infixr 2 || or
-
-and : Bool -> Bool -> Bool
-and False _ = False
-and True a = a
-
-or : Bool -> Bool -> Bool
-or True _ = True
-or False a = a
 
 boolToString False = "False"
 boolToString True = "True"

@@ -1,12 +1,12 @@
 module Common.Array
 
-import Native((++), (+), (-),
+import Native((++), (+), (-), (&&),
     True, False,
     isArray, unsafeCoerce, toString,
     unsafeInsert, unsafeIndex, length,
     error)
 import Common.Option(Some, None, unsafeFromOption)
-import Common.Base((==), (<), (>), (>=), (&&),
+import Common.Base((==), (<), (>), (>=),
     Tuple2, identity, flip)
 
 // Insert all elements into a fresh array

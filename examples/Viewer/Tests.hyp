@@ -1,8 +1,8 @@
 module Tests
 
-import Native((+), (-), (*), (^), (++),
+import Native((+), (-), (*), (^), (++), (&&),
     print)
-import Common.Base((==), (&&), boolToString)
+import Common.Base((==), boolToString)
 import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix,

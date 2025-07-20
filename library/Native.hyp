@@ -82,6 +82,14 @@ le : e -> e -> Bool
 
 ge : e -> e -> Bool
 
+// Boolean operators are native, because they need to be lazy
+infixr 3 && and
+infixr 2 || or
+
+and : Bool -> Bool -> Bool
+
+or : Bool -> Bool -> Bool
+
 # IO
 print : Text -> Void
 

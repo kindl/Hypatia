@@ -1,7 +1,7 @@
 module Common.Text
 
-import Native((+), textLength, substring, unsafeInsert)
-import Common.Base((||), (>=), (==))
+import Native((+), (||), textLength, substring, unsafeInsert)
+import Common.Base((>=), (==))
 import Common.Option(None, Some)
 
 

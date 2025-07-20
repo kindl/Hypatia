@@ -5,7 +5,7 @@ Native_Love.polygon = function(mode, line)
 end
 
 Native_Love.unsafeRandom = function(minNumber, maxNumber)
-    return love.math.random(minNumber, maxnumber)
+    return love.math.random(minNumber, maxNumber)
 end
 
 Native_Love.file = love.filesystem.read

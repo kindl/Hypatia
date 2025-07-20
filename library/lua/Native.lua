@@ -2,54 +2,6 @@ local utf8 = require("utf8")
 
 local Native = {}
 
-Native.eq = function(v1, v2)
-    return v1 == v2
-end
-
-Native.lt = function(v1, v2)
-    return v1 < v2
-end
-
-Native.gt = function(v1, v2)
-    return v1 > v2
-end
-
-Native.le = function(v1, v2)
-    return v1 <= v2
-end
-
-Native.ge = function(v1, v2)
-    return v1 >= v2
-end
-
-Native.multiply = function(v1, v2)
-    return v1 * v2
-end
-
-Native.divide = function(v1, v2)
-    return v1 / v2
-end
-
-Native.modulo = function(v1, v2)
-    return v1 % v2
-end
-
-Native.plus = function(v1, v2)
-    return v1 + v2
-end
-
-Native.minus = function(v1, v2)
-    return v1 - v2
-end
-
-Native.power = function(v1, v2)
-    return v1 ^ v2
-end
-
-Native.concat = function(v1, v2)
-    return v1 .. v2
-end
-
 Native.negate = function(v)
     return -v
 end

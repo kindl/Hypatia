@@ -1,33 +1,5 @@
 ﻿const Native = {};
 
-Native.eq = function(v1, v2) {
-    return v1 === v2;
-};
-
-Native.multiply = function(v1, v2) {
-    return v1 * v2;
-};
-
-Native.divide = function(v1, v2) {
-    return v1 / v2;
-};
-
-Native.modulo = function(v1, v2) {
-    return v1 % v2;
-};
-
-Native.plus = function(v1, v2) {
-    return v1 + v2;
-};
-
-Native.minus = function(v1, v2) {
-    return v1 - v2;
-};
-
-Native.concat = function(v1, v2) {
-    return v1 + v2;
-};
-
 Native.negate = function(v) {
     return -v;
 };

@@ -36,6 +36,7 @@ data Expr
     | Call Expr [Expr]
     | Arr [Expr]
     | And Expr Expr
+    | Or Expr Expr
     | Eq Expr Expr
         deriving (Show, Typeable, Data)
 
@@ -118,7 +119,8 @@ toLuaE (Call e@(Func _ _) es) =
     parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
-toLuaE (And e1 e2) = toLuaE e1 <+> text "and" <+> toLuaE e2
+toLuaE (And e1 e2) = parens (toLuaE e1 <+> text "and" <+> toLuaE e2)
+toLuaE (Or e1 e2) = parens (toLuaE e1 <+> text "or" <+> toLuaE e2)
 toLuaE (Eq e1 e2) = toLuaE e1 <+> text "==" <+> toLuaE e2
 
 -- e.g. A module A.B is saved in the file A_B.lua
@@ -192,6 +194,8 @@ toJsE (Call e es) =
 toJsE (Arr es) = brackets (commas (fmap toJsE es))
 toJsE (And e1 e2) =
     toJsE e1 <+> text "&&" <+> toJsE e2
+toJsE (Or e1 e2) =
+    toJsE e1 <+> text "||" <+> toJsE e2
 toJsE (Eq e1 e2) =
     toJsE e1 <+> text "===" <+> toJsE e2
 
@@ -202,12 +206,17 @@ toJsPath modName = dquotes ("./" <> flatModName modName)
 -- If they shadow another name, use full qualified name, otherwise short name
 -- For example there is both, `Array.map` and `Reader.map` they become
 -- `Array_map` and `Reader_map` otherwise `Array.map` just becomes `map`.
-optimizeNames arityMap keywords (Mod modName imports statements) =
+optimize arityMap keywords (Mod modName imports statements) =
     Mod modName imports
         ((transformBi (optimizeName modName)
         . transformBi (renameKeywords keywords)
+        . transformBi inlineOperators
         . optimizeApplication arityMap)
             statements)
+
+inlineOperators (Call (Var (Name ["Native"] (Id "and" _))) [a, b]) = And a b
+inlineOperators (Call (Var (Name ["Native"] (Id "or" _))) [a, b]) = Or a b
+inlineOperators e = e
 
 optimizeApplication arityMap statements =
     fmap (removeCurryS arityMap) statements
@@ -239,6 +248,8 @@ removeCurryE arityMap (Arr es) =
     Arr (fmap (removeCurryE arityMap) es)
 removeCurryE arityMap (And e1 e2) =
     And (removeCurryE arityMap e1) (removeCurryE arityMap e2)
+removeCurryE arityMap (Or e1 e2) =
+    Or (removeCurryE arityMap e1) (removeCurryE arityMap e2)
 removeCurryE arityMap (Eq e1 e2) =
     Eq (removeCurryE arityMap e1) (removeCurryE arityMap e2)
 removeCurryE _ e =

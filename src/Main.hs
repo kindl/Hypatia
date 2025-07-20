@@ -119,7 +119,7 @@ writeResult buildDir abbreviation arityMap modDecl =
         filePath = buildDir ++ "/" ++ fileName
         keywords = if abbreviation == "js" then jsKeywords else luaKeywords
         renderFun = if abbreviation == "js" then renderJs else renderLua
-        optimized = optimizeNames arityMap keywords compiled
+        optimized = optimize arityMap keywords compiled
     in if name == "Native" || name == "Main" || Text.isPrefixOf "Native_" name
 -- A module which name starts with "Native" is a native module by convention
 -- meaning it is a module where the corresponding lua file is created by hand

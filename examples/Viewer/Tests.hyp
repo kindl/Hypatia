@@ -10,7 +10,7 @@ import Geometry.Matrix(Matrix,
     rotationX, rotationY,
     rotationZ, rotation)
 import Common.Array(inspect)
-import Viewer.Obj as Obj
+import Obj
 import Common.Text as Text
 
 

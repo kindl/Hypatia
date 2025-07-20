@@ -19,14 +19,31 @@ type Import = Name
 data Mod = Mod Name [Import] [Statement]
     deriving (Show, Typeable, Data)
 
-data Statement
-    = Ret Expr
+data Statement =
+    Ret Expr
     | Assign Binding Expr
     | If Expr [Statement] [Statement]
         deriving (Show, Typeable, Data)
 
-data Expr
-    = Var Name
+data Op =
+    And
+    | Or
+    | Eq
+    | Le
+    | Ge
+    | Lt
+    | Gt
+    | Plus
+    | Minus
+    | Multiply
+    | Divide
+    | Modulo
+    | Power
+    | Concat
+    deriving (Show, Typeable, Data)
+
+data Expr =
+    Var Name
     | Tag Name
     | LitI Int
     | LitD Double
@@ -35,9 +52,7 @@ data Expr
     | Access Id [Int]
     | Call Expr [Expr]
     | Arr [Expr]
-    | And Expr Expr
-    | Or Expr Expr
-    | Eq Expr Expr
+    | Op Op Expr Expr
         deriving (Show, Typeable, Data)
 
 
@@ -119,9 +134,23 @@ toLuaE (Call e@(Func _ _) es) =
     parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
-toLuaE (And e1 e2) = parens (toLuaE e1 <+> text "and" <+> toLuaE e2)
-toLuaE (Or e1 e2) = parens (toLuaE e1 <+> text "or" <+> toLuaE e2)
-toLuaE (Eq e1 e2) = toLuaE e1 <+> text "==" <+> toLuaE e2
+toLuaE (Op op e1 e2) =
+    maybeParens toLuaE e1 <+> toLuaOp op <+> maybeParens toLuaE e2
+
+toLuaOp And = text "and"
+toLuaOp Or = text "or"
+toLuaOp Eq = text "=="
+toLuaOp Lt = text "<"
+toLuaOp Gt = text ">"
+toLuaOp Le = text "<="
+toLuaOp Ge = text ">="
+toLuaOp Plus = text "+"
+toLuaOp Minus = text "-"
+toLuaOp Multiply = text "*"
+toLuaOp Divide = text "/"
+toLuaOp Modulo = text "%"
+toLuaOp Power = text "^"
+toLuaOp Concat = text ".."
 
 -- e.g. A module A.B is saved in the file A_B.lua
 -- local A_B = require("A_B")
@@ -192,12 +221,24 @@ toJsE (Call e@(Func _ _) es) =
 toJsE (Call e es) =
     toJsE e <> parens (commas (fmap toJsE es))
 toJsE (Arr es) = brackets (commas (fmap toJsE es))
-toJsE (And e1 e2) =
-    toJsE e1 <+> text "&&" <+> toJsE e2
-toJsE (Or e1 e2) =
-    toJsE e1 <+> text "||" <+> toJsE e2
-toJsE (Eq e1 e2) =
-    toJsE e1 <+> text "===" <+> toJsE e2
+toJsE (Op op e1 e2) =
+    maybeParens toJsE e1 <+> toJsOp op <+> maybeParens toJsE e2
+
+toJsOp And = text "&&"
+toJsOp Or = text "||"
+toJsOp Eq = text "==="
+toJsOp Lt = text "<"
+toJsOp Gt = text ">"
+toJsOp Le = text "<="
+toJsOp Ge = text ">="
+toJsOp Plus = text "+"
+toJsOp Minus = text "-"
+toJsOp Multiply = text "*"
+toJsOp Divide = text "/"
+toJsOp Modulo = text "%"
+toJsOp Concat = text "+"
+-- Operator only available in new js versions
+toJsOp Power = text "**"
 
 -- js needs the leading dot for local modules
 toJsPath modName = dquotes ("./" <> flatModName modName)
@@ -214,8 +255,20 @@ optimize arityMap keywords (Mod modName imports statements) =
         . optimizeApplication arityMap)
             statements)
 
-inlineOperators (Call (Var (Name ["Native"] (Id "and" _))) [a, b]) = And a b
-inlineOperators (Call (Var (Name ["Native"] (Id "or" _))) [a, b]) = Or a b
+inlineOperators (Call (Var (Name ["Native"] (Id "and" _))) [a, b]) = Op And a b
+inlineOperators (Call (Var (Name ["Native"] (Id "or" _))) [a, b]) = Op Or a b
+inlineOperators (Call (Var (Name ["Native"] (Id "eq" _))) [a, b]) = Op Eq a b
+inlineOperators (Call (Var (Name ["Native"] (Id "le" _))) [a, b]) = Op Le a b
+inlineOperators (Call (Var (Name ["Native"] (Id "lt" _))) [a, b]) = Op Lt a b
+inlineOperators (Call (Var (Name ["Native"] (Id "ge" _))) [a, b]) = Op Ge a b
+inlineOperators (Call (Var (Name ["Native"] (Id "gt" _))) [a, b]) = Op Gt a b
+inlineOperators (Call (Var (Name ["Native"] (Id "plus" _))) [a, b]) = Op Plus a b
+inlineOperators (Call (Var (Name ["Native"] (Id "minus" _))) [a, b]) = Op Minus a b
+inlineOperators (Call (Var (Name ["Native"] (Id "multiply" _))) [a, b]) = Op Multiply a b
+inlineOperators (Call (Var (Name ["Native"] (Id "divide" _))) [a, b]) = Op Divide a b
+inlineOperators (Call (Var (Name ["Native"] (Id "modulo" _))) [a, b]) = Op Modulo a b
+inlineOperators (Call (Var (Name ["Native"] (Id "power" _))) [a, b]) = Op Power a b
+inlineOperators (Call (Var (Name ["Native"] (Id "concat" _))) [a, b]) = Op Concat a b
 inlineOperators e = e
 
 optimizeApplication arityMap statements =
@@ -246,12 +299,8 @@ removeCurryE arityMap (Func vs sts) =
     Func vs (fmap (removeCurryS arityMap) sts)
 removeCurryE arityMap (Arr es) =
     Arr (fmap (removeCurryE arityMap) es)
-removeCurryE arityMap (And e1 e2) =
-    And (removeCurryE arityMap e1) (removeCurryE arityMap e2)
-removeCurryE arityMap (Or e1 e2) =
-    Or (removeCurryE arityMap e1) (removeCurryE arityMap e2)
-removeCurryE arityMap (Eq e1 e2) =
-    Eq (removeCurryE arityMap e1) (removeCurryE arityMap e2)
+removeCurryE arityMap (Op o e1 e2) =
+    Op o (removeCurryE arityMap e1) (removeCurryE arityMap e2)
 removeCurryE _ e =
     e
 
@@ -452,7 +501,7 @@ compileMultiAlts vs = foldr (\(ps, e) rest ->
     in makeIf conditions s rest)
 
 makeIf [] s _ = s
-makeIf cs s elseBranch = [If (foldr1 And cs) s elseBranch]
+makeIf cs s elseBranch = [If (foldr1 (Op And) cs) s elseBranch]
 
 getOrMakeIds = getOrMakeIds' 0
 
@@ -474,7 +523,7 @@ extractVar _ = Nothing
 getConditions v i (AliasPattern _ p) =
     getConditions v i p
 getConditions v i (ConstructorPattern _ c []) =
-    [Eq (Access v i) (Tag c)]
+    [Op Eq (Access v i) (Tag c)]
 -- Constructors with only one variable are not wrapped in an array
 getConditions v i (ConstructorPattern ArrayRepresentation _ [p]) =
     getConditions v i p
@@ -485,21 +534,21 @@ getConditions v i (ConstructorPattern ArrayRepresentation _ ps) =
 getConditions v i (ConstructorPattern TaggedRepresentation c ps) =
     [makeIsArray (Access v i),
     -- + 1 to account for length of tag
-    Eq (makeLength (Access v i)) (LitI (length ps + 1)),
+    Op Eq (makeLength (Access v i)) (LitI (length ps + 1)),
     -- Compare tag
-    Eq (Access v (i ++ [0])) (Tag c)]
+    Op Eq (Access v (i ++ [0])) (Tag c)]
     ++ descendAccess (getConditions v) i 1 ps
 getConditions v i (ArrayPattern ps) =
     getConditionsArray v i ps
 getConditions v i (LiteralPattern l) =
-    [Eq (Access v i) (compileL l)]
+    [Op Eq (Access v i) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ renderError p)
 
 getConditionsArray v i ps =
     [makeIsArray (Access v i),
-    Eq (makeLength (Access v i)) (LitI (length ps))]
+    Op Eq (makeLength (Access v i)) (LitI (length ps))]
     ++ descendAccess (getConditions v) i 0 ps
 
 getAssignments v [] (VariablePattern (Name [] x)) | v == x =
@@ -560,3 +609,9 @@ getArityFromType x ty@(TypeArrow _ _) =
     in [(x, l)]
 getArityFromType x (ForAll _ ty) = getArityFromType x ty
 getArityFromType _ _ = []
+
+-- Helper for nested operators
+maybeParens f e =
+    case e of
+        (Op _ _ _) -> parens (f e)
+        _ -> f e

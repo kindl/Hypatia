@@ -29,6 +29,7 @@ data Op =
     And
     | Or
     | Eq
+    | Ne
     | Le
     | Ge
     | Lt
@@ -140,6 +141,7 @@ toLuaE (Op op e1 e2) =
 toLuaOp And = text "and"
 toLuaOp Or = text "or"
 toLuaOp Eq = text "=="
+toLuaOp Ne = text "~="
 toLuaOp Lt = text "<"
 toLuaOp Gt = text ">"
 toLuaOp Le = text "<="
@@ -227,6 +229,7 @@ toJsE (Op op e1 e2) =
 toJsOp And = text "&&"
 toJsOp Or = text "||"
 toJsOp Eq = text "==="
+toJsOp Ne = text "!=="
 toJsOp Lt = text "<"
 toJsOp Gt = text ">"
 toJsOp Le = text "<="
@@ -258,6 +261,7 @@ optimize arityMap keywords (Mod modName imports statements) =
 inlineOperators (Call (Var (Name ["Native"] (Id "and" _))) [a, b]) = Op And a b
 inlineOperators (Call (Var (Name ["Native"] (Id "or" _))) [a, b]) = Op Or a b
 inlineOperators (Call (Var (Name ["Native"] (Id "eq" _))) [a, b]) = Op Eq a b
+inlineOperators (Call (Var (Name ["Native"] (Id "ne" _))) [a, b]) = Op Ne a b
 inlineOperators (Call (Var (Name ["Native"] (Id "le" _))) [a, b]) = Op Le a b
 inlineOperators (Call (Var (Name ["Native"] (Id "lt" _))) [a, b]) = Op Lt a b
 inlineOperators (Call (Var (Name ["Native"] (Id "ge" _))) [a, b]) = Op Ge a b

@@ -605,10 +605,14 @@ captureSignatureArity (ModuleDeclaration _ _ decls) =
     fromList (concat [getArityFromType x ty | TypeSignature x ty <- decls])
 
 getArityFromType x ty@(TypeArrow _ _) =
-    let l = length (arrowsToList ty) - 1
+    let l = countArrows ty
     in [(x, l)]
 getArityFromType x (ForAll _ ty) = getArityFromType x ty
 getArityFromType _ _ = []
+
+countArrows (ForAll _ ty) = countArrows ty
+countArrows (TypeArrow _ ty) = 1 + countArrows ty
+countArrows _ = 0
 
 -- Helper for nested operators
 maybeParens f e =

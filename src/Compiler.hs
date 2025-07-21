@@ -286,14 +286,20 @@ removeCurryS arityMap (If e thenBranch elseBranch) =
 removeCurryE arityMap e@(Var v) =
     case lookup v arityMap of
         Just arity | arity > 1 ->
-            createCurry arity e
+            -- When a function is referred as a name
+            -- it has to be curried as if it was applied to no arguments
+            createPartialApplication arity e []
         _ -> e
 removeCurryE arityMap c@(Call f originalEs) =
     case flattenCall c [] of
-        ((Var v), es) ->
+        (Var v, es) ->
             case lookup v arityMap of
-                Just arity | arity == length es -> Call (Var v) (fmap (removeCurryE arityMap) es)
-                _ -> Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
+                Just arity | arity == length es ->
+                    Call (Var v) (fmap (removeCurryE arityMap) es)
+                Just arity | arity > length es ->
+                    createPartialApplication arity (Var v) (fmap (removeCurryE arityMap) es)
+                _ ->
+                    Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
         _ -> Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
 removeCurryE arityMap (Func vs sts) =
     Func vs (fmap (removeCurryS arityMap) sts)
@@ -304,11 +310,12 @@ removeCurryE arityMap (Op o e1 e2) =
 removeCurryE _ e =
     e
 
-createCurry arity e =
+createPartialApplication arity e es =
     let
-        parameters = nNewVars arity
-        body = [Ret (Call e (fmap (Var . fromId) parameters))]
-    in curryFuncSts parameters body
+        vars = nNewVars (arity - length es)
+        parameters = es ++ fmap (Var . fromId) vars
+        body = [Ret (Call e parameters)]
+    in curryFuncSts vars body
 
 optimizeName modName n@(Name qs ident) =
     if qs == nameToList modName then Name [] ident else n

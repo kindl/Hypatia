@@ -80,8 +80,8 @@ testParens1 =
 
 testParens2 =
     let
-        v1 = (2 * 3) + (5 * 7) + (11 * 13) #is 184
-        v2 =  2 * 3  +  5 * 7  +  11 * 13  #is 219
+        v1 = (2 * 3) + (5 * 7) + (11 * 13) + (17 * 19)
+        v2 =  2 * 3  +  5 * 7  +  11 * 13 + 17 * 19
     in test "parens 2" (boolToString (v1 == v2))
 
 testNegate =
@@ -102,6 +102,12 @@ testEq =
 testRight = test "should be true" (m1 == m1)
 testWrong = test "should be false" (m1 == m2)
 testInspect = test "inspect" (multiply m2 m1)
+
+testEqNestedArrays =
+    let
+        a1 = [[1, 2, 3], [4, 5, 6]]
+        a2 = [[1, 2, 3], [4, 5, 6]]
+    in test "testEqNestedArrays" (a1 == a2)
 
 testToArray = test "Text.toArray" (Text.toArray "Wörld!" == ["W", "ö", "r", "l", "d", "!"])
 

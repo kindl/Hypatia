@@ -10,10 +10,8 @@ sqrt x = x ^ 0.5
 
 pi = 3.141592653589793
 
-# Comparison
+// Comparisons
 infix 4 == equals
-// Is != the right choice?
-// Lua uses ~=, Haskell /= and F# <>
 infix 4 != notEquals
 infix 4 < lessThan
 infix 4 > greaterThan
@@ -32,8 +30,9 @@ lessThanOrEqual l r = genComp le l r
 
 greaterThanOrEqual l r = genComp ge l r
 
-# Generic comparison
+// Generic comparison
 genComp comp l r =
+    // genComp has to be passed recursively for nested datatypes
     comp l r || trySeqComp (genComp comp) l r
 
 trySeqComp comp l r =
@@ -52,13 +51,11 @@ seqCompAux comp i maxN l r =
     eq i maxN
     || (comp (unsafeIndex i l) (unsafeIndex i r) && seqCompAux comp (i + 1) maxN l r)
 
-
 min a b = if a <= b then a else b
 
 max a b = if a <= b then b else a
 
 sign a = if a < 0 then -1 else if a > 0 then 1 else 0
-
 
 repeatN f n =
     if eq n 0 then Unit
@@ -84,7 +81,7 @@ type Tuple5 a b c d e = Tuple5 a b c d e
 first f (Tuple2 a b) = Tuple2 (f a) b
 
 
-# Functions
+// Functions
 fix f x = f (fix f) x
 
 flip f x y = f y x

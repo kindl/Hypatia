@@ -74,6 +74,8 @@ substring : Text -> Number -> Number -> Text
 # Comparing Numbers, Strings and Constructors
 eq : e -> e -> Bool
 
+ne : e -> e -> Bool
+
 lt : e -> e -> Bool
 
 gt : e -> e -> Bool

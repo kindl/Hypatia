@@ -3,7 +3,7 @@ module Common.Base
 import Native(Number, Text, Array, Bool,
     (^), (-), (+), (&&), (||),
     unsafeIndex, length, isArray, unsafeCoerce,
-    eq, lt, gt, le, ge,
+    eq, ne, lt, gt, le, ge,
     True, False)
 
 sqrt x = x ^ 0.5
@@ -20,7 +20,7 @@ infix 4 >= greaterThanOrEqual
 
 equals l r = genComp eq l r
 
-notEquals a b = not (equals a b)
+notEquals l r = genComp ne l r
 
 lessThan l r = genComp lt l r
 

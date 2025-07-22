@@ -39,7 +39,7 @@ trySeqComp comp l r =
     isArray l && isArray r && seqComp comp (toArray l) (toArray r)
     where
         toArray : a -> Array b
-        toArray = unsafeCoerce
+        toArray x = unsafeCoerce x
 
 seqComp comp l r =
     let

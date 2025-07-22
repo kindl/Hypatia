@@ -12,7 +12,7 @@ import Control.Monad.Trans.Class(lift)
 import Data.List(sortOn)
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
-import Data.Generics.Uniplate.Data(universe, para, descend)
+import Data.Generics.Uniplate.Data(universe, para, descend, transformM)
 import Data.Foldable(traverse_, foldMap', foldl')
 import Control.Exception(onException)
 import Control.Applicative((<|>))
@@ -110,7 +110,8 @@ typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 typecheckVar x ty = do
     env <- getEnv
     scheme <- mfind x env
-    subsume scheme ty
+    instantiated <- deepInstantiate scheme
+    subsume instantiated ty
 
 typecheckAlt patternTy expressionTy pat expr = do
     binds <- typecheckPattern pat patternTy
@@ -344,6 +345,8 @@ instantiate (ForAll vars ty) = do
     subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt (getLocation x))) vars
     return (apply (fromList subst) ty)
 instantiate ty = return ty
+
+deepInstantiate ty = transformM instantiate ty
 
 subsume x y = do
     subst <- getSubst

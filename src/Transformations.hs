@@ -9,9 +9,9 @@ import Operators
 import Qualification
 import Data.HashMap.Strict(insert, (!))
 import Data.Foldable(foldMap')
-import Control.Monad.Trans.State.Strict(StateT(StateT), runStateT)
 import Control.Monad((<=<))
-import qualified Data.Text.IO as Text
+-- import qualified Data.Text.IO as Text
+import Data.Traversable(mapAccumM)
 
 
 transformProgram ms = either fail return (transformations ms)
@@ -49,7 +49,7 @@ typecheckAction envs m = do
     -- Save the environment for debugging
     -- let logPath = "logs/" ++ renderName (getName m) ++ ".log"
     -- Text.writeFile logPath (renderEnv captured)
-    return ((), captured)
+    return (captured, ())
 
 {- Operators and Aliasing -}
 qualifyProgram =
@@ -76,20 +76,15 @@ simpleActionA action filterEnvs capture envs m = do
     captured <- capture m
     let combined = captured `mappend` filterEnvs (getImports m) envs
     result <- action combined m
-    pure (result, captured)
+    pure (captured, result)
 
 -- Incrementally grow an environment and perform an action on all modules.
 -- An action is a function that returns captured information e.g. operators and their aliases
 -- and a changed module e.g. where operators have been changed to function application.
-feedbackM action mods = fmap fst (mapAccumM step mempty mods)
-    -- step could also be written without do-notation:
-    --fmap (fmap (flip (insert (getName m)) envs)) (action envs m)
+feedbackM action mods = fmap snd (mapAccumM step mempty mods)
     where step envs m = do
-            (result, captured) <- action envs m
-            return (result, insert (getName m) captured envs)
-
--- TODO Remove with base-4.18
-mapAccumM f s t = runStateT (traverse (StateT . flip f) t) s
+            (captured, result) <- action envs m
+            return (insert (getName m) captured envs, result)
 
 filterIds imports envs =
     foldMap' (\(ImportDeclaration modName importedIds _) ->

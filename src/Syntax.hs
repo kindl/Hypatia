@@ -166,18 +166,30 @@ instance Pretty Location where
 
 instance Pretty Type where
     pretty t@(TypeArrow _ _) =
-        parens (mintercalate (text " -> ") (fmap pretty (arrowsToList t)))
+        mintercalate (text " -> ") (fmap (parensType pretty) (arrowsToList t))
     pretty (TypeInfixOperator a op b) =
-        parens (pretty a <+> pretty op <+> pretty b)
+        parensType pretty a <+> pretty op <+> parensType pretty b
     pretty (TypeConstructor n) = pretty n
     pretty (TypeVariable n) = pretty n
     pretty (SkolemConstant s) = text "skolem." <> pretty s
     pretty t@(TypeApplication _ _) =
-        parens (mintercalate (text " ") (fmap pretty (typeApplicationToList t)))
+        mintercalate (text " ") (fmap (parensTypeApplication pretty) (typeApplicationToList t))
     pretty (ParenthesizedType t) = parens (pretty t)
     pretty (ForAll ts t) =
         text "forall" <+> mintercalate (text " ") (fmap pretty ts)
             <> text "." <+> pretty t
+
+parensTypeApplication f e =
+    case e of
+        TypeApplication _ _ -> parens (f e)
+        _ -> parensType f e
+
+parensType f e =
+    case e of
+        TypeInfixOperator _ _ _ -> parens (f e)
+        TypeArrow _ _ -> parens (f e)
+        ForAll _ _ -> parens (f e)
+        _ -> f e
 
 instance Pretty Literal where
     pretty (Number n) = pretty n

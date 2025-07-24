@@ -346,6 +346,11 @@ instantiate (ForAll vars ty) = do
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 
+-- TODO: find better solution
+-- Deep instantiation is a bandaid for typing functions like
+-- `map3 map2 f a1 a2 a3 = map2 identity (map2 f a1 a2) a3`
+-- However, it leads to programs being accepted that should not be,
+-- for example `runST (newSTRef 0)`
 deepInstantiate ty = transformM instantiate ty
 
 subsume x y = do

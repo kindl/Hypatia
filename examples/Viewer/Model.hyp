@@ -22,18 +22,22 @@ objToVertexData obj =
         vertices = getVertices obj
         textureCoordinates = getTextureCoordinates obj
 
-        getPoint (VI vi) = toArray3 (nth vi vertices) <> [0, 0, 0, 0, 0]
-        getPoint (VTI vi vt) = toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> [0, 0, 0]
-        getPoint (VNI vi vn) = toArray3 (nth vi vertices) <> [0, 0] <> toArray3 (nth vn normals)
-        getPoint (VTNI vi vt vn) = toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> toArray3 (nth vn normals)
-
-    in foldMap (map getPoint) (foldMap triangulate faces)
+        pointToVertexData (VI vi) =
+            toArray3 (nth vi vertices) <> [0, 0, 0, 0, 0]
+        pointToVertexData (VTI vi vt) =
+            toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> [0, 0, 0]
+        pointToVertexData (VNI vi vn) =
+            toArray3 (nth vi vertices) <> [0, 0] <> toArray3 (nth vn normals)
+        pointToVertexData (VTNI vi vt vn) =
+            toArray3 (nth vi vertices) <> toArray2 (nth vt textureCoordinates) <> toArray3 (nth vn normals)
+    in foldMap (map pointToVertexData) (foldMap triangulate faces)
 
 // TODO simple fan triangulation
 triangulate [a, b, c, d] = [[a, b, c], [a, c, d]]
 triangulate f = [f]
 
-// The format is necessary to have z for VertexPosition and VertexNormal
+// This format is different from the default
+// by adding z for VertexPosition and VertexNormal
 vertexFormat =
     [
         Tuple3 "VertexPosition" "float" 3,

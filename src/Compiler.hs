@@ -628,5 +628,5 @@ countArrows _ = 0
 -- Helper for nested operators
 maybeParens f e =
     case e of
-        (Op _ _ _) -> parens (f e)
+        Op _ _ _ -> parens (f e)
         _ -> f e

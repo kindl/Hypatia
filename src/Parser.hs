@@ -213,31 +213,29 @@ constr = do
     return (fromId c, ts)
 {-# INLINE constr #-}
 
-{- Expressions -}
-expr = negationExpression <|> operatorOrLexpr
-{-# INLINE expr #-}
-
 {-
 the same as operatorExpr <|> lexpr
 because operator expression would start with an lexpr
 and fail if it is not an operator expression
 lexpr would be parsed twice
 -}
-operatorOrLexpr = do
+expr = do
     l <- lexpr
     mo <- optional (liftA2 (,) qvarsym expr)
     return (case mo of
         Just (o, r) -> OperatorExpression l o r
         Nothing -> l)
-{-# INLINE operatorOrLexpr #-}
+{-# INLINE expr #-}
 
+-- NOTE negation expression was moved out of expr
+-- and down to lexpr
 negationExpression = do
     Varsym [] "-" <- nextLexeme
-    e <- expr
+    e <- fexpr
     return (NegationExpression e)
 {-# INLINE negationExpression #-}
 
-lexpr = lambdaExpression <|> letExpression
+lexpr = negationExpression <|> lambdaExpression <|> letExpression
     <|> ifExpression <|> caseExpression <|> fexpr
 {-# INLINE lexpr #-}
 

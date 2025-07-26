@@ -1,15 +1,16 @@
 module Tests
 
 import Native((+), (-), (*), (^), (++), (&&),
-    print)
-import Common.Base((==), boolToString)
+    print, unsafeCoerce)
+import Common.Base((==), (<),
+    abs, not)
 import Common.Parser(words)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix,
     transpose, multiply, subtract,
     rotationX, rotationY,
     rotationZ, rotation)
-import Common.Array(inspect)
+import Common.Array(inspect, all)
 import Obj
 import Common.Text as Text
 
@@ -37,7 +38,7 @@ testTranspose =
             3 13 29 43
             5 17 31 47
             7 19 37 53
-    in test "transpose" (boolToString (transpose m1 == m1t))
+    in test "transpose" (transpose m1 == m1t)
 
 testMultiply =
     let
@@ -46,47 +47,63 @@ testMultiply =
             5318 5562 5980 6246
             10514 11006 11840 12378
             15894 16634 17888 18710
-    in test "multiply" (boolToString (multiply m1 m2 == m))
+    in test "multiply" (multiply m1 m2 == m)
 
 testDot =
     let
         v1 = Vector4 2 3 5 7
         v2 = Vector4 11 13 17 19
-    in test "dot prod" (boolToString (dot v1 v2 == 279))
+    in test "dot prod" (dot v1 v2 == 279)
 
 testPrecedence =
     let
         v1 = 5 + 3 * 4
         v2 = 3 * 4 + 5
-    in test "precedence" (boolToString (v1 == v2))
+    in test "precedence" (v1 == v2)
 
 testAssocL =
     let
         v1 = 2 - 3 - 4 - 5
         v2 = -10
-    in test "assocL" (boolToString (v1 == v2))
+    in test "assocL" (v1 == v2)
 
 testAssocR =
     let
         v1 = 2 ^ 2 ^ 2 ^ 2
         v2 = 65536
-    in test "assocR" (boolToString (v1 == v2))
+    in test "assocR" (v1 == v2)
 
 testParens1 =
     let
         v1 = (2 * 3) + (5 * 7)
         v2 =  2 * 3  +  5 * 7
-    in test "parens 1" (boolToString (v1 == v2))
+    in test "parens 1" (v1 == v2)
 
 testParens2 =
     let
         v1 = (2 * 3) + (5 * 7) + (11 * 13) + (17 * 19)
         v2 =  2 * 3  +  5 * 7  +  11 * 13 + 17 * 19
-    in test "parens 2" (boolToString (v1 == v2))
+    in test "parens 2" (v1 == v2)
 
+// Compared to Haskell, negation needs less parentheses
 testNegate =
+    let
+        v = 3
+        r1 = v - v
+        r2 = -v + v
+        // This is allowed
+        r3 = v + -v
+        r4 = -v - -v
+        // This is parsed as a literal, not negate 3
+        r5 = v + -3
+        // `inc -v` would not work, because it would be parsed as `minus inc v`
+        inc x = x + 1
+        r6 = inc (-v) - inc (-v)
+    in test "negate" (r1 == 0 && r2 == 0 && r3 == 0 && r4 == 0 && r5 == 0 && r6 == 0)
+
+testNegatePattern =
     let { x = 5 } in
-        test "negate" (case -x of {
+        test "negatePattern" (case -x of {
             -5 -> "true";
             _ -> "false"})
 
@@ -97,10 +114,10 @@ testEq =
             11 13 17 19
             23 29 31 37
             41 43 47 53
-    in test "eq" (boolToString (m1 == m))
+    in test "eq" (m1 == m)
 
-testRight = test "should be true" (m1 == m1)
-testWrong = test "should be false" (m1 == m2)
+testMatrixEquality = test "matrix equality" (m1 == m1)
+testMatrixInequality = test "matrix inequality" (not (m1 == m2))
 testInspect = test "inspect" (multiply m2 m1)
 
 testEqNestedArrays =
@@ -116,7 +133,12 @@ testWords =
         general = words " \nHello Little Wörld! " == ["Hello", "Little", "Wörld!"]
         empty1 = words "" == []
         empty2 = words " \n" == []
-    in test "words should be true" (general && empty1 && empty2)
+    in test "words" (general && empty1 && empty2)
+
+// Due to floating point numbers
+// the order of multiplication could introduce some rounding errors
+// instead of equality, check that the difference is small
+smallNumber = 1.0e-16
 
 testMultiplyAssoc =
     let
@@ -125,7 +147,8 @@ testMultiplyAssoc =
         z = 11
         combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
         combined2 = multiply (rotationX x) (multiply (rotationY y) (rotationZ z))
-    in test "matrix multiply all should be almost 0" (subtract combined1 combined2)
+    in test "matrix multiply assoc"
+        (all (\n -> abs n < smallNumber) (unsafeCoerce (subtract combined1 combined2)))
 
 testRotate =
     let
@@ -134,4 +157,5 @@ testRotate =
         z = 11
         combined1 = multiply (multiply (rotationX x) (rotationY y)) (rotationZ z)
         combined2 = rotation x y z
-    in test "matrix rotate all should be almost 0" (subtract combined1 combined2)
+    in test "matrix rotate"
+        (all (\n -> abs n < smallNumber) (unsafeCoerce (subtract combined1 combined2)))

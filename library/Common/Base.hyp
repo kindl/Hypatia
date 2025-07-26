@@ -57,6 +57,8 @@ max a b = if a <= b then b else a
 
 sign a = if a < 0 then -1 else if a > 0 then 1 else 0
 
+abs a = if a < 0 then -a else a
+
 repeatN f n =
     if eq n 0 then Unit
         else let { _ = f Unit } in repeatN f (n - 1)

@@ -74,7 +74,7 @@ annotateTagInfoProgram =
 -- but return only the local environment
 simpleActionA action filterEnvs capture envs m = do
     captured <- capture m
-    let combined = captured `mappend` filterEnvs (getImports m) envs
+    let combined = captured <> filterEnvs (getImports m) envs
     result <- action combined m
     pure (captured, result)
 

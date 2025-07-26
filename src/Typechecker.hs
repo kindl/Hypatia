@@ -36,13 +36,13 @@ inferModule (ModuleDeclaration _ _ decls) = do
     constructors <- getAp (foldMap' gatherConstructor decls)
     signatures <- getAp (foldMap' gatherTypeSig decls)
 
-    let consAndSigs = mappend constructors signatures
+    let consAndSigs = constructors <> signatures
     binds <- with consAndSigs (inferDecls generalize decls)
 
     sanitySkolemCheck binds
     sanityFreeVariableCheck binds
 
-    return (mappend consAndSigs binds)
+    return (consAndSigs <> binds)
 
 -- Skolem variables are caught earlier,
 -- so this check is redundant, but makes sure
@@ -96,7 +96,7 @@ typecheck (LambdaExpression [p] e) ty = do
 typecheck (LetExpression decls e) ty = do
     signatures <- getAp (foldMap' gatherTypeSig decls)
     binds <- with signatures (inferDecls return decls)
-    with (mappend signatures binds) (typecheck e ty)
+    with (signatures <> binds) (typecheck e ty)
 typecheck (IfExpression condtition thenBranch elseBranch) ty = do
     typecheck condtition (TypeConstructor (fromText "Native.Bool"))
     typecheck thenBranch ty
@@ -207,7 +207,7 @@ typecheckNextWith gen binds next = do
     generalized <- traverse gen binds
 
     nextTys <- with generalized next
-    return (mappend generalized nextTys)
+    return (generalized <> nextTys)
 
 -- Typecheck Patterns
 typecheckPattern (VariablePattern x) ty = do
@@ -309,7 +309,7 @@ getSubst = do
     lift (readIORef r)
 
 with binds = local (\(TypecheckerState env r s) ->
-    TypecheckerState (mappend binds env) r s)
+    TypecheckerState (binds <> env) r s)
 
 -- Type Variables
 newUnique = do

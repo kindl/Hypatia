@@ -151,7 +151,7 @@ data Expression
 commas = mintercalate (text ", ")
 
 mintercalate _ [] = mempty
-mintercalate s xs = foldr1 (\x r -> x `mappend` s `mappend` r) xs
+mintercalate s xs = foldr1 (\x r -> x <> s <> r) xs
 
 qualify (Name modQs modName) (Name [] name) =
     Name (modQs ++ [getText modName]) name

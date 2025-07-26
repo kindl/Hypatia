@@ -24,22 +24,22 @@ fixAssoc operatorTable =
 captureAssocs (ModuleDeclaration _ _ decls) =
     fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
 
-fixAssocE operatorTable (InfixOperator (InfixOperator e1 child e2) root e3) =
-    fixAssocAux operatorTable False InfixOperator e1 child e2 root e3
-fixAssocE operatorTable (InfixOperator e1 root (InfixOperator e2 child e3)) =
-    fixAssocAux operatorTable True InfixOperator e1 child e2 root e3
+fixAssocE operatorTable (OperatorExpression (OperatorExpression e1 child e2) root e3) =
+    fixAssocAux operatorTable False OperatorExpression e1 child e2 root e3
+fixAssocE operatorTable (OperatorExpression e1 root (OperatorExpression e2 child e3)) =
+    fixAssocAux operatorTable True OperatorExpression e1 child e2 root e3
 fixAssocE _ _ = Right Nothing
 
-fixAssocP operatorTable (PatternInfixOperator (PatternInfixOperator e1 child e2) root e3) =
-    fixAssocAux operatorTable False PatternInfixOperator e1 child e2 root e3
-fixAssocP operatorTable (PatternInfixOperator e1 root (PatternInfixOperator e2 child e3)) =
-    fixAssocAux operatorTable True PatternInfixOperator e1 child e2 root e3
+fixAssocP operatorTable (OperatorPattern (OperatorPattern e1 child e2) root e3) =
+    fixAssocAux operatorTable False OperatorPattern e1 child e2 root e3
+fixAssocP operatorTable (OperatorPattern e1 root (OperatorPattern e2 child e3)) =
+    fixAssocAux operatorTable True OperatorPattern e1 child e2 root e3
 fixAssocP _ _ = Right Nothing
 
-fixAssocT operatorTable (TypeInfixOperator (TypeInfixOperator e1 child e2) root e3) =
-    fixAssocAux operatorTable False TypeInfixOperator e1 child e2 root e3
-fixAssocT operatorTable (TypeInfixOperator e1 root (TypeInfixOperator e2 child e3)) =
-    fixAssocAux operatorTable True TypeInfixOperator e1 child e2 root e3
+fixAssocT operatorTable (TypeOperator (TypeOperator e1 child e2) root e3) =
+    fixAssocAux operatorTable False TypeOperator e1 child e2 root e3
+fixAssocT operatorTable (TypeOperator e1 root (TypeOperator e2 child e3)) =
+    fixAssocAux operatorTable True TypeOperator e1 child e2 root e3
 fixAssocT _ _ = Right Nothing
 
 -- General helper function for patterns, types and expressions

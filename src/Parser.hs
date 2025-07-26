@@ -185,7 +185,7 @@ otype = do
     n <- optional (liftA2 (,) (eitherP (token "->") qvarsym) otype)
     return (case n of
         Just (Left _, t) -> TypeArrow b t
-        Just (Right o, t) -> TypeInfixOperator b o t
+        Just (Right o, t) -> TypeOperator b o t
         Nothing -> b)
 {-# INLINE otype #-}
 
@@ -214,42 +214,28 @@ constr = do
 {-# INLINE constr #-}
 
 {- Expressions -}
-expr = {- typeAnnotation <|> -} infixexpr
+expr = negationExpression <|> operatorOrLexpr
 {-# INLINE expr #-}
 
 {-
--- in the same way as infixOperatorOrLexpr
-typeAnnotationOrInfixExpr = do
-    e <- infixexpr
-    ot <- optional (token ":" *> qtype)
-    return (case ot of
-        Just t -> TypeAnnotation e t
-        Nothing -> e)
-{-# INLINE typeAnnotationOrInfixExpr #-}
--}
-
-infixexpr = prefixNegation <|> infixOperatorOrLexpr
-{-# INLINE infixexpr #-}
-
-{-
-the same as infixOperator <|> lexpr
-because infixOperator would start with an lexpr
-and fail if it is not an infixOperator
+the same as operatorExpr <|> lexpr
+because operator expression would start with an lexpr
+and fail if it is not an operator expression
 lexpr would be parsed twice
 -}
-infixOperatorOrLexpr = do
+operatorOrLexpr = do
     l <- lexpr
-    mo <- optional (liftA2 (,) qvarsym infixexpr)
+    mo <- optional (liftA2 (,) qvarsym expr)
     return (case mo of
-        Just (o, r) -> InfixOperator l o r
+        Just (o, r) -> OperatorExpression l o r
         Nothing -> l)
-{-# INLINE infixOperatorOrLexpr #-}
+{-# INLINE operatorOrLexpr #-}
 
-prefixNegation = do
+negationExpression = do
     Varsym [] "-" <- nextLexeme
-    e <- infixexpr
-    return (PrefixNegation e)
-{-# INLINE prefixNegation #-}
+    e <- expr
+    return (NegationExpression e)
+{-# INLINE negationExpression #-}
 
 lexpr = lambdaExpression <|> letExpression
     <|> ifExpression <|> caseExpression <|> fexpr
@@ -339,15 +325,15 @@ alt = do
 {-# INLINE alt #-}
 
 {- Patterns -}
-pat = patternInfixOperator <|> lpat
+pat = operatorPattern <|> lpat
 {-# INLINE pat #-}
 
-patternInfixOperator = do
+operatorPattern = do
     l <- lpat
     o <- qvarsym
     r <- pat
-    return (PatternInfixOperator l o r)
-{-# INLINE patternInfixOperator #-}
+    return (OperatorPattern l o r)
+{-# INLINE operatorPattern #-}
 
 -- NOTE negative patterns were removed from lpat
 -- because the minus is part of the literal

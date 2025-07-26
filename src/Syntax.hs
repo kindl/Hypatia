@@ -97,7 +97,7 @@ data Declaration
 
 data Type
     = TypeArrow Type Type
-    | TypeInfixOperator Type Name Type
+    | TypeOperator Type Name Type
     | TypeApplication Type Type
     | TypeConstructor Name
     | ParenthesizedType Type
@@ -118,11 +118,13 @@ data Pattern
     | ConstructorPattern TagInfo Name [Pattern]
     | ParenthesizedPattern Pattern
     | ArrayPattern [Pattern]
-    | PatternInfixOperator Pattern Name Pattern
+    | OperatorPattern Pattern Name Pattern
     | AliasPattern Binding Pattern
         deriving (Show, Data, Typeable)
 
-
+-- TODO think about how types could be added to expressions
+-- We could define type annotation as a function with type application
+-- so instead of (expression: Type) one could write (it @Type expression)
 data Expression
     = Variable Name
     | LiteralExpression Literal
@@ -135,17 +137,14 @@ data Expression
 --  | CaseLambdaExpression [(Pattern, Expression)]
     | ParenthesizedExpression Expression
     | ArrayExpression [Expression]
-    | InfixOperator Expression Name Expression
-    | PrefixNegation Expression
+    | OperatorExpression Expression Name Expression
+    | NegationExpression Expression
 -- Await expressions are only allowed in the form
 -- pat = await expr
     | AwaitExpression Expression
     | IfExpression Expression Expression Expression
     | CaseExpression Expression [(Pattern, Expression)]
     | LambdaExpression [Pattern] Expression
--- TODO think about how types could be added to expressions
--- We could define type annotation as a function with type application
---  | TypeAnnotation Expression Type
         deriving (Show, Data, Typeable)
 
 commas = mintercalate (text ", ")
@@ -167,7 +166,7 @@ instance Pretty Location where
 instance Pretty Type where
     pretty t@(TypeArrow _ _) =
         mintercalate (text " -> ") (fmap (parensType pretty) (arrowsToList t))
-    pretty (TypeInfixOperator a op b) =
+    pretty (TypeOperator a op b) =
         parensType pretty a <+> pretty op <+> parensType pretty b
     pretty (TypeConstructor n) = pretty n
     pretty (TypeVariable n) = pretty n
@@ -186,7 +185,7 @@ parensTypeApplication f e =
 
 parensType f e =
     case e of
-        TypeInfixOperator _ _ _ -> parens (f e)
+        TypeOperator _ _ _ -> parens (f e)
         TypeArrow _ _ -> parens (f e)
         ForAll _ _ -> parens (f e)
         _ -> f e
@@ -204,7 +203,7 @@ instance Pretty Pattern where
     pretty (ConstructorPattern _ name ps) =
         parens (pretty name
             <+> mintercalate (text " ") (fmap pretty ps))
-    pretty (PatternInfixOperator a op b) =
+    pretty (OperatorPattern a op b) =
         parens (pretty a <+> pretty op <+> pretty b)
     pretty (ParenthesizedPattern p) =
         parens (pretty p)

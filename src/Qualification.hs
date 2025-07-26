@@ -48,8 +48,8 @@ qualifyP quals pat =
             fmap (flip AliasPattern p) (findName quals v)
         f (ConstructorPattern info c ps) =
             fmap (\q -> ConstructorPattern info q ps) (findName quals c)
-        f (PatternInfixOperator p1 op p2) =
-            fmap (\q -> PatternInfixOperator p1 q p2) (findName quals op)
+        f (OperatorPattern p1 op p2) =
+            fmap (\q -> OperatorPattern p1 q p2) (findName quals op)
         f p = Right p
     in transformM f pat
 
@@ -68,8 +68,8 @@ qualifyE quals (CaseExpression e alts) =
 qualifyE quals (LambdaExpression [p] e) = do
     (qp, qe) <- qualifyAlt quals (p, e)
     pure (LambdaExpression [qp] qe)
-qualifyE quals (InfixOperator ea name eb) =
-    liftA3 InfixOperator (qualifyE quals ea) (findName quals name) (qualifyE quals eb)
+qualifyE quals (OperatorExpression ea name eb) =
+    liftA3 OperatorExpression (qualifyE quals ea) (findName quals name) (qualifyE quals eb)
 qualifyE quals e =
     descendM (qualifyE quals) e
 
@@ -108,8 +108,8 @@ captureTopDecl _ = []
 -- Type Level
 qualifyTypeNames quals m =
     let
-        h (TypeInfixOperator ta op tb) =
-            fmap (\q -> TypeInfixOperator ta q tb) (findName quals op)
+        h (TypeOperator ta op tb) =
+            fmap (\q -> TypeOperator ta q tb) (findName quals op)
         h (TypeConstructor c) =
             fmap TypeConstructor (findName quals c)
         h t = Right t
@@ -148,18 +148,18 @@ changeQualifiedImports quals =
             Variable (changeQualifier n quals)
         f (ConstructorExpression c) =
             ConstructorExpression (changeQualifier c quals)
-        f (InfixOperator ea name eb) =
-            InfixOperator ea (changeQualifier name quals) eb
+        f (OperatorExpression ea name eb) =
+            OperatorExpression ea (changeQualifier name quals) eb
         f e = e
 
         g (ConstructorPattern info c ps) =
             ConstructorPattern info (changeQualifier c quals) ps
-        g (PatternInfixOperator p1 op p2) =
-            PatternInfixOperator p1 (changeQualifier op quals) p2
+        g (OperatorPattern p1 op p2) =
+            OperatorPattern p1 (changeQualifier op quals) p2
         g p = p
 
-        h (TypeInfixOperator ta op tb) =
-            TypeInfixOperator ta (changeQualifier op quals) tb
+        h (TypeOperator ta op tb) =
+            TypeOperator ta (changeQualifier op quals) tb
         h (TypeConstructor c) =
             TypeConstructor (changeQualifier c quals)
         h t = t

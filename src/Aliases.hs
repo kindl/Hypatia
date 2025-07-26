@@ -32,9 +32,9 @@ aliasConstructors aliasTable =
 
 aliasOperators aliases =
     let
-        f (PrefixNegation e) =
+        f (NegationExpression e) =
             Right (FunctionApplication (Variable (fromText "Native.negate")) e)
-        f (InfixOperator a op b) =
+        f (OperatorExpression a op b) =
             fmap (\al -> makeOp al a b) (findAlias op aliases)
         f (Variable x) | isOperator x =
             fmap Variable (findAlias x aliases)
@@ -42,13 +42,13 @@ aliasOperators aliases =
             fmap ConstructorExpression (findAlias c aliases)
         f e = Right e
 
-        g (PatternInfixOperator a op b) =
+        g (OperatorPattern a op b) =
             fmap (\al -> makeOpPat al a b) (findAlias op aliases)
         g (ConstructorPattern info c ps) | isOperator c =
             fmap (\op -> ConstructorPattern info op ps) (findAlias c aliases)
         g p = Right p
 
-        h (TypeInfixOperator a op b) =
+        h (TypeOperator a op b) =
             fmap (\al -> makeOpTyp al a b) (findAlias op aliases)
         h (TypeConstructor c) | isOperator c =
             fmap TypeConstructor (findAlias c aliases)

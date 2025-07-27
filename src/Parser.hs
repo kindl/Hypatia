@@ -12,7 +12,7 @@ import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..),
     lexlex, prettyLocated, alternating1,
     extractLexeme, extractLocation)
-import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', eitherP, option)
+import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', option)
 
 
 {-
@@ -149,10 +149,8 @@ expressionDeclaration = do
 rhs = token "=" *> exprWithWhere
 {-# INLINE rhs #-}
 
-exprWithWhere = do
-    e <- expr
-    ws <- optional (token "where" *> decls)
-    return (maybe e (flip LetExpression e) ws)
+exprWithWhere =
+    maybeWith expr (fmap LetExpression (token "where" *> decls))
 {-# INLINE exprWithWhere #-}
 
 fixity = token "infixl" $> LeftAssociative
@@ -172,22 +170,11 @@ forAll = do
     return (ForAll ids t)
 {-# INLINE forAll #-}
 
-{-
-otype could be defined as
-otype = typeArrow <|> typeOperator <|> btype
-but because all options would start with a btype
-a lot of backtracking might be necessary
-Better: first parse a btype and then decide
-what to parse on the following token "->" or qvarsym
--}
-otype = do
-    b <- btype
-    n <- optional (liftA2 (,) (eitherP (token "->") qvarsym) otype)
-    return (case n of
-        Just (Left _, t) -> TypeArrow b t
-        Just (Right o, t) -> TypeOperator b o t
-        Nothing -> b)
+otype = maybeWith typeOperator (fmap (flip TypeArrow) (token "->" *> otype))
 {-# INLINE otype #-}
+
+typeOperator = maybeWith btype (liftA2 (\o r l -> TypeOperator l o r) qvarsym typeOperator)
+{-# INLINE typeOperator #-}
 
 btype = liftA2 (foldl' TypeApplication) atype (many' atype)
 {-# INLINE btype #-}
@@ -213,19 +200,24 @@ constr = do
     return (fromId c, ts)
 {-# INLINE constr #-}
 
-{-
-the same as operatorExpr <|> lexpr
-because operator expression would start with an lexpr
-and fail if it is not an operator expression
-lexpr would be parsed twice
--}
-expr = do
-    l <- lexpr
-    mo <- optional (liftA2 (,) qvarsym expr)
-    return (case mo of
-        Just (o, r) -> OperatorExpression l o r
-        Nothing -> l)
+expr = maybeWith lexpr (liftA2 (\o r l -> OperatorExpression l o r) qvarsym expr)
 {-# INLINE expr #-}
+
+{-
+Performance helper for cases like
+`operatorExpr <|> lexpr`
+where operator expression is starting with an lexpr.
+When we just want to parse an lexpr, we would still enter operatorExpr
+and then fail, because it is not an operator application.
+Essentially, lexpr would be parsed twice.
+-}
+maybeWith lp rp = do
+    l <- lp
+    o <- optional rp
+    return (case o of
+        Just f -> f l
+        Nothing -> l)
+{-# INLINE maybeWith #-}
 
 -- NOTE negation expression was moved out of expr
 -- and down to lexpr

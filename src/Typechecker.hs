@@ -155,7 +155,11 @@ constructorToType tyCon vars tys =
         then pure constructorTy
         else fail ("Constructor type variables " ++ renderSetToError frees ++ " have no definition")
 
--- move types from signatures into environment
+-- When the signature has an outer forall, then all variables
+-- inside the signature have to be bound.
+-- A signature without explicit forall like
+-- `head : List a -> a`
+-- becomes `forall a. List a -> a`
 gatherTypeSig (TypeSignature name ty@(ForAll _ _)) =
     let frees = freeVars ty
     in if null frees
@@ -207,11 +211,13 @@ typecheckBraced binds errInfo e ty = do
             LambdaExpression p _ -> putStrLn (baseError ++ "\n   specifically at " ++ renderError p)
             _ -> putStrLn baseError)
 
+-- It is fine, that binds contains signatures,
+-- because they will not be changed by gen.
+-- gatherTypeSig already ensures that all free variables
+-- are wrapped in a forall.
+-- For LetExpressions gen is just 'return',
+-- meaning let expressions are not generalized
 typecheckNextWith gen binds next = do
-    -- generalize e.g. id : x1 -> x1 to id : forall x1 . x1 -> x1
-    -- NOTE if binds contain signatures then those are not generalized
-    -- because they are already in the form forall x1 ... xn . t
-    -- also in LetExpressions gen is just 'return' and does nothing
     generalized <- traverse gen binds
 
     nextTys <- with generalized next

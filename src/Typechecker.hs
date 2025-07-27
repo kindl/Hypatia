@@ -75,24 +75,8 @@ typecheck (CaseExpression expr alts) ty = do
     patternTy <- newTyVar
     traverse_ (uncurry (typecheckAlt patternTy ty)) alts
     typecheck expr patternTy
-typecheck (LambdaExpression [p] e) (TypeArrow patternTy resultTy) =
-    typecheckAlt patternTy resultTy p e
--- A shortcut that avoids generating new type variables
-typecheck (LambdaExpression [p] e) s@(ForAll _ (TypeArrow _ _)) = do
-    (skolVars, TypeArrow alpha beta) <- skolemise s
-    typecheckAlt alpha beta p e
-    subst <- getSubst
-    env <- getEnv
-    let escVars = skolems s <> foldMap' (skolems . apply subst) env
-    let escaped = Set.intersection escVars (Set.fromList skolVars)
-    unless (null escaped) (fail ("Escape check lambda: "
-        ++ renderSetToError escaped ++ " escaped when checking fun "
-        ++ renderError p ++ " -> ... against " ++ renderError s))
-typecheck (LambdaExpression [p] e) ty = do
-    patternTy <- newTyVar
-    resultTy <- newTyVar
-    typecheckAlt patternTy resultTy p e
-    subsume (TypeArrow patternTy resultTy) ty
+typecheck (LambdaExpression ps e) ty =
+    typecheckLambda ps e ty
 typecheck (LetExpression decls e) ty = do
     signatures <- getAp (foldMap' gatherTypeSig decls)
     binds <- with signatures (inferDecls return decls)
@@ -113,9 +97,30 @@ typecheckVar x ty = do
     instantiated <- deepInstantiate scheme
     subsume instantiated ty
 
+-- A shortcut that avoids generating new type variables
+typecheckLambda [p] e (TypeArrow patternTy resultTy) =
+    typecheckAlt patternTy resultTy p e
+typecheckLambda [p] e s@(ForAll _ (TypeArrow _ _)) = do
+    (skolVars, TypeArrow alpha beta) <- skolemise s
+    typecheckAlt alpha beta p e
+    subst <- getSubst
+    env <- getEnv
+    let escVars = skolems s <> foldMap' (skolems . apply subst) env
+    let escaped = Set.intersection escVars (Set.fromList skolVars)
+    unless (null escaped) (fail ("Escape check lambda: "
+        ++ renderSetToError escaped ++ " escaped when checking fun "
+        ++ renderError p ++ " -> ... against " ++ renderError s))
+typecheckLambda [p] e ty = do
+    patternTy <- newTyVar
+    resultTy <- newTyVar
+    typecheckAlt patternTy resultTy p e
+    subsume (TypeArrow patternTy resultTy) ty
+typecheckLambda ps _ _ =
+    fail ("Lambda with patterns " ++ show ps ++ " was not curried")
+
 typecheckAlt patternTy expressionTy pat expr = do
     binds <- typecheckPattern pat patternTy
-    with (fromList binds) (typecheck expr expressionTy)
+    typecheckBraced (fromList binds) (renderError pat) expr expressionTy
 
 {-
 Typecheck Constructors
@@ -167,32 +172,35 @@ inferDecls gen =
     foldr (inferDecl gen) (return mempty)
 
 -- A version of onException that works with ReaderT
-onException' a b = ReaderT (\s -> onException (runReaderT a s) b)
+onException' a b =
+    ReaderT (\s -> onException (runReaderT a s) b)
 
 inferDecl gen (FunctionDeclaration v alts) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
     let binds' = fromList [(v, ty)]
+    -- TODO use typecheckLambda as soon as it supports multiple patterns
     let exprs = fmap (uncurry curryLambda) alts
-    traverse_ (\e -> typecheckDecl binds' v e ty) exprs
+    traverse_ (\e -> typecheckBraced binds' (renderError v) e ty) exprs
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
     let binds' = fromList [(v, ty)]
-    typecheckDecl binds' v e ty
+    typecheckBraced binds' (renderError v) e ty
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do
     ty <- newTyVar
     binds <- typecheckPattern p ty
     let binds' = fromList binds
-    typecheckDecl binds' p e ty
+    typecheckBraced binds' (renderError p) e ty
     typecheckNextWith gen binds' next
 inferDecl _ _ next = next
 
-typecheckDecl binds errInfo e ty = do
+-- Wrap typecheck with onError to give more info
+typecheckBraced binds errInfo e ty = do
     onException' (with binds (typecheck e ty)) (
-        let baseError = "When typechecking declaration " ++ renderError errInfo
+        let baseError = "When typechecking declaration " ++ errInfo
         in case e of
             -- If an error occurs in a function declaration,
             -- also show in which pattern it happened

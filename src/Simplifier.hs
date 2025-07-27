@@ -56,7 +56,7 @@ removeAwaitDeclaration m = transformBi f m
 
 translateAwait [] e = e
 translateAwait (Right ds:rest) e = LetExpression ds (translateAwait rest e)
-translateAwait (Left (p, a):rest) e = makeOp (fromText "bind") a
+translateAwait (Left (p, a):rest) e = makeOpApp (fromText "bind") a
     (LambdaExpression [p] (translateAwait rest e))
 
 -- Put normal declarations into groups and break on declarations with await

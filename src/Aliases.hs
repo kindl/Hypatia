@@ -35,7 +35,7 @@ aliasOperators aliases =
         f (NegationExpression e) =
             Right (FunctionApplication (Variable (fromText "Native.negate")) e)
         f (OperatorExpression a op b) =
-            fmap (\al -> makeOp al a b) (findAlias op aliases)
+            fmap (\al -> makeOpApp al a b) (findAlias op aliases)
         f (Variable x) | isOperator x =
             fmap Variable (findAlias x aliases)
         f (ConstructorExpression c) | isOperator c =
@@ -43,13 +43,13 @@ aliasOperators aliases =
         f e = Right e
 
         g (OperatorPattern a op b) =
-            fmap (\al -> makeOpPat al a b) (findAlias op aliases)
+            fmap (\al -> makeOpPatCon al a b) (findAlias op aliases)
         g (ConstructorPattern info c ps) | isOperator c =
             fmap (\op -> ConstructorPattern info op ps) (findAlias c aliases)
         g p = Right p
 
         h (TypeOperator a op b) =
-            fmap (\al -> makeOpTyp al a b) (findAlias op aliases)
+            fmap (\al -> makeOpTypCon al a b) (findAlias op aliases)
         h (TypeConstructor c) | isOperator c =
             fmap TypeConstructor (findAlias c aliases)
         h t = Right t

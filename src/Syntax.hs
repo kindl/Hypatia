@@ -338,15 +338,15 @@ getBindings p =
 nNewVars n =
     fmap (prefixedId builtinLocation . intToText) [1..n]
 
-makeOp op a b =
+makeOpApp op a b =
     foldl' FunctionApplication (if isConstructor op
         then ConstructorExpression op
         else Variable op) [a, b]
 
-makeOpPat op a b =
+makeOpPatCon op a b =
     ConstructorPattern TaggedRepresentation op [a, b]
 
-makeOpTyp op a b =
+makeOpTypCon op a b =
     foldl' TypeApplication (TypeConstructor op) [a, b]
 
 -- Turns an interpolated string in the form $"{x} {y}" into a call

@@ -167,14 +167,14 @@ renderJsMod (Mod _ imports statements) = vcat [
     hardline,
     mintercalate (hardline <> hardline) (fmap toJsS statements),
     hardline,
-    text "module.exports = {",
+    text "export default {",
     indent 4 (mintercalate (text "," <> hardline) (fmap pretty (getIdentifiers statements))),
     text "}"
     ]
 
 toJsI modName =
-    text "const" <+> flatModName modName <+> equals <+>
-        text "require" <> parens (toJsPath modName) <> semi
+    text "import" <+> flatModName modName <+>
+        text "from" <+> toJsPath modName <> semi
 
 toJsS (Assign (Name [] (Id "_" _)) e) =
     toJsE e <> semi
@@ -244,7 +244,7 @@ toJsOp Concat = text "+"
 toJsOp Power = text "**"
 
 -- js needs the leading dot for local modules
-toJsPath modName = dquotes ("./" <> flatModName modName)
+toJsPath modName = dquotes ("./" <> flatModName modName <> ".js")
 
 -- TODO handling of imported names:
 -- If they shadow another name, use full qualified name, otherwise short name

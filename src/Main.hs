@@ -7,25 +7,49 @@ import Syntax
 import Compiler
 import Transformations
 import Parser(parseFile)
-import System.Environment(getArgs)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.HashSet as Set
 import System.FilePath(takeDirectory)
 import System.Directory(createDirectoryIfMissing, copyFile,
     doesFileExist, doesDirectoryExist, listDirectory)
+import Options.Applicative
 
+
+data Options = Options {
+    getAbbreviation :: String,
+    getLibDir :: FilePath,
+    getPath :: FilePath
+}
+
+opts = info (commands <**> helper) mempty
+
+commands = hsubparser (
+    command "compile" (info (compileCommand "lua") (progDesc "Compile to lua"))
+    <> command "compiletojs" (info (compileCommand "js") (progDesc "Compile to js"))
+    )
+
+libDirOption =
+    strOption (
+        long "library"
+        <> help "Directory for standard library"
+        <> value "library"
+        <> metavar "FILEPATH")
+
+compileCommand abbreviation =
+    Options abbreviation
+        <$> libDirOption
+        <*> argument str (metavar "FILEPATH")
 
 main = do
-    args <- getArgs
-    case args of
-        ["compile", path] -> compileProgram path "lua"
-        ["compiletojs", path] -> compileProgram path "js"
-        _ -> putStrLn "Usage: hypatia compile Module.hyp"
+    options <- execParser opts
+    compileProgram
+        (getAbbreviation options)
+        (getLibDir options)
+        (getPath options)
 
-compileProgram path abbreviation = do
+compileProgram abbreviation libDir path = do
     let normalizedPath = normalizePath path
-    let libDir = "library"
     let baseDir = takeDirectory normalizedPath
     program <- loadProgram libDir baseDir normalizedPath
     let libraryAssetDir = libDir ++ "/" ++ abbreviation

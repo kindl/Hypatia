@@ -2,10 +2,6 @@ local utf8 = require("utf8")
 
 local Native = {}
 
-Native.negate = function(v)
-    return -v
-end
-
 Native.length = function(a)
     return #a
 end

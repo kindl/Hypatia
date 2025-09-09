@@ -1,9 +1,5 @@
 ﻿const Native = {};
 
-Native.negate = function(v) {
-    return -v;
-};
-
 Native.size = function(v) {
     return v.length;
 };

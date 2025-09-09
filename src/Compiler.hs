@@ -49,6 +49,7 @@ data Expr =
     | LitI Int
     | LitD Double
     | LitT Text
+    | LitB Bool
     | Func [Id] [Statement]
     | Access Id [Int]
     | Call Expr [Expr]
@@ -121,6 +122,8 @@ toLuaE (Tag x) = flatName x
 toLuaE (LitI i) = pretty i
 toLuaE (LitD d) = prettyNumber d
 toLuaE (LitT t) = prettyEscaped t
+toLuaE (LitB True) = text "true"
+toLuaE (LitB False) = text "false"
 toLuaE (Func [] []) = text "function() end"
 toLuaE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)),
@@ -210,6 +213,8 @@ toJsE (Tag x) = flatName x
 toJsE (LitI i) = pretty i
 toJsE (LitD d) = prettyNumber d
 toJsE (LitT t) = prettyEscaped t
+toJsE (LitB True) = text "true"
+toJsE (LitB False) = text "false"
 toJsE (Func [] []) = text "function() {}"
 toJsE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
@@ -273,6 +278,8 @@ inlineOperators (Call (Var (Name ["Native"] (Id "divide" _))) [a, b]) = Op Divid
 inlineOperators (Call (Var (Name ["Native"] (Id "modulo" _))) [a, b]) = Op Modulo a b
 inlineOperators (Call (Var (Name ["Native"] (Id "power" _))) [a, b]) = Op Power a b
 inlineOperators (Call (Var (Name ["Native"] (Id "concat" _))) [a, b]) = Op Concat a b
+inlineOperators (Var (Name ["Native"] (Id "True" _))) = LitB True
+inlineOperators (Var (Name ["Native"] (Id "False" _))) = LitB False
 inlineOperators e = e
 
 optimizeApplication arityMap statements =

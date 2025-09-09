@@ -32,9 +32,6 @@ Native.unsafeSet = function(a, i, v)
     return a
 end
 
-Native.True = true
-Native.False = false
-
 Native.sin = math.sin
 Native.cos = math.cos
 Native.tan = math.tan

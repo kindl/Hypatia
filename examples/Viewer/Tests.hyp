@@ -1,7 +1,7 @@
 module Tests
 
 import Native((+), (-), (*), (^), (++), (&&),
-    print, unsafeCoerce)
+    print, unsafeCoerce, negate)
 import Common.Base((==), (<),
     abs, not)
 import Common.Parser(words)
@@ -10,7 +10,7 @@ import Geometry.Matrix(Matrix,
     transpose, multiply, subtract,
     rotationX, rotationY,
     rotationZ, rotation)
-import Common.Array(inspect, all)
+import Common.Array(inspect, all, map)
 import Obj
 import Common.Text as Text
 
@@ -85,6 +85,11 @@ testParens2 =
         v2 =  2 * 3  +  5 * 7  +  11 * 13 + 17 * 19
     in test "parens 2" (v1 == v2)
 
+testMapNegate =
+    let
+        arr = [1, 2, 3]
+    in test "map negate" (map negate arr == map (\x -> -x) arr)
+
 // Compared to Haskell, negation needs less parentheses
 testNegate =
     let
@@ -117,7 +122,9 @@ testEq =
     in test "eq" (m1 == m)
 
 testMatrixEquality = test "matrix equality" (m1 == m1)
+
 testMatrixInequality = test "matrix inequality" (not (m1 == m2))
+
 testInspect = test "inspect" (multiply m2 m1)
 
 testEqNestedArrays =

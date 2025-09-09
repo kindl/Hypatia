@@ -55,6 +55,7 @@ data Expr =
     | Call Expr [Expr]
     | Arr [Expr]
     | Op Op Expr Expr
+    | Negate Expr
         deriving (Show, Typeable, Data)
 
 
@@ -140,6 +141,7 @@ toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
 toLuaE (Arr es) = braces (commas (fmap toLuaE es))
 toLuaE (Op op e1 e2) =
     maybeParens toLuaE e1 <+> toLuaOp op <+> maybeParens toLuaE e2
+toLuaE (Negate e) = "-" <> maybeParens toLuaE e
 
 toLuaOp And = text "and"
 toLuaOp Or = text "or"
@@ -230,6 +232,7 @@ toJsE (Call e es) =
 toJsE (Arr es) = brackets (commas (fmap toJsE es))
 toJsE (Op op e1 e2) =
     maybeParens toJsE e1 <+> toJsOp op <+> maybeParens toJsE e2
+toJsE (Negate e) = "-" <> maybeParens toJsE e
 
 toJsOp And = text "&&"
 toJsOp Or = text "||"
@@ -263,6 +266,7 @@ optimize arityMap keywords (Mod modName imports statements) =
         . optimizeApplication arityMap)
             statements)
 
+inlineOperators (Call (Var (Name ["Native"] (Id "negate" _))) [a]) = Negate a
 inlineOperators (Call (Var (Name ["Native"] (Id "and" _))) [a, b]) = Op And a b
 inlineOperators (Call (Var (Name ["Native"] (Id "or" _))) [a, b]) = Op Or a b
 inlineOperators (Call (Var (Name ["Native"] (Id "eq" _))) [a, b]) = Op Eq a b
@@ -294,6 +298,12 @@ removeCurryS arityMap (If e thenBranch elseBranch) =
         (fmap (removeCurryS arityMap) thenBranch)
         (fmap (removeCurryS arityMap) elseBranch)
 
+-- A special case for unary operators
+-- for example `map negate array`
+-- should become `map (\v -> negate v) array`
+-- and in turn an operator
+removeCurryE arityMap e@(Var (Name ["Native"] (Id "negate" _))) =
+    createPartialApplication 1 e []
 removeCurryE arityMap e@(Var v) =
     case lookup v arityMap of
         Just arity | arity > 1 ->
@@ -614,7 +624,7 @@ captureArity m =
     <> captureSignatureArity m
 
 captureFunctionArity (ModuleDeclaration _ _ decls) =
-    fromList [(x, length (fst (head alts))) | (FunctionDeclaration x alts) <- decls]
+    fromList [(x, length (fst (head alts))) | FunctionDeclaration x alts <- decls]
 
 captureConstructorArity (ModuleDeclaration _ _ decls) =
     fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- decls])
@@ -636,4 +646,5 @@ countArrows _ = 0
 maybeParens f e =
     case e of
         Op _ _ _ -> parens (f e)
+        Negate _ -> parens (f e)
         _ -> f e

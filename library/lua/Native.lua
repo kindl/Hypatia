@@ -35,14 +35,27 @@ Native.print = print
 
 Native.toString = tostring
 
+Native.toLowerCase = function(t)
+    string.lower(s)
+end
+
 Native.textLength = function(s)
     return utf8.len(s)
 end
 
-Native.substring = function(s, startIndex, endIndex)
+Native.slice = function(s, startIndex, endIndex)
     local startOffset = utf8.offset(s, startIndex + 1)
-    local endOffset = utf8.offset(s, endIndex + 2) - 1
-    return string.sub(s, startOffset, endOffset)
+    local endOffset = utf8.offset(s, endIndex + 2)
+    
+    if startOffset == nil then
+        return ""
+    end
+
+    if endOffset == nil then
+        return string.sub(s, startOffset)
+    end
+
+    return string.sub(s, startOffset, endOffset - 1)
 end
 
 Native.toNumber = function(s)

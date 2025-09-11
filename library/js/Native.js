@@ -1,36 +1,58 @@
-﻿const Native = {};
+﻿const length = a => a.length;
 
-Native.size = function(v) {
-    return v.length;
-};
+const textLength = text => text.length;
 
-Native.isArray = function(v) {
-    return typeof(v) === typeof([]);
-};
+const slice = (text, start, end) => text.slice(start, end);
 
-Native.unsafeIndex = function(n, a) {
-    return a[n];
-};
+const isArray = v => typeof(v) === typeof([]);
 
-Native.coerce = function(x) {
-    return x;
-};
+const unsafeIndex = (i, a) => a[i];
 
-Native.insert = function(a, e) {
+const unsafeCoerce = x => x;
+
+const unsafeInsert = (a, e) => {
     a.push(e);
     return a;
 };
 
-Native.toString = function(x) {
-    return x.toString();
-};
+const unsafeSet = (a, i, v) => {
+    a[i + 1] = v;
+    return a;
+}
 
-Native.print = function(x) {
-    console.log(x);
-};
+const toString = x => x.toString();
 
-Native.error = function(x) {
+const print = x => console.log(x);
+
+const error = x => {
     throw x;
 };
 
-module.exports = Native
+const toLowerCase = x => x.toLowerCase();
+
+const sin = x => Math.sin(x);
+
+const cos = x => Math.cos(x);
+
+const tan = x => Math.tan(x);
+
+const toNumber = x => parseFloat(x);
+
+export default {
+    length,
+    textLength,
+    isArray,
+    unsafeIndex,
+    slice,
+    unsafeCoerce,
+    unsafeInsert,
+    unsafeSet,
+    toLowerCase,
+    sin,
+    cos,
+    tan,
+    toNumber,
+    toString,
+    print,
+    error,
+}

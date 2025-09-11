@@ -1,10 +1,10 @@
 module Tests
 
 import Native((+), (-), (*), (^), (++), (&&),
-    print, unsafeCoerce, negate)
+    print, unsafeCoerce, slice, textLength, negate)
 import Common.Base((==), (<),
     abs, not)
-import Common.Parser(words)
+import Common.Parser(words, split)
 import Geometry.Vector4(Vector4, dot)
 import Geometry.Matrix(Matrix,
     transpose, multiply, subtract,
@@ -135,6 +135,12 @@ testEqNestedArrays =
 
 testToArray = test "Text.toArray" (Text.toArray "Wörld!" == ["W", "ö", "r", "l", "d", "!"])
 
+testSplit =
+    let
+        result = ["Hello", "Little", "World!"]
+        splitted = split " " "Hello Little World!"
+    in test "split" (result == splitted)
+
 testWords =
     let
         general = words " \nHello Little Wörld! " == ["Hello", "Little", "Wörld!"]
@@ -166,3 +172,22 @@ testRotate =
         combined2 = rotation x y z
     in test "matrix rotate"
         (all (\n -> abs n < smallNumber) (unsafeCoerce (subtract combined1 combined2)))
+
+testSlice =
+    let
+        text = "Hello World!"
+        sub = slice text 6 (6 + 5)
+    in test "slice" (sub == "World")
+
+testSliceIdentity =
+    let
+        text = "Helölö"
+        sub = slice text 0 (textLength text)
+    in test "slice identity" (sub == text)
+
+// This test that we do not cut the grapheme in the middle
+testSliceInbetween =
+    let
+        text = "Ö Helölö"
+        sub = slice text 1 (1 + 5)
+    in test "slice inbetween" (sub == " Helö")

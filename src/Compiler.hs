@@ -284,6 +284,8 @@ inlineOperators (Call (Var (Name ["Native"] (Id "power" _))) [a, b]) = Op Power 
 inlineOperators (Call (Var (Name ["Native"] (Id "concat" _))) [a, b]) = Op Concat a b
 inlineOperators (Var (Name ["Native"] (Id "True" _))) = LitB True
 inlineOperators (Var (Name ["Native"] (Id "False" _))) = LitB False
+inlineOperators (Tag (Name ["Native"] (Id "True" _))) = LitB True
+inlineOperators (Tag (Name ["Native"] (Id "False" _))) = LitB False
 inlineOperators e = e
 
 optimizeApplication arityMap statements =
@@ -302,7 +304,7 @@ removeCurryS arityMap (If e thenBranch elseBranch) =
 -- for example `map negate array`
 -- should become `map (\v -> negate v) array`
 -- and in turn an operator
-removeCurryE arityMap e@(Var (Name ["Native"] (Id "negate" _))) =
+removeCurryE _ e@(Var (Name ["Native"] (Id "negate" _))) =
     createPartialApplication 1 e []
 removeCurryE arityMap e@(Var v) =
     case lookup v arityMap of

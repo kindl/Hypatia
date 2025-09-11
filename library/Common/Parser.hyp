@@ -2,8 +2,8 @@ module Common.Parser
 
 import Native((++), (+), (-), (||),
     True, Array, Text,
-    textLength, toNumber, substring, unsafeInsert)
-import Common.Base((==), (!=), (>>), (>=),
+    textLength, toNumber, slice, unsafeInsert)
+import Common.Base((==), (!=), (>>), (>=), (>),
     Tuple2, Tuple3,
     not)
 import Common.Text(toArray)
@@ -100,16 +100,15 @@ parseTilEnd p s = case parse p s of
             else None
     None -> None
 
-
 // Combinators
 text t = StateT (\(Tuple3 input position len) ->
     let
-        partLength = position + textLength t - 1
-    in if position >= len || partLength >= len then None else
+        partLength = position + textLength t
+    in if position >= len || partLength > len then None else
         let
-            part = substring input position partLength
+            part = slice input position partLength
         in (if t == part
-            then Some (Tuple2 part (Tuple3 input (partLength + 1) len))
+            then Some (Tuple2 part (Tuple3 input partLength len))
             else None)
     )
 
@@ -121,7 +120,7 @@ takeWhileAux p = StateT (\(Tuple3 input position len) ->
     case runStateT p (Tuple3 input position len) of
         Some (Tuple2 _ (Tuple3 _ newPosition _)) ->
             let
-                part = substring input position (newPosition - 1)
+                part = slice input position newPosition
             in Some (Tuple2 part (Tuple3 input newPosition len))
         None -> None
     )
@@ -129,7 +128,7 @@ takeWhileAux p = StateT (\(Tuple3 input position len) ->
 satisfy p = StateT (\(Tuple3 input position len) ->
     if position >= len then None else
         let
-            part = substring input position position
+            part = slice input position (position + 1)
         in (if p part
             then Some (Tuple2 part (Tuple3 input (position + 1) len))
             else None)

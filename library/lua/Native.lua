@@ -45,8 +45,8 @@ end
 
 Native.slice = function(s, startIndex, endIndex)
     local startOffset = utf8.offset(s, startIndex + 1)
-    local endOffset = utf8.offset(s, endIndex + 2)
-    
+    local endOffset = utf8.offset(s, endIndex + 1)
+
     if startOffset == nil then
         return ""
     end

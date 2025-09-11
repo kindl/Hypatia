@@ -61,7 +61,7 @@ length : Array a -> Number
 
 isArray : a -> Bool
 
-# Beware that insert and set is impure and changes the array
+// Beware that insert and set is impure and changes the array
 unsafeInsert : Array a -> a -> Array a
 
 unsafeSet : Array a -> Number -> a -> Array a
@@ -69,7 +69,15 @@ unsafeSet : Array a -> Number -> a -> Array a
 # Text
 textLength : Text -> Number
 
-substring : Text -> Number -> Number -> Text
+toString : a -> Text
+
+toLowerCase : Text -> Text
+
+concat : Text -> Text -> Text
+
+toNumber : Text -> Number
+
+slice : Text -> Number -> Number -> Text
 
 # Comparing Numbers, Strings and Constructors
 eq : e -> e -> Bool
@@ -94,10 +102,3 @@ or : Bool -> Bool -> Bool
 
 # IO
 print : Text -> Void
-
-# Strings
-toString : a -> Text
-
-concat : Text -> Text -> Text
-
-toNumber : Text -> Number

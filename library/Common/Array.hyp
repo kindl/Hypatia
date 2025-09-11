@@ -17,20 +17,27 @@ copy a = foldl unsafeInsert [] a
 
 reverse a = foldr (flip unsafeInsert) [] a
 
+unique a = foldl (\z e -> if elem e z then z else unsafeInsert z e) [] a
+
 infixr 5 <> append
 
+// Append two arrays
 // The first array is copied to avoid inserting the elements into a
 append a b = foldl unsafeInsert (copy a) b
 
-// Inserting the elements into a fresh array
-prepend a b = foldl unsafeInsert [a] b
+// Insert at the front
+prepend a element = foldl unsafeInsert [element] a
 
+// Insert at the end
+insert a element = unsafeInsert (copy a) element
 
 map f a = foldl (\z e -> unsafeInsert z (f e)) [] a
 
 mapWithIndex f a = foldlWithIndex (\i z e -> unsafeInsert z (f i e)) [] a
 
 foldMap f a = foldl (\z e -> append z (f e)) [] a
+
+fold a = foldl (\z e -> append z e) [] a
 
 foldr f z xs = foldl (\k x y -> k (f x y)) identity xs z
 

@@ -252,6 +252,11 @@ mergeLocationInfos locations@(Location _ _ filePath:_) =
     in Location (minimum positions) (maximum positions) filePath
 mergeLocationInfos _ = builtinLocation
 
+firstLocationInfo x =
+    case locationInfos x of
+        loc:_ -> loc
+        [] -> builtinLocation
+
 text :: Text -> Doc a
 text = pretty
 
@@ -313,6 +318,13 @@ builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
 
 prefixedId location x = Id ("_v" <> x) location
 {-# INLINE prefixedId #-}
+
+-- Encode the location inside the name to avoid name conflicts
+locatedId location@(Location (Position line column) _ _) x =
+    Id ("_v" <> x
+        <> "_" <> uintToText line
+        <> "_" <> uintToText column) location
+{-# INLINE locatedId #-}
 
 getQualifiers (Name q _) = q
 

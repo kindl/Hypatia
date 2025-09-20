@@ -408,19 +408,15 @@ compileLambda f ps e =
         sts = compileMultiAlts vs [err] [(ps, e)]
     in f vs sts
 
-{-
-Compiles an expression in a statement context
-TODO investigate
-Compiling an expressions to a statement seemed to be a good way of saving immediate functions
-however nested case expressions lead to problems e.g. multiple defined local _v
--}
+-- Compiles an expression in a statement context
 compileEtoS (CaseExpression (Variable (Name [] v)) alts) =
     let
         err = Ret (makeError ("No pattern match for " <> prettyError (fmap fst alts)))
     in compileAlts v [err] alts
 compileEtoS (CaseExpression e alts) =
     let
-        v = prefixedId builtinLocation "c"
+        location = firstLocationInfo e
+        v = locatedId location "c"
         err = Ret (makeError ("No pattern match for " <> prettyError (fmap fst alts)))
     in Assign (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
@@ -455,13 +451,14 @@ let
     Tuple2 a b = Tuple2 2 3
 in print (toString a)
 -}
-compileD (ExpressionDeclaration p pe) =
+compileD (ExpressionDeclaration p e) =
     let
-        v = prefixedId builtinLocation "d"
+        location = firstLocationInfo p
+        v = locatedId location "d"
         err = Ret (makeError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
         withEarlyOut = makeIf (getConditions v [] p) [] [err] <> assignments
-    in Assign (fromId v) (compileE pe) : withEarlyOut
+    in Assign (fromId v) (compileE e) : withEarlyOut
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
@@ -538,6 +535,7 @@ getOrMakeIds = getOrMakeIds' 0
 getOrMakeIds' index (patterns:ps) =
     case extractVar patterns of
         Nothing ->
+            -- Investigate if this could produce name conflicts
             prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
         Just v ->
             toId v : getOrMakeIds'(index + 1) ps
@@ -605,7 +603,6 @@ getAssignments _ _ p = error ("getAssignments on " ++ renderError p)
 descendAccess _ _ _ [] = []
 descendAccess f i j (p:ps) =
     f (i ++ [j]) p ++ descendAccess f i (j + 1) ps
-
 
 immediate statements = Call (Func [] statements) []
 

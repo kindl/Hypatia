@@ -147,17 +147,21 @@ toLuaOp And = text "and"
 toLuaOp Or = text "or"
 toLuaOp Eq = text "=="
 toLuaOp Ne = text "~="
-toLuaOp Lt = text "<"
-toLuaOp Gt = text ">"
-toLuaOp Le = text "<="
-toLuaOp Ge = text ">="
-toLuaOp Plus = text "+"
-toLuaOp Minus = text "-"
-toLuaOp Multiply = text "*"
-toLuaOp Divide = text "/"
-toLuaOp Modulo = text "%"
 toLuaOp Power = text "^"
 toLuaOp Concat = text ".."
+toLuaOp other = toOp other
+
+toOp Lt = text "<"
+toOp Gt = text ">"
+toOp Le = text "<="
+toOp Ge = text ">="
+toOp Plus = text "+"
+toOp Minus = text "-"
+toOp Multiply = text "*"
+toOp Divide = text "/"
+toOp Modulo = text "%"
+toOp other =
+    error ("Bug: Operator " <> show other <> " not defined")
 
 -- e.g. A module A.B is saved in the file A_B.lua
 -- local A_B = require("A_B")
@@ -238,18 +242,10 @@ toJsOp And = text "&&"
 toJsOp Or = text "||"
 toJsOp Eq = text "==="
 toJsOp Ne = text "!=="
-toJsOp Lt = text "<"
-toJsOp Gt = text ">"
-toJsOp Le = text "<="
-toJsOp Ge = text ">="
-toJsOp Plus = text "+"
-toJsOp Minus = text "-"
-toJsOp Multiply = text "*"
-toJsOp Divide = text "/"
-toJsOp Modulo = text "%"
 toJsOp Concat = text "+"
 -- Operator only available in new js versions
 toJsOp Power = text "**"
+toJsOp other = toOp other
 
 -- js needs the leading dot for local modules
 toJsPath modName = dquotes ("./" <> flatModName modName <> ".js")

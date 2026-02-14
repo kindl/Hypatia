@@ -29,11 +29,13 @@ commands = hsubparser (
     <> command "compiletojs" (info (compileCommand "js") (progDesc "Compile to js"))
     )
 
+defaultLibraryPath = "library"
+
 libDirOption =
     strOption (
         long "library"
         <> help "Directory for standard library"
-        <> value "library"
+        <> value defaultLibraryPath
         <> metavar "FILEPATH")
 
 compileCommand abbreviation =
@@ -82,7 +84,7 @@ copyEntry srcDir dstDir name =
             else copyFile srcPath dstPath
 
 loadProgram libDir baseDir path = do
-    putStrLn ("Compiling module from " ++ path)
+    putStrLn ("Compiling module from \"" ++ path ++ "\" using library path \"" ++ libDir ++ "\"")
     loadedModule <- parseFile path
     mods <- growModuleEnv libDir baseDir [loadedModule]
     program <- transformProgram mods
@@ -135,14 +137,24 @@ growModuleEnv libDir baseDir env =
 writeProgram buildDir abbreviation =
     feedbackM (simpleActionA (writeResult buildDir abbreviation) filterNames (return . captureArity))
 
+getRender "lua" = renderLua
+getRender "js" = renderJs
+getRender other =
+    error ("No rendering function for" ++ show other)
+
+getKeywordSet "lua" = luaKeywords
+getKeywordSet "js" = jsKeywords
+getKeywordSet other =
+    error ("No keyword set for " ++ show other)
+
 writeResult buildDir abbreviation arityMap modDecl =
     let
         name = render (flatModName (getName modDecl))
         compiled = compile modDecl
         fileName = Text.unpack name ++ "." ++ abbreviation
         filePath = buildDir ++ "/" ++ fileName
-        keywords = if abbreviation == "js" then jsKeywords else luaKeywords
-        renderFun = if abbreviation == "js" then renderJs else renderLua
+        keywords = getKeywordSet abbreviation
+        renderFun = getRender abbreviation
         optimized = optimize arityMap keywords compiled
     in if name == "Native" || name == "Main" || Text.isPrefixOf "Native_" name
 -- A module which name starts with "Native" is a native module by convention

@@ -83,6 +83,8 @@ toLuaI modName =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
 
+toLuaS (Assign (Name [] (Id "_" _)) e) =
+    toLuaE e
 -- local functions need a forward declaration for recursion
 -- Otherwise `local fix = function(f) return f(fix(f)) end`
 -- would result in an error because `fix` is undefined

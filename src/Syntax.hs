@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Syntax where
 
 import Prelude hiding (lookup)
@@ -278,7 +278,7 @@ escape '\'' = "\\\'"
 escape '\\' = "\\\\"
 escape c = if isPrint c
     then Text.singleton c
-    else Text.pack (show c)
+    else Text.show c
 
 render d = renderStrict (layoutPretty defaultLayoutOptions d)
 
@@ -412,7 +412,7 @@ intToDouble :: Int -> Double
 intToDouble = fromIntegral
 
 intToText :: Int -> Text
-intToText = Text.pack . show
+intToText = Text.show
 
 uintToText :: Word64 -> Text
-uintToText = Text.pack . show
+uintToText = Text.show

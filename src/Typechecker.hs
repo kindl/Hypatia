@@ -292,7 +292,7 @@ unifyVar x ty = if occurs x ty
     else insertSubst x ty
 
 -- Does a type variable occur in a type?
-occurs x ty = elem x (freeVars ty)
+occurs x ty = Set.member x (freeVars ty)
 
 -- substitute bound variables with unification variables
 apply subst (ForAll vs ty) =

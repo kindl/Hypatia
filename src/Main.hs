@@ -168,6 +168,7 @@ writeResult buildDir abbreviation arityMap modDecl =
 -- which is used as an entry point by Love 2D
         then do
             doesExist <- doesFileExist filePath
-            putStrLn ("Native module " ++ fileName ++ " exists: " ++ show doesExist)
+            let message = if doesExist then " exists at " else " does NOT exist at "
+            putStrLn ("Native module " ++ fileName ++ message ++ filePath)
         else
             Text.writeFile filePath (renderFun optimized)

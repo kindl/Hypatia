@@ -2,7 +2,7 @@ module Geometry.Vector4
 
 import Native((+), (-), (*), (/))
 import Common.Base(sqrt)
-
+import Geometry.Vector3(Vector3)
 
 type Vector4 a = Vector4 a a a a
 
@@ -36,3 +36,6 @@ normalize v = scale (1 / length v) v
 distance v w = length (subtract v w)
 
 toArray (Vector4 x y z w) = [x, y, z, w]
+
+perspectiveDivide (Vector4 x y z w) =
+    Vector3 (x / w) (y / w) (z / w)

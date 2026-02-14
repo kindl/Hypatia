@@ -5,7 +5,7 @@ import Prelude hiding (lookup)
 import Data.HashMap.Strict(lookup, mapKeys, fromList, lookupDefault)
 import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
-import Control.Applicative(liftA2, liftA3)
+import Control.Applicative(liftA3)
 import Control.Monad((>=>))
 
 -- Qualification is split into value level and type level,

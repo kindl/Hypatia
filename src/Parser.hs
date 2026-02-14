@@ -6,7 +6,7 @@ import qualified Data.Text.IO as Text
 import Data.List(uncons)
 import Data.Foldable(foldl')
 import Data.Functor(($>))
-import Control.Applicative((<|>), optional, empty, liftA2)
+import Control.Applicative((<|>), optional, empty)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..),

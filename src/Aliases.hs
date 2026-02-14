@@ -5,7 +5,6 @@ import Syntax
 import Data.Generics.Uniplate.Data(transformBiM)
 import Data.HashMap.Strict(fromList, lookup)
 import Control.Monad((>=>))
-import Control.Applicative(liftA2)
 import Prelude hiding (lookup)
 
 
@@ -89,6 +88,7 @@ captureOperatorAliases (ModuleDeclaration _ _ decls) =
     fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
 
 -- TODO allow forall?
+-- this would be clear for types but not for patterns
 aliasToType original (TypeApplication t1 t2) =
     liftA2 TypeApplication (aliasToType original t1) (aliasToType original t2)
 aliasToType original (TypeConstructor c) =

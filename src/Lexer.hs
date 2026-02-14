@@ -6,7 +6,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Data.Text(Text)
 import Prettyprinter(pretty)
-import Control.Applicative((<|>), liftA2)
+import Control.Applicative((<|>))
 import Data.Functor(($>))
 import Data.Char(isSpace, isUpper, isAlphaNum)
 import Data.Traversable(mapAccumL)

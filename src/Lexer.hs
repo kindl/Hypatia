@@ -68,7 +68,9 @@ layout [] (m:ms)
 {-# INLINE layout #-}
 
 semi pos = LocatedLexeme (Reserved ";") pos
+
 open pos = LocatedLexeme (Reserved "{") pos
+
 close pos = LocatedLexeme (Reserved "}") pos
 
 isLayout (LocatedLexeme (Reserved t) _)
@@ -76,7 +78,7 @@ isLayout (LocatedLexeme (Reserved t) _)
 isLayout _ = False
 
 -- add 1 because counting columns starts from 1
-indLength ws = Text.length (last (Text.split (=='\n') ws)) + 1
+indLength ws = Text.length (last (Text.split (== '\n') ws)) + 1
 
 getBlock (LocatedLexeme (Whitespace ws) pos) =
     LocatedLexeme (Block (indLength ws)) pos
@@ -140,6 +142,7 @@ data LocatedLexeme = LocatedLexeme Lexeme Location
     deriving (Show)
 
 extractLocation (LocatedLexeme _ p) = p
+
 extractLexeme (LocatedLexeme l _) = l
 
 prettyLocated (LocatedLexeme l p) =
@@ -198,10 +201,10 @@ whitechars = fmap Whitespace (takeWhile1 isSpace)
 {-# INLINE whitechars #-}
 
 -- NOTE in contrast to the report this does not consume a newline
-hashcomment = fmap Comment (char '#' *> takeWhile (/='\n'))
+hashcomment = fmap Comment (char '#' *> takeWhile (/= '\n'))
 {-# INLINE hashcomment #-}
 
-slashcomment = fmap Comment (char '/' *> char '/' *> takeWhile (/='\n'))
+slashcomment = fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n'))
 {-# INLINE slashcomment #-}
 
 qident = fmap (\ms -> makeIdent (init ms) (last ms))
@@ -268,11 +271,14 @@ alternating1 a sep =
     liftA2 (\x y -> x : concat y) a (many' (liftA2 (\x y -> [x, y]) sep a))
 {-# INLINE alternating1 #-}
 
--- TODO position will be off, because text consumed by the brackets is not accounted for
-expressionPart = char '{' *> manyTill' (match lexeme) (char '}')
+-- Add brackets, otherwise the text is not accounted for in the position
+expressionPart = do
+    start <- match (char '{' $> Reserved "{")
+    mid <- manyTill' (match lexeme) (char '}')
+    return (start : mid ++ [("}", Reserved "}")])
 {-# INLINE expressionPart #-}
 
-charPred x = x /='\"' && x /= '\\'
+charPred x = x /= '\"' && x /= '\\'
 {-# INLINE charPred #-}
 
 interpolatedCharPred x = charPred x && x /= '{' && x /= '}'

@@ -294,7 +294,7 @@ arrayExpression =
 
 interpolatedStringExpression = do
     InterpolatedStringStart <- nextLexeme
-    expressions <- alternating1 positionedStringExpr expr
+    expressions <- alternating1 positionedStringExpr (curlyBraces expr)
     InterpolatedStringEnd <- nextLexeme
     return (makeInterpolatedString expressions)
 {-# INLINE interpolatedStringExpression #-}

@@ -15,9 +15,7 @@ import Lexer(Lexeme(..),
 import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', option)
 
 
-{-
-This module turns a list of lexemes into a syntax tree
--}
+-- This module turns a list of lexemes into a syntax tree
 parse path s = do
     lexemes <- lexlex path s
     case runStateT modDecl lexemes of
@@ -206,7 +204,7 @@ expr = maybeWith lexpr (liftA2 (\o r l -> OperatorExpression l o r) qvarsym expr
 {-
 Performance helper for cases like
 `operatorExpr <|> lexpr`
-where operator expression is starting with an lexpr.
+where an operator expression is starting with an lexpr.
 When we just want to parse an lexpr, we would still enter operatorExpr
 and then fail, because it is not an operator application.
 Essentially, lexpr would be parsed twice.
@@ -346,9 +344,11 @@ aliasPattern uses a keyword instead of @, allows pat instead of apat
 and requires enclosing parentheses e.g. (s alias Sphere p v c r)
 
 Here are some alternative ideas
-(Sphere p v c r as s)       hard to read because as looks like a variable
-(s as Sphere p v c r)       would be clearer, but switched compared to imports
-                            e.g. import Viewer.Obj as Obj
+`(Sphere p v c r as s)`
+hard to read because as looks like a variable
+`(s as Sphere p v c r)`
+would be clearer, but switched compared to imports
+e.g. import Viewer.Obj as Obj
 
 TODO warn or eliminate patterns of the form
 (aVar alias anotherVar) and (aVar alias (anotherVar))
@@ -377,14 +377,11 @@ parenthesizedPattern = ParenthesizedPattern <$!> parenthesized pat
 arrayPattern = ArrayPattern <$!> bracketed (sepByTrailing pat (token ","))
 {-# INLINE arrayPattern #-}
 
-{-
-Read the following like this example:
-A variable can be a varid like x
-or a varsym like (+)
--}
 spec = varid <|> conid <|> parenthesized varsym
 {-# INLINE spec #-}
 
+-- A var can be a varid like `x`
+-- or a varsym like `(+)`
 var = varid <|> parenthesized varsym
 {-# INLINE var #-}
 
@@ -396,12 +393,6 @@ con = conid <|> parenthesized varsym
 
 qcon = qconid <|> parenthesized qvarsym
 {-# INLINE qcon #-}
-
-{-
-Read the following like this example:
-A qvarid can be a qualified variable like List.map
-or a normal variable identifier like map
--}
 
 fromVarsym (Varsym [] v) l = return (Id v l)
 fromVarsym _ _ = Nothing
@@ -445,6 +436,8 @@ qvarsym = parseLocated fromQVarsym
 varid = parseLocated fromVarid
 {-# INLINE varid #-}
 
+-- A qvarid can be a qualified identifier for example `List.map`
+-- or a unqualified identifier like `map`
 qvarid = parseLocated fromQVarid
 {-# INLINE qvarid #-}
 

@@ -85,8 +85,13 @@ toLuaI modName =
 
 toLuaS (Assign (Name [] (Id "_" _)) e) =
     toLuaE e
--- local functions need a forward declaration for recursion
--- Otherwise `local fix = function(f) return f(fix(f)) end`
+-- Local functions need a forward declaration for recursion
+-- Otherwise
+-- ```
+-- local fix = function(f)
+--     return f(fix(f))
+-- end
+-- ```
 -- would result in an error because `fix` is undefined
 -- TODO decide if a forward declaration is necessary without looking
 -- at all names appearing in the function body. Maybe the result of
@@ -136,8 +141,10 @@ toLuaE (Func variables statements) = vcat [
 toLuaE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty . (+ 1)) indices
 -- Add parantheses for immediate functions
--- (function () print "Hi" end)() would be a syntax error
--- without parentheses
+-- ```
+-- (function () print "Hi" end)()
+-- ```
+-- would be a syntax error without parentheses
 toLuaE (Call e@(Func _ _) es) =
     parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
@@ -232,7 +239,8 @@ toJsE (Func variables statements) = vcat [
     text "}"]
 toJsE (Access v indices) =
     pretty v <> foldMap' (brackets . pretty) indices
--- Add parantheses for immediate functions
+-- Wrapping immediate function might not be necessary in js,
+-- but is also done as a convention.
 toJsE (Call e@(Func _ _) es) =
     parens (toJsE e) <> parens (commas (fmap toJsE es))
 toJsE (Call e es) =
@@ -254,6 +262,11 @@ toJsOp other = toOp other
 -- js needs the leading dot for local modules
 toJsPath modName = dquotes ("./" <> flatModName modName <> ".js")
 
+-- This function is used for
+-- * module level arity optimization
+-- * renaming optimization
+-- * keyword renaming
+-- * operator inlining
 -- TODO handling of imported names:
 -- If they shadow another name, use full qualified name, otherwise short name
 -- For example there is both, `Array.map` and `Reader.map` they become
@@ -439,6 +452,7 @@ compileTop (FunctionDeclaration x alts) =
     [Assign x (compileMultiLambda Func alts)]
 compileTop other = compileD other
 
+-- Function declarations in let bindings are curried
 compileD (FunctionDeclaration x alts) =
     [Assign x (compileMultiLambda curryFuncSts alts)]
 compileD (ExpressionDeclaration (VariablePattern x) e) =
@@ -447,9 +461,11 @@ compileD (ExpressionDeclaration (Wildcard w) e) =
     [Assign (fromId w) (compileE e)]
 {-
 Compile pattern matches in let expressions like
+```
 let
     Tuple2 a b = Tuple2 2 3
 in print (toString a)
+```
 -}
 compileD (ExpressionDeclaration p e) =
     let
@@ -499,19 +515,28 @@ v is a temporal variable and contains the value of expression e
 a are variables appearing in the pattern p
 
 A constructor returns an array, for example in
-type Option a = Just a | Nothing
-Just is compiled as
-    local Just = function(x)
-        return {Just, x}
-    end
-Matching on the pattern (Just y) compiles to
-    if isArray(v) and #v == 2 and v[1] == Just then
+type Option a = None | Some a
+Some is compiled as
+```
+local Some
+Some = function(x)
+    return {Some, x}
+end
+```
+and None is compiled as
+```
+local None = function() end
+```
+
+Matching on the pattern (Some y) compiles to
+```
+if isArray(v) and #v == 2 and v[1] == Some then
         local y = v[2]
         ...
     end
-
+```
 descendAccess is used to recurse deeper into the patterns.
-The y in (Just y) could be any pattern and not only a variable.
+The y in `(Some y)` could be any pattern and not only a variable.
 -}
 compileAlts v = foldr (\(p, e) rest ->
     let

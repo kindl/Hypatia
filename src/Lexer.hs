@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Lexer where
 
 import Prelude hiding (takeWhile)

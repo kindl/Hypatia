@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Simplifier where
 
 import Syntax

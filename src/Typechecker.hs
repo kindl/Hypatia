@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Typechecker where
 
 import Prelude hiding (lookup)
@@ -26,11 +25,11 @@ data TypecheckerState =
 
 type Typechecker a = ReaderT TypecheckerState IO a
 
-typecheckModule env m = do
+typecheckModule env modDecl = do
     r <- newIORef 0
     s <- newIORef mempty
-    putStrLn ("Typechecking Module " ++ renderName (getName m))
-    runReaderT (inferModule m) (TypecheckerState env r s)
+    putStrLn ("Typechecking Module " ++ renderName modDecl.getName)
+    runReaderT (inferModule modDecl) (TypecheckerState env r s)
 
 inferModule (ModuleDeclaration _ _ decls) = do
     constructors <- getAp (foldMap' gatherConstructor decls)
@@ -183,7 +182,7 @@ onException' a b =
 
 inferDecl gen (FunctionDeclaration v alts) next = do
     env <- getEnv
-    ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
+    ty <- mfind v env <|> newTyVarAt v.getId.getLocation
     let binds' = fromList [(v, ty)]
     -- TODO use typecheckLambda as soon as it supports multiple patterns
     let exprs = fmap (uncurry curryLambda) alts
@@ -191,7 +190,7 @@ inferDecl gen (FunctionDeclaration v alts) next = do
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
     env <- getEnv
-    ty <- mfind v env <|> newTyVarAt (getLocation (getId v))
+    ty <- mfind v env <|> newTyVarAt v.getId.getLocation
     let binds' = fromList [(v, ty)]
     typecheckBraced binds' (renderError v) e ty
     typecheckNextWith gen binds' next
@@ -358,7 +357,7 @@ generalize ty = do
     return (makeForAll qualVars ty')
 
 instantiate (ForAll vars ty) = do
-    subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt (getLocation x))) vars
+    subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt x.getLocation)) vars
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 
@@ -401,10 +400,10 @@ subsume' t1 t2 = unify' t1 t2
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 <> Set.fromList tvs2) ty
 makeForAll tvs ty =
-    if null tvs then ty else ForAll (sortOn getText (Set.toList tvs)) ty
+    if null tvs then ty else ForAll (sortOn (.getText) (Set.toList tvs)) ty
 
 skolemise (ForAll vars ty) = do
-    skolVars <- traverse (newUniqueName . getLocation) vars
+    skolVars <- traverse (newUniqueName . (.getLocation)) vars
     let subs = fromList (zip vars (fmap SkolemConstant skolVars))
     return (skolVars, apply subs ty)
 skolemise ty = return ([], ty)

@@ -2,7 +2,7 @@ module Qualification where
 
 import Syntax
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, mapKeys, fromList, lookupDefault)
+import Data.HashMap.Strict(lookup, fromList)
 import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
 import Control.Applicative(liftA3)
@@ -132,8 +132,9 @@ findName quals (Name [] identifier) = do
     pure (Name q.getQualifiers identifier)
 findName _ n = Right n
 
-toLocals ids = fmap (mapKeys toId) (fromListUnique ids)
-toQualifieds modName ids = fmap (fmap (qualify modName)) (toLocals ids)
+toLocals names = fromListUnique (fmap (\name -> (toId name, name)) names)
+
+toQualifieds modName names = fmap (fmap (qualify modName)) (toLocals names)
 
 -- Change qualified imports
 -- e.g. import Viewer.Obj as Obj

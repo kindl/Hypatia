@@ -386,9 +386,11 @@ locationInfos other = [l | Id _ l <- universeBi other]
 -- Functions for sets that error on overwriting a key
 unionUnique m1 m2 = sequenceA (unionWith (bind2 shadowingError) (fmap Right m1) (fmap Right m2))
 
-fromListUnique l = sequenceA (fromListWith (bind2 shadowingError) (fmap ((,) <*> Right) l))
+fromListUnique l = sequenceA (fromListWith (bind2 shadowingError) (fmap (fmap Right) l))
 
-toSetUniqueM l = either fail (return . keysSet) (fromListUnique l)
+toSetUniqueM l = eitherToFail (fmap keysSet (fromListUnique (fmap dup l)))
+
+dup x = (x, x)
 
 bind2 f a b = do
     a' <- a

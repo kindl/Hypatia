@@ -68,7 +68,7 @@ aliasConstructorsProgram =
     feedbackM (simpleActionA aliasConstructors filterNames (return . captureAliases))
 
 annotateTagInfoProgram =
-    feedbackM (simpleActionA (\env m -> return (annotateTagInfo env m)) filterNames (return . captureTagInfo))
+    feedbackM (simpleActionA annotateTagInfo filterNames (return . captureTagInfos))
 
 -- Run action with captured local env and imported envs
 -- but return only the local environment

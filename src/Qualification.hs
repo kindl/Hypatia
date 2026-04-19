@@ -178,9 +178,14 @@ changeQualifier name quals =
 annotateTagInfo tagInfos =
     let
         g (ConstructorPattern _ c ps) =
-            ConstructorPattern (lookupDefault TaggedRepresentation c tagInfos) c ps
-        g p = p
-    in transformBi g
+            fmap (\tagInfo -> ConstructorPattern tagInfo c ps) (findEither c tagInfos)
+        g p = Right p
+    in transformBiM g
 
-captureTagInfo (ModuleDeclaration _ _ decls) =
-    fromList [(c, ArrayRepresentation) | TypeDeclaration _ _ [(c, _)] <- decls]
+captureTagInfos modDecl = fromList (foldMap' captureTagInfo modDecl.getDecls)
+
+captureTagInfo (TypeDeclaration _ _ [(c, _)]) =
+    [(c, ArrayRepresentation)]
+captureTagInfo (TypeDeclaration _ _ constructors) =
+    fmap (fmap (const TaggedRepresentation)) constructors
+captureTagInfo _ = mempty

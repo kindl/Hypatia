@@ -563,7 +563,7 @@ getOrMakeIds' index (patterns:ps) =
             -- Investigate if this could produce name conflicts
             prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
         Just v ->
-            toId v : getOrMakeIds'(index + 1) ps
+            toId v : getOrMakeIds' (index + 1) ps
 getOrMakeIds' _ [] = []
 
 extractVar [VariablePattern x] = Just x

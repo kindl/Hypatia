@@ -403,6 +403,13 @@ eitherToFail e = either fail return e
 curryLambda ps e =
     foldr (\p -> LambdaExpression [p]) e ps
 
+identical (x:xs) =
+    if all (== x) xs
+        then x
+        else error ("Not all elements are equivalent to "
+            ++ show x ++ " in " ++ show xs)
+identical [] = error "Called `identical` with empty list"
+
 intToDouble :: Int -> Double
 intToDouble = fromIntegral
 

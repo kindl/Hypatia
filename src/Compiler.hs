@@ -497,6 +497,7 @@ compileConstructor info (c, variables) =
 
 curryFuncSts [v] s = Func [v] s
 curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
+curryFuncSts [] _ = error "Empty list given to curryFuncSts"
 
 {-
 Compiling case expressions
@@ -645,19 +646,19 @@ flattenCall (Call f [e]) es =
     flattenCall f (e:es)
 flattenCall e es = (e, es)
 
-captureArity m =
-    captureFunctionArity m
-    <> captureConstructorArity m
-    <> captureSignatureArity m
+captureArity modDecl =
+    captureFunctionArity modDecl
+    <> captureConstructorArity modDecl
+    <> captureSignatureArity modDecl
 
-captureFunctionArity (ModuleDeclaration _ _ decls) =
-    fromList [(x, length (fst (head alts))) | FunctionDeclaration x alts <- decls]
+captureFunctionArity modDecl =
+    fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.getDecls]
 
-captureConstructorArity (ModuleDeclaration _ _ decls) =
-    fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- decls])
+captureConstructorArity modDecl =
+    fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.getDecls])
 
-captureSignatureArity (ModuleDeclaration _ _ decls) =
-    fromList (concat [getArityFromType x ty | TypeSignature x ty <- decls])
+captureSignatureArity modDecl =
+    fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.getDecls])
 
 getArityFromType x ty@(TypeArrow _ _) =
     let l = countArrows ty

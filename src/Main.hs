@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings, OverloadedRecordDot #-}
-
 module Main(main) where
 
 import Data.Foldable(traverse_, foldMap')
@@ -115,17 +113,17 @@ parseFromName libDir baseDir modName =
 
 parseFile' modName path = do
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
-    m <- parseFile path
-    if getName m == modName
-        then return m
-        else fail ("The parsed module name " <> renderError (getName m)
+    modDecl <- parseFile path
+    if modDecl.getName == modName
+        then return modDecl
+        else fail ("The parsed module name " <> renderError modDecl.getName
             <> " did not match the expected module name " <> renderName modName
             <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
 growModuleEnv libDir baseDir env =
     let
-        imported = Set.fromList (fmap getName env)
+        imported = Set.fromList (fmap (.getName) env)
         imports = foldMap' importedModules env
         needed = Set.difference imports imported
     in if null needed
@@ -149,7 +147,7 @@ getKeywordSet other =
 
 writeResult buildDir abbreviation arityMap modDecl =
     let
-        name = render (flatModName (getName modDecl))
+        name = render (flatModName modDecl.getName)
         compiled = compile modDecl
         fileName = Text.unpack name ++ "." ++ abbreviation
         filePath = buildDir ++ "/" ++ fileName

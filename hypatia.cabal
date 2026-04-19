@@ -29,8 +29,8 @@ executable hypatia
     Syntax,
     Transformations,
     Typechecker
-  other-extensions:
-    OverloadedStrings, OverloadedRecordDot
+  extensions:
+    OverloadedStrings, OverloadedRecordDot, NoFieldSelectors
   build-depends:
     -- Lower bound necessary for mapAccumM
     base >= 4.18.0.0,

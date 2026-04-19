@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Aliases where
 
 import Syntax
@@ -92,26 +91,26 @@ captureOperatorAliases (ModuleDeclaration _ _ decls) =
 aliasToType original (TypeApplication t1 t2) =
     liftA2 TypeApplication (aliasToType original t1) (aliasToType original t2)
 aliasToType original (TypeConstructor c) =
-    Right (TypeConstructor (switchWithLocation original c))
+    Right (TypeConstructor (switchLocation original c))
 aliasToType _ other = Left ("Cannot convert " ++ renderError other ++ " to a type")
 
 aliasToExpression original (TypeApplication t1 t2) =
     liftA2 FunctionApplication (aliasToExpression original t1) (aliasToExpression original t2)
 aliasToExpression original (TypeConstructor c) =
-    Right (ConstructorExpression (switchWithLocation original c))
+    Right (ConstructorExpression (switchLocation original c))
 aliasToExpression _ other = Left ("Cannot convert " ++ renderError other ++ " to an expression")
 
 aliasToPattern original ps t = case typeApplicationToList t of
     (TypeConstructor c:ts) -> do
         patterns <- traverse (aliasToPattern original []) ts
-        return (ConstructorPattern TaggedRepresentation (switchWithLocation original c) (patterns ++ ps))
+        return (ConstructorPattern TaggedRepresentation (switchLocation original c) (patterns ++ ps))
     other -> Left ("Cannot convert " ++ renderError other ++ " to a pattern")
 
 -- finds alias e.g. eq for == but preserves location info
 findAlias name m = do
     alias <- findEither name m
-    return (switchWithLocation name alias)
+    return (switchLocation name alias)
 
-switchWithLocation original (Name qs (Id i _)) =
-    let originalLocation = getLocation (getId original)
-    in Name qs (Id i originalLocation)
+switchLocation original name =
+    let originalLocation = original.getId.getLocation
+    in Name name.getQualifiers (Id name.getId.getText originalLocation)

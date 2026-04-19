@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Compiler where
 
 import Syntax
@@ -75,7 +74,7 @@ renderLuaMod (Mod _ imports statements) = vcat [
 exports x = pretty x <+> text "=" <+> pretty x
 
 getIdentifiers statements =
-    [i | Assign (Name _ (Id i _)) _ <- statements, not (isWildcard i)]
+    [name.getId.getText | Assign name _ <- statements, not (isWildcard name.getId.getText)]
 
 isWildcard i = i == "_"
 
@@ -353,11 +352,15 @@ createPartialApplication arity e es =
         body = [Ret (Call e parameters)]
     in curryFuncSts vars body
 
-optimizeName modName n@(Name qs ident) =
-    if qs == nameToList modName then Name [] ident else n
+optimizeName modName name =
+    if name.getQualifiers == nameToList modName
+        then Name [] name.getId
+        else name
 
-renameKeywords keywords ident@(Id i loc) =
-    if elem i keywords then Id ("__" <> i) loc else ident
+renameKeywords keywords identifier =
+    if elem identifier.getText keywords
+        then Id ("__" <> identifier.getText) identifier.getLocation
+        else identifier
 
 luaKeywords :: [Text]
 luaKeywords = [
@@ -380,11 +383,11 @@ jsKeywords = [
     ]
 
 -- Compile to simplified language
-compile m =
+compile modDecl =
     let
-        compiledDecls = foldMap' compileTop (getDecls m)
-        imports = importedModules m
-    in Mod (getName m) (Set.toList imports) compiledDecls
+        compiledDecls = foldMap' compileTop modDecl.getDecls
+        imports = importedModules modDecl
+    in Mod modDecl.getName (Set.toList imports) compiledDecls
 
 compileE (Variable v) =
     Var v

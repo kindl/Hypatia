@@ -43,11 +43,11 @@ transformations =
 {- Typechecking -}
 typecheckProgram p = feedbackM typecheckAction p
 
-typecheckAction envs m = do
-    let filtered = filterNames (getImports m) envs
-    captured <- typecheckModule filtered m
+typecheckAction envs modDecl = do
+    let filtered = filterNames modDecl.getImports envs
+    captured <- typecheckModule filtered modDecl
     -- Save the environment for debugging
-    -- let logPath = "logs/" ++ renderName (getName m) ++ ".log"
+    -- let logPath = "logs/" ++ renderName modDecl.getName ++ ".log"
     -- Text.writeFile logPath (renderEnv captured)
     return (captured, ())
 
@@ -72,19 +72,19 @@ annotateTagInfoProgram =
 
 -- Run action with captured local env and imported envs
 -- but return only the local environment
-simpleActionA action filterEnvs capture envs m = do
-    captured <- capture m
-    let combined = captured <> filterEnvs (getImports m) envs
-    result <- action combined m
+simpleActionA action filterEnvs capture envs modDecl = do
+    captured <- capture modDecl
+    let combined = captured <> filterEnvs modDecl.getImports envs
+    result <- action combined modDecl
     pure (captured, result)
 
 -- Incrementally grow an environment and perform an action on all modules.
 -- An action is a function that returns captured information e.g. operators and their aliases
 -- and a changed module e.g. where operators have been changed to function application.
 feedbackM action mods = fmap snd (mapAccumM step mempty mods)
-    where step envs m = do
-            (captured, result) <- action envs m
-            return (insert (getName m) captured envs, result)
+    where step envs modDecl = do
+            (captured, result) <- action envs modDecl
+            return (insert modDecl.getName captured envs, result)
 
 filterIds imports envs =
     foldMap' (\(ImportDeclaration modName importedIds _) ->

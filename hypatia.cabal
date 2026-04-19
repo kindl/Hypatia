@@ -30,7 +30,7 @@ executable hypatia
     Transformations,
     Typechecker
   other-extensions:
-    OverloadedStrings
+    OverloadedStrings, OverloadedRecordDot
   build-depends:
     -- Lower bound necessary for mapAccumM
     base >= 4.18.0.0,

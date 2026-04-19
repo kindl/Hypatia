@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, OverloadedRecordDot #-}
 
 module Main(main) where
 
@@ -46,9 +46,9 @@ compileCommand abbreviation =
 main = do
     options <- execParser opts
     compileProgram
-        (getAbbreviation options)
-        (getLibDir options)
-        (getPath options)
+        options.getAbbreviation
+        options.getLibDir
+        options.getPath
 
 compileProgram abbreviation libDir path = do
     let normalizedPath = normalizePath path

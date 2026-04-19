@@ -54,7 +54,7 @@ resolve getDefs getDeps done rest =
 
 -- Sort imported modules, so that modules that other modules depend on are compiled first
 sortModules =
-    resolve (Set.singleton . getName) importedModules mempty
+    resolve (Set.singleton . (.getName)) importedModules mempty
 
 
 -- Gather variables used in an expression.

@@ -14,7 +14,7 @@ import Control.Monad((<=<))
 import Data.Traversable(mapAccumM)
 
 
-transformProgram ms = either fail return (transformations ms)
+transformProgram ms = eitherToFail (transformations ms)
 
 -- The lowest function in this list is the first step of the transformations
 transformations =

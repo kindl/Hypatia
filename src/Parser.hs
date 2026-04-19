@@ -27,7 +27,7 @@ parse path s = do
 
 parseFile path = do
     str <- Text.readFile path
-    either fail return (parse path str)
+    eitherToFail (parse path str)
 {-# INLINE parseFile #-}
 
 parseString s = parse "" s

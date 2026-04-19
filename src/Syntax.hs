@@ -398,6 +398,8 @@ bind2 f a b = do
 shadowingError v1 v2 =
     Left (renderError v1 <> " shadows " <> renderError v2)
 
+eitherToFail e = either fail return e
+
 curryLambda ps e =
     foldr (\p -> LambdaExpression [p]) e ps
 

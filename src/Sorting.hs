@@ -53,8 +53,8 @@ resolve getDefs getDeps done rest =
             Right (xs <> next)
 
 -- Sort imported modules, so that modules that other modules depend on are compiled first
-sortModules =
-    resolve (Set.singleton . (.getName)) importedModules mempty
+sortModules modules =
+    resolve (Set.singleton . (.getName)) importedModules mempty modules
 
 
 -- Gather variables used in an expression.

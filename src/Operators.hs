@@ -21,8 +21,8 @@ fixAssoc operatorTable =
     in rewriteBiM f >=> rewriteBiM g >=> rewriteBiM h
 
 {- Read the fixity declarations -}
-captureAssocs (ModuleDeclaration _ _ decls) =
-    fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- decls]
+captureAssocs modDecl =
+    fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- modDecl.getDecls]
 
 fixAssocE operatorTable (OperatorExpression (OperatorExpression e1 child e2) root e3) =
     fixAssocAux operatorTable False OperatorExpression e1 child e2 root e3

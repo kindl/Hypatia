@@ -53,10 +53,9 @@ aliasOperators aliases =
         h t = Right t
     in transformBiM f >=> transformBiM g >=> transformBiM h
 
-aliasOperatorsMod (ModuleDeclaration modName imports decls) =
+aliasOperatorsMod modDecl@(ModuleDeclaration modName imports decls) =
     let
-        aliases = fromList [(op, alias) |
-            FixityDeclaration _ _ op alias <- decls]
+        aliases = captureOperatorAliases modDecl
 
         k (FunctionDeclaration op alts) | isOperator op =
             fmap (\al -> FunctionDeclaration al alts) (findAlias op aliases)
@@ -80,11 +79,11 @@ findConstructorOp aliases op | isOperator op = do
             ++  " is not a constructor")
 findConstructorOp _ op = Right op
 
-captureAliases (ModuleDeclaration _ _ decls) =
-    fromList [(v, alias) | AliasDeclaration v alias <- decls]
+captureAliases modDecl =
+    fromList [(v, alias) | AliasDeclaration v alias <- modDecl.getDecls]
 
-captureOperatorAliases (ModuleDeclaration _ _ decls) =
-    fromList [(op, alias) | FixityDeclaration _ _ op alias <- decls]
+captureOperatorAliases modDecl =
+    fromList [(op, alias) | FixityDeclaration _ _ op alias <- modDecl.getDecls]
 
 -- TODO allow forall?
 -- this would be clear for types but not for patterns

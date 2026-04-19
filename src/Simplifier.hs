@@ -8,8 +8,8 @@ import Data.Generics.Uniplate.Data(transformBi)
 -- to simpler equivalent expressions
 
 -- Note that the simplifications run right to left and the order matters.
-simplifications m =
-    (curryLambdas . removeAwaitDeclaration . mergeFunctionDeclarations) m
+simplifications modDecl =
+    (curryLambdas . removeAwaitDeclaration . mergeFunctionDeclarations) modDecl
 
 curryLambdas m =
     let
@@ -82,7 +82,7 @@ index
     n (Element _ es) = index (n - 1) es
 ```
 -}
-mergeFunctionDeclarations m =
+mergeFunctionDeclarations modDecl =
     let
         f (LetExpression decls e) =
             LetExpression (groupBinds decls) e
@@ -90,7 +90,7 @@ mergeFunctionDeclarations m =
 
         k (ModuleDeclaration name imports decls) =
             ModuleDeclaration name imports (groupBinds decls)
-    in transformBi f (k m)
+    in transformBi f (k modDecl)
 
 groupBinds decls =
     let

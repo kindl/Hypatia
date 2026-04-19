@@ -60,8 +60,8 @@ import Viewer.Obj(getFaces)
 import Viewer.Obj as Obj
 ```
 -}
-importedModules (ModuleDeclaration _ imports _) =
-    Set.fromList [name | ImportDeclaration name _ _ <- imports]
+importedModules modDecl =
+    Set.fromList [name | ImportDeclaration name _ _ <- modDecl.getImports]
 
 
 data Literal

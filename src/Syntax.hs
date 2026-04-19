@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Syntax where
 
 import Prelude hiding (lookup)
@@ -28,8 +27,10 @@ type EndPosition = Position
 data Location = Location StartPosition EndPosition FilePath
     deriving (Show, Data, Typeable)
 
-data Id = Id Text Location
-    deriving (Show, Data, Typeable)
+data Id = Id {
+    getText :: Text,
+    getLocation :: Location
+} deriving (Show, Data, Typeable)
 
 instance Eq Id where
     Id t1 _ == Id t2 _ = t1 == t2
@@ -37,20 +38,20 @@ instance Eq Id where
 instance Hashable Id where
     hashWithSalt s (Id t _) = hashWithSalt s t
 
-data Name = Name [Text] Id
-    deriving (Show, Data, Typeable, Eq)
+data Name = Name {
+    getQualifiers :: [Text],
+    getId :: Id
+} deriving (Show, Data, Typeable, Eq)
 
 instance Hashable Name where
     hashWithSalt s (Name a b) = hashWithSalt s (a, b)
 
 
-data ModuleDeclaration =
-    ModuleDeclaration Name [ImportDeclaration] [Declaration]
-        deriving (Show, Data, Typeable)
-
-getDecls (ModuleDeclaration _ _ decls) = decls
-getName (ModuleDeclaration name _ _) = name
-getImports (ModuleDeclaration _ imports _) = imports
+data ModuleDeclaration = ModuleDeclaration {
+    getName :: Name,
+    getImports :: [ImportDeclaration],
+    getDecls :: [Declaration]
+} deriving (Show, Data, Typeable)
 
 {-
 Uses a set so that the name of a module appears only once in cases as for example:
@@ -152,9 +153,9 @@ commas = mintercalate (text ", ")
 mintercalate _ [] = mempty
 mintercalate s xs = foldr1 (\x r -> x <> s <> r) xs
 
-qualify (Name modQs modName) (Name [] name) =
-    Name (modQs ++ [getText modName]) name
-qualify _ n = n
+qualify moduleName (Name [] identifier) =
+    Name (moduleName.getQualifiers ++ [moduleName.getId.getText]) identifier
+qualify _ name = name
 
 
 instance Pretty Location where
@@ -236,8 +237,8 @@ flatName = intercalateName (text "_") (text ".")
 {-# INLINE flatName #-}
 
 intercalateName _ _ (Name [] i) = pretty i
-intercalateName qualSep idSep (Name qs i) =
-    mintercalate qualSep (fmap text qs) <> idSep <> pretty i
+intercalateName qualSep idSep name =
+    mintercalate qualSep (fmap text name.getQualifiers) <> idSep <> pretty name.getId
 {-# INLINE intercalateName #-}
 
 
@@ -287,7 +288,7 @@ renderEnv m = render (foldrWithKey (\k v r ->
     pretty k <+> text ":" <+> pretty v <> hardline <> r) mempty m)
 {-# INLINE renderEnv #-}
 
-nameToList (Name is i) = is ++ [getText i]
+nameToList name = name.getQualifiers ++ [name.getId.getText]
 
 fromText t =
     let splitted = Text.split (== '.') t
@@ -296,12 +297,12 @@ fromText t =
 fromId = Name []
 
 toId (Name [] identifier) = identifier
-toId n = error ("Tried to turn name " <> renderError n
+toId name = error ("Tried to turn name " <> renderError name
     <> " into an identifier but it had qualifiers")
 
-isConstructor (Name _ i) = firstIs isUpper (getText i)
+isConstructor name = firstIs isUpper name.getId.getText
 
-isOperator (Name _ i) = firstIs isSym (getText i)
+isOperator name = firstIs isSym name.getId.getText
 
 firstIs f = Text.foldr (const . f) False
 {-# INLINE firstIs #-}
@@ -325,14 +326,6 @@ locatedId location@(Location (Position line column) _ _) x =
         <> "_" <> uintToText line
         <> "_" <> uintToText column) location
 {-# INLINE locatedId #-}
-
-getQualifiers (Name q _) = q
-
-getText (Id t _) = t
-
-getLocation (Id _ l) = l
-
-getId (Name _ i) = i
 
 differenceKeys m ks = filterWithKey (const . flip notElem ks) m
 {-# INLINE differenceKeys #-}

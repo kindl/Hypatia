@@ -6,7 +6,7 @@ import Data.List(uncons)
 import Data.Foldable(foldl')
 import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty)
-import Control.Monad(guard, (<$!>))
+import Control.Monad(guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), LocatedLexeme(..),
     lexlex, prettyLocated, alternating1)
@@ -36,7 +36,7 @@ parseString s = parse "" s
 next = StateT uncons
 {-# INLINE next #-}
 
-nextLexeme = (.getLexeme) <$!> next
+nextLexeme = fmap (.getLexeme) next
 {-# INLINE nextLexeme #-}
 
 token t = do
@@ -178,13 +178,13 @@ btype = liftA2 (foldl' TypeApplication) atype (many' atype)
 atype = typeConstructor <|> typeVariable <|> parenthesizedType
 {-# INLINE atype #-}
 
-typeConstructor = TypeConstructor <$!> qcon
+typeConstructor = fmap TypeConstructor qcon
 {-# INLINE typeConstructor #-}
 
-typeVariable = TypeVariable <$!> var
+typeVariable = fmap TypeVariable var
 {-# INLINE typeVariable #-}
 
-parenthesizedType = ParenthesizedType <$!> parenthesized qtype
+parenthesizedType = fmap ParenthesizedType (parenthesized qtype)
 {-# INLINE parenthesizedType #-}
 
 constrs = sepBy1' constr (token "|")
@@ -271,21 +271,21 @@ aexpr = variable <|> constructorExpression <|> literalExpression
     <|> interpolatedStringExpression
 {-# INLINE aexpr #-}
 
-variable = Variable <$!> qvar
+variable = fmap Variable qvar
 {-# INLINE variable #-}
 
-constructorExpression = ConstructorExpression <$!> qcon
+constructorExpression = fmap ConstructorExpression qcon
 {-# INLINE constructorExpression #-}
 
-literalExpression = LiteralExpression <$!> literal
+literalExpression = fmap LiteralExpression literal
 {-# INLINE literalExpression #-}
 
 parenthesizedExpression =
-    ParenthesizedExpression <$!> parenthesized expr
+    fmap ParenthesizedExpression (parenthesized expr)
 {-# INLINE parenthesizedExpression #-}
 
 arrayExpression =
-    ArrayExpression <$!> bracketed (sepByTrailing expr (token ","))
+    fmap ArrayExpression (bracketed (sepByTrailing expr (token ",")))
 {-# INLINE arrayExpression #-}
 
 interpolatedStringExpression = do
@@ -358,7 +358,7 @@ aliasPattern = parenthesized (do
     return (AliasPattern (fromId v) p))
 {-# INLINE aliasPattern #-}
 
-variablePattern = (VariablePattern . fromId) <$!> var
+variablePattern = fmap (VariablePattern . fromId) var
 {-# INLINE variablePattern #-}
 
 constructorPattern = do
@@ -366,13 +366,13 @@ constructorPattern = do
     return (ConstructorPattern TaggedRepresentation c [])
 {-# INLINE constructorPattern #-}
 
-literalPattern = LiteralPattern <$!> literal
+literalPattern = fmap LiteralPattern literal
 {-# INLINE literalPattern #-}
 
-parenthesizedPattern = ParenthesizedPattern <$!> parenthesized pat
+parenthesizedPattern = fmap ParenthesizedPattern (parenthesized pat)
 {-# INLINE parenthesizedPattern #-}
 
-arrayPattern = ArrayPattern <$!> bracketed (sepByTrailing pat (token ","))
+arrayPattern = fmap ArrayPattern (bracketed (sepByTrailing pat (token ",")))
 {-# INLINE arrayPattern #-}
 
 spec = varid <|> conid <|> parenthesized varsym
@@ -467,7 +467,7 @@ string = do
 {-# INLINE string #-}
 
 literal =
-    Number . intToDouble <$!> integer
-    <|> Number <$!> float
-    <|> Text <$!> string
+    fmap (Number . intToDouble) integer
+    <|> fmap Number float
+    <|> fmap Text string
 {-# INLINE literal #-}

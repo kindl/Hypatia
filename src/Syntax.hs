@@ -6,10 +6,9 @@ import Data.Data(Data, Typeable)
 import Data.Text(Text)
 import qualified Data.Text as Text
 import Data.Char(isUpper, isSymbol, isPrint)
-import Data.Hashable(Hashable, hashWithSalt)
-import Data.HashMap.Strict(lookup, keys, foldrWithKey,
+import Data.Map.Strict(lookup, keys, foldrWithKey,
     filterWithKey, fromListWith, unionWith, keysSet)
-import qualified Data.HashSet as Set
+import qualified Data.Set as Set
 import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
     dquotes, parens, brackets, layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text(renderStrict)
@@ -35,17 +34,13 @@ data Id = Id {
 instance Eq Id where
     Id t1 _ == Id t2 _ = t1 == t2
 
-instance Hashable Id where
-    hashWithSalt s (Id t _) = hashWithSalt s t
+instance Ord Id where
+    Id t1 _ <= Id t2 _ = t1 <= t2
 
 data Name = Name {
     getQualifiers :: [Text],
     getId :: Id
-} deriving (Show, Data, Typeable, Eq)
-
-instance Hashable Name where
-    hashWithSalt s (Name a b) = hashWithSalt s (a, b)
-
+} deriving (Show, Data, Typeable, Eq, Ord)
 
 data ModuleDeclaration = ModuleDeclaration {
     getName :: Name,

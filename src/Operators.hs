@@ -2,7 +2,7 @@ module Operators where
 
 import Syntax
 import Data.Generics.Uniplate.Data(rewriteBiM)
-import Data.HashMap.Strict(fromList)
+import Data.Map.Strict(fromList)
 import Control.Monad((>=>))
 
 {-

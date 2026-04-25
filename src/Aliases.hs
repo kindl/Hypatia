@@ -2,7 +2,7 @@ module Aliases where
 
 import Syntax
 import Data.Generics.Uniplate.Data(transformBiM)
-import Data.HashMap.Strict(fromList, lookup)
+import Data.Map.Strict(fromList, lookup)
 import Control.Monad((>=>))
 import Prelude hiding (lookup)
 

@@ -6,10 +6,10 @@ import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 import Data.Foldable(foldMap')
-import qualified Data.HashSet as Set
+import qualified Data.Set as Set
 import Data.Data(Data, Typeable)
 import Data.Generics.Uniplate.Data(universeBi, transformBi)
-import Data.HashMap.Strict(fromList, lookup)
+import Data.Map.Strict(fromList, lookup)
 import Prelude hiding (lookup)
 
 

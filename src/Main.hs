@@ -7,7 +7,7 @@ import Transformations
 import Parser(parseFile)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import qualified Data.HashSet as Set
+import qualified Data.Set as Set
 import System.FilePath(takeDirectory)
 import System.Directory(createDirectoryIfMissing, copyFile,
     doesFileExist, doesDirectoryExist, listDirectory)

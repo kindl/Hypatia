@@ -7,7 +7,7 @@ import Sorting
 import Typechecker
 import Operators
 import Qualification
-import Data.HashMap.Strict(insert, (!))
+import Data.Map.Strict(insert, (!))
 import Data.Foldable(foldMap')
 import Control.Monad((<=<))
 -- import qualified Data.Text.IO as Text

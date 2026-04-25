@@ -3,12 +3,11 @@ module Typechecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
-import Data.HashMap.Strict(HashMap, fromList, insert, foldrWithKey, lookup, singleton)
-import qualified Data.HashSet as Set
+import Data.Map.Strict(Map, fromList, insert, foldrWithKey, lookup, singleton)
+import qualified Data.Set as Set
 import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)
-import Data.List(sortOn)
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend, transformM)
@@ -16,9 +15,9 @@ import Data.Foldable(traverse_, foldMap', foldl')
 import Control.Exception(onException)
 import Control.Applicative((<|>))
 
-type Environment = HashMap Name Type
+type Environment = Map Name Type
 
-type Substitution = HashMap Id Type
+type Substitution = Map Id Type
 
 data TypecheckerState =
     TypecheckerState Environment (IORef Word64) (IORef Substitution)
@@ -400,7 +399,7 @@ subsume' t1 t2 = unify' t1 t2
 makeForAll tvs1 (ForAll tvs2 ty) =
     makeForAll (tvs1 <> Set.fromList tvs2) ty
 makeForAll tvs ty =
-    if null tvs then ty else ForAll (sortOn (.getText) (Set.toList tvs)) ty
+    if null tvs then ty else ForAll (Set.toAscList tvs) ty
 
 skolemise (ForAll vars ty) = do
     skolVars <- traverse (newUniqueName . (.getLocation)) vars

@@ -2,7 +2,7 @@ module Qualification where
 
 import Syntax
 import Prelude hiding (lookup)
-import Data.HashMap.Strict(lookup, fromList)
+import Data.Map.Strict(lookup, fromList)
 import Data.Generics.Uniplate.Data(transformM, descendM, transformBi, transformBiM)
 import Data.Foldable(foldMap')
 import Control.Applicative(liftA3)

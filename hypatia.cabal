@@ -36,8 +36,7 @@ executable hypatia
     base >= 4.18.0.0,
     -- Lower bound necessary for Text.show
     text >= 2.1.2.0,
-    unordered-containers < 0.3,
-    hashable < 1.5,
+    containers,
     prettyprinter < 1.8,
     transformers < 0.7,
     uniplate < 1.7,

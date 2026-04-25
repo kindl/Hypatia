@@ -68,7 +68,8 @@ renderLuaMod (Mod _ imports statements) = vcat [
     hardline,
     text "return {",
     indent 4 (mintercalate (text "," <> hardline) (fmap exports (getIdentifiers statements))),
-    text "}"
+    text "}",
+    mempty
     ]
 
 exports x = pretty x <+> text "=" <+> pretty x
@@ -187,7 +188,8 @@ renderJsMod (Mod _ imports statements) = vcat [
     hardline,
     text "export default {",
     indent 4 (mintercalate (text "," <> hardline) (fmap pretty (getIdentifiers statements))),
-    text "}"
+    text "}",
+    mempty
     ]
 
 toJsI modName =

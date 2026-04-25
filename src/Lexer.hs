@@ -30,7 +30,7 @@ lexFileDebug path =
     fmap (parse (program path)) (Text.readFile path)
 
 lexFileDebug2 path =
-    fmap (fmap (fmap extractLexeme) . lexlex path)
+    fmap (fmap (fmap (.getLexeme)) . lexlex path)
         (Text.readFile path)
 
 lexDebug = parseOnly (program "")
@@ -137,12 +137,10 @@ initialPosition = Position 1 1
 oneOf xs = satisfy (flip Text.elem xs)
 {-# INLINE oneOf #-}
 
-data LocatedLexeme = LocatedLexeme Lexeme Location
-    deriving (Show)
-
-extractLocation (LocatedLexeme _ p) = p
-
-extractLexeme (LocatedLexeme l _) = l
+data LocatedLexeme = LocatedLexeme {
+    getLexeme :: Lexeme,
+    getLoc :: Location
+} deriving (Show)
 
 prettyLocated (LocatedLexeme l p) =
     show l ++ " " ++ show (pretty p)

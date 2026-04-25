@@ -8,9 +8,8 @@ import Data.Functor(($>))
 import Control.Applicative((<|>), optional, empty)
 import Control.Monad(guard, (<$!>))
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
-import Lexer(Lexeme(..),
-    lexlex, prettyLocated, alternating1,
-    extractLexeme, extractLocation)
+import Lexer(Lexeme(..), LocatedLexeme(..),
+    lexlex, prettyLocated, alternating1)
 import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', option)
 
 
@@ -37,7 +36,7 @@ parseString s = parse "" s
 next = StateT uncons
 {-# INLINE next #-}
 
-nextLexeme = extractLexeme <$!> next
+nextLexeme = (.getLexeme) <$!> next
 {-# INLINE nextLexeme #-}
 
 token t = do
@@ -423,7 +422,7 @@ fromWildcard _ _ = Nothing
 
 parseLocated f = do
     n <- next
-    maybe empty return (f (extractLexeme n) (extractLocation n))
+    maybe empty return (f n.getLexeme n.getLoc)
 {-# INLINE parseLocated #-}
 
 varsym = parseLocated fromVarsym

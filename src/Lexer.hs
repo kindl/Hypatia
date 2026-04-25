@@ -238,10 +238,14 @@ hexdecimal = fmap Integer
     (char '0' *> oneOf "xX" *> hexadecimal)
 {-# INLINE hexdecimal #-}
 
--- TODO parse integers
--- attoparsec parses a decimal as a double
--- for example 3 is parsed as 3.0
-number = fmap Double double
+-- `double` from attoparsec will parse an int
+-- like 3 as the double 3.0. Here we check and convert
+-- if the number is actually an int
+number = do
+    d <- double
+    return (if isInt d
+        then Integer (round d)
+        else Double d)
 {-# INLINE number #-}
 
 stringLiteral =

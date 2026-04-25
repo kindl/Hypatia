@@ -114,7 +114,7 @@ typeSignature = do
 
 fixityDeclaration = do
     f <- fixity
-    i <- float
+    i <- float <|> fmap intToDouble integer
     o <- varsym
     a <- varid <|> conid
     return (FixityDeclaration f i (fromId o) (fromId a))

@@ -257,9 +257,11 @@ text :: Text -> Doc a
 text = pretty
 
 prettyNumber d =
-    if not (isInfinite d) && d == intToDouble (round d)
+    if isInt d
         then pretty (round d :: Int)
         else pretty d
+
+isInt d = not (isInfinite d) && d == intToDouble (round d)
 
 prettyEscaped = dquotes . text . Text.concatMap escape
 

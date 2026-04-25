@@ -577,61 +577,66 @@ extractVar (VariablePattern x : ps) =
         _ -> Nothing
 extractVar _ = Nothing
 
-getConditions v i (AliasPattern _ p) =
-    getConditions v i p
-getConditions v i (ConstructorPattern _ c []) =
-    [Op Eq (Access v i) (Tag c)]
+-- `getConditions` is used for constructing a boolean expression
+-- for a pattern match
+getConditions v indices (AliasPattern _ p) =
+    getConditions v indices p
+getConditions v indices (ConstructorPattern _ c []) =
+    [Op Eq (Access v indices) (Tag c)]
 -- Constructors with only one variable are not wrapped in an array
-getConditions v i (ConstructorPattern ArrayRepresentation _ [p]) =
-    getConditions v i p
+getConditions v indices (ConstructorPattern ArrayRepresentation _ [p]) =
+    getConditions v indices p
 -- Compare as array for constructors without tag
-getConditions v i (ConstructorPattern ArrayRepresentation _ ps) =
-    getConditionsArray v i ps
+getConditions v indices (ConstructorPattern ArrayRepresentation _ ps) =
+    getConditionsArray v indices ps
 -- Compare as array and also the tag for constructors with tag
-getConditions v i (ConstructorPattern TaggedRepresentation c ps) =
-    [makeIsArray (Access v i),
+getConditions v indices (ConstructorPattern TaggedRepresentation c ps) =
+    [makeIsArray (Access v indices),
     -- + 1 to account for length of tag
-    Op Eq (makeLength (Access v i)) (LitI (length ps + 1)),
+    Op Eq (makeLength (Access v indices)) (LitI (length ps + 1)),
     -- Compare tag
-    Op Eq (Access v (i ++ [0])) (Tag c)]
-    ++ descendAccess (getConditions v) i 1 ps
-getConditions v i (ArrayPattern ps) =
-    getConditionsArray v i ps
-getConditions v i (LiteralPattern l) =
-    [Op Eq (Access v i) (compileL l)]
+    Op Eq (Access v (indices ++ [0])) (Tag c)]
+    ++ descendAccess (getConditions v) indices 1 ps
+getConditions v indices (ArrayPattern ps) =
+    getConditionsArray v indices ps
+getConditions v indices (LiteralPattern l) =
+    [Op Eq (Access v indices) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ renderError p)
 
-getConditionsArray v i ps =
-    [makeIsArray (Access v i),
-    Op Eq (makeLength (Access v i)) (LitI (length ps))]
-    ++ descendAccess (getConditions v) i 0 ps
+getConditionsArray v indices ps =
+    [makeIsArray (Access v indices),
+    Op Eq (makeLength (Access v indices)) (LitI (length ps))]
+    ++ descendAccess (getConditions v) indices 0 ps
 
+-- `getAssignments` is used for creating a series of assignments
+-- to extract the values of a pattern match
 getAssignments v [] (VariablePattern (Name [] x)) | v == x =
     []
-getAssignments v i (VariablePattern x) =
-    [Assign x (Access v i)]
-getAssignments v i (AliasPattern x p) =
-    Assign x (Access v i):getAssignments v i p
+getAssignments v indices (VariablePattern x) =
+    [Assign x (Access v indices)]
+getAssignments v indices (AliasPattern x p) =
+    Assign x (Access v indices):getAssignments v indices p
 -- Identity constructor
-getAssignments v i (ConstructorPattern ArrayRepresentation _ [p]) =
-    getAssignments v i p
+getAssignments v indices (ConstructorPattern ArrayRepresentation _ [p]) =
+    getAssignments v indices p
 -- Untagged constructor
-getAssignments v i (ConstructorPattern ArrayRepresentation _ ps) =
-    descendAccess (getAssignments v) i 0 ps
+getAssignments v indices (ConstructorPattern ArrayRepresentation _ ps) =
+    descendAccess (getAssignments v) indices 0 ps
 -- Tagged constructor
-getAssignments v i (ConstructorPattern TaggedRepresentation _ ps) =
-    descendAccess (getAssignments v) i 1 ps
-getAssignments v i (ArrayPattern ps) =
-    descendAccess (getAssignments v) i 0 ps
+getAssignments v indices (ConstructorPattern TaggedRepresentation _ ps) =
+    descendAccess (getAssignments v) indices 1 ps
+getAssignments v indices (ArrayPattern ps) =
+    descendAccess (getAssignments v) indices 0 ps
 getAssignments _ _ (LiteralPattern _) = []
 getAssignments _ _ (Wildcard _) = []
 getAssignments _ _ p = error ("getAssignments on " ++ renderError p)
 
-descendAccess _ _ _ [] = []
-descendAccess f i j (p:ps) =
-    f (i ++ [j]) p ++ descendAccess f i (j + 1) ps
+-- `descendAccess` is used to recurse into the fields of a constructor
+-- or the elements of an array
+descendAccess f previousIndices offset ps =
+    mconcat (zipWith (\i p -> f (previousIndices ++ [i]) p) [offset .. offset + length ps] ps)
 
 immediate statements = Call (Func [] statements) []
 

@@ -7,12 +7,12 @@ import Data.Text(Text)
 import Prettyprinter(pretty)
 import Control.Applicative((<|>))
 import Data.Functor(($>))
-import Data.Char(isSpace, isUpper, isAlphaNum)
+import Data.Char(isSpace, isUpper, isLower, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
 -- NOTE strict combinators are used
 -- however <$!> instead of fmap would decrease performance
-import Data.Attoparsec.Combinator(many', sepBy1', endOfInput, manyTill')
+import Data.Attoparsec.Combinator(many', endOfInput, manyTill')
 import Data.Attoparsec.Text(char, satisfy,
     takeWhile, takeWhile1,
     match, parse, parseOnly,
@@ -157,6 +157,7 @@ data Lexeme
     | Varid [Text] Text
     | Varsym [Text] Text
     | Conid [Text] Text
+    | Accessor Text
     | Comment Text
     | Block Int
     | Indent Int
@@ -182,7 +183,12 @@ program path = fmap (located path . concat)
 matchedLexeme = fmap return (match lexeme) <|> interpolatedString
 {-# INLINE matchedLexeme #-}
 
-lexeme = whitespace <|> literal <|> special <|> qident
+lexeme = whitespace
+    <|> literal
+    -- `accessor` has to come before `special` to handle the dot
+    <|> accessor
+    <|> special
+    <|> qident
 {-# INLINE lexeme #-}
 
 -- NOTE . was addded
@@ -204,28 +210,44 @@ hashcomment = fmap Comment (char '#' *> takeWhile (/= '\n'))
 slashcomment = fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n'))
 {-# INLINE slashcomment #-}
 
-qident = fmap (\ms -> makeIdent (init ms) (last ms))
-    (sepBy1' (ident <|> varsym) (char '.'))
+qident = do
+    prefix <- many' (uppercaseIdent <* char '.')
+    fmap (handleReserved Varid prefix) lowercaseIdent
+        <|> fmap (handleReserved Varsym prefix) varsym
+        <|> fmap (Conid prefix) uppercaseIdent
 {-# INLINE qident #-}
 
--- TODO improve this check
--- qualifiers have to start with an uppercase qualifier
-makeIdent ms i | any (firstIs (not . isUpper)) ms =
-    error ("Bad qualifier for identifier " ++ show i)
-makeIdent [] i | elem i reserved = Reserved i
-makeIdent ms i | firstIs isUpper i = Conid ms i
-makeIdent ms i | firstIs isSym i = Varsym ms i
-makeIdent ms i = Varid ms i
-{-# INLINE makeIdent #-}
+handleReserved _ qs r | elem r reserved =
+    if null qs
+        then Reserved r
+        else error ("Identifier " <> Text.unpack r <> " cannot be used qualifed")
+handleReserved f qs i = f qs i
+{-# INLINE handleReserved #-}
+
+accessor = fmap Accessor (char '.' *> lowercaseIdent)
+{-# INLINE accessor #-}
 
 {- Identifiers -}
 reserved = ["alias", "enum", "type", "forall", "await",
         "import", "module", "fun", "let", "in", "where", "case", "of",
-        "if", "then", "else", "infix", "infixl", "infixr", "as", "_",
-        ":", "=", "->", "|", "\\"]
+        "if", "then", "else", "infix", "infixl", "infixr", "as",
+        "record",
+        "_", ":", "=", "->", "|", "\\"]
 
-ident = takeWhile1 (\x -> isAlphaNum x || x == '_')
-{-# INLINE ident #-}
+uppercaseIdent =
+    liftA2 Text.cons
+        (satisfy isUpper)
+        (takeWhile isIdentChar)
+{-# INLINE uppercaseIdent #-}
+
+lowercaseIdent = do
+    liftA2 Text.cons
+        (satisfy (\x -> isLower x || x == '_'))
+        (takeWhile isIdentChar)
+{-# INLINE lowercaseIdent #-}
+
+isIdentChar x = isAlphaNum x || x == '_'
+{-# INLINE isIdentChar #-}
 
 varsym = takeWhile1 isSym
 {-# INLINE varsym #-}

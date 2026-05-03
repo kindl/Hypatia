@@ -74,6 +74,8 @@ type OperatorAlias = Name
 
 type Binding = Name
 
+type Accessor = Name
+
 -- The imported Ids in an `import`
 type Spec = Maybe [Id]
 
@@ -141,6 +143,7 @@ data Expression
     | IfExpression Expression Expression Expression
     | CaseExpression Expression [(Pattern, Expression)]
     | LambdaExpression [Pattern] Expression
+    | DotExpression Expression Accessor
         deriving (Show, Data, Typeable)
 
 commas = mintercalate (text ", ")

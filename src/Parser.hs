@@ -266,10 +266,15 @@ caseExpression = do
 fexpr = liftA2 (foldl' FunctionApplication) aexpr (many' aexpr)
 {-# INLINE fexpr #-}
 
-aexpr = variable <|> constructorExpression <|> literalExpression
-    <|> parenthesizedExpression <|> arrayExpression
+aexpr = accessorExpr
+    <|> constructorExpression
+    <|> literalExpression
+    <|> arrayExpression
     <|> interpolatedStringExpression
 {-# INLINE aexpr #-}
+
+accessorExpr = liftA2 (foldl' DotExpression) (variable <|> parenthesizedExpression) (many' accessor)
+{-# INLINE accessorExpr #-}
 
 variable = fmap Variable qvar
 {-# INLINE variable #-}
@@ -420,6 +425,10 @@ fromWildcard (Reserved "_") l = return (Wildcard (Id "_" l))
 fromWildcard _ _ = Nothing
 {-# INLINE fromWildcard #-}
 
+fromAccessor (Accessor a) l = return (Name [] (Id a l))
+fromAccessor _ _ = Nothing
+{-# INLINE fromAccessor #-}
+
 parseLocated f = do
     n <- next
     maybe empty return (f n.getLexeme n.getLoc)
@@ -447,6 +456,9 @@ qconid = parseLocated fromQConid
 
 wildcard = parseLocated fromWildcard
 {-# INLINE wildcard #-}
+
+accessor = parseLocated fromAccessor
+{-# INLINE accessor #-}
 
 modid = qconid
 {-# INLINE modid #-}

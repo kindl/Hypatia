@@ -107,7 +107,7 @@ typecheckLambda [p] e s@(ForAll _ (TypeArrow _ _)) = do
     let escVars = skolems s <> foldMap' (skolems . apply subst) env
     let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check lambda: "
-        ++ renderSetToError escaped ++ " escaped when checking fun "
+        ++ renderSetToError escaped ++ " escaped when checking function "
         ++ renderError p ++ " -> ... against " ++ renderError s))
 typecheckLambda [p] e ty = do
     let location = firstLocationInfo p

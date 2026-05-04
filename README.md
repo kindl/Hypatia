@@ -51,7 +51,6 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 * No do-expressions, list comprehensions and arithmetic sequences. Instead plain functions like `andThen`, `map2` or `range`.
 * No records. My father's Achilles heel... I am dreaming of a unified solution for first class modules, records and ad-hoc polymorphism when I am older.
 * Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` can be used for pattern- and type aliases.
-* You can write `fun` instead of `\` to be a little less cryptic.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
 
 It was nice to talk with you stranger.

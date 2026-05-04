@@ -44,8 +44,8 @@ is translated to
 f = let
         filePath = "Test"
         fileEnding ".txt"
-    in bind (readFile (filePath ++ fileEnding)) (fun fileName ->
-        bind (readFile fileName) (fun content -> printText content))
+    in bind (readFile (filePath ++ fileEnding)) (\fileName ->
+        bind (readFile fileName) (\content -> printText content))
 -}
 removeAwaitDeclaration m = transformBi f m
   where

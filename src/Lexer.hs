@@ -229,9 +229,10 @@ accessor = fmap Accessor (char '.' *> lowercaseIdent)
 
 {- Identifiers -}
 reserved = ["alias", "enum", "type", "forall", "await",
-        "import", "module", "fun", "let", "in", "where", "case", "of",
+        "import", "module", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as",
         "record",
+        "fun",
         "_", ":", "=", "->", "|", "\\"]
 
 uppercaseIdent =

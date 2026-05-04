@@ -70,7 +70,8 @@ typecheck (FunctionApplication e1 e2) ty = do
     typecheck e1 (TypeArrow alpha ty)
     typecheck e2 alpha
 typecheck (CaseExpression expr alts) ty = do
-    patternTy <- newTyVar
+    let location = firstLocationInfo (fmap fst alts)
+    patternTy <- newTyVarAt location
     traverse_ (uncurry (typecheckAlt patternTy ty)) alts
     typecheck expr patternTy
 typecheck (LambdaExpression ps e) ty =
@@ -109,8 +110,9 @@ typecheckLambda [p] e s@(ForAll _ (TypeArrow _ _)) = do
         ++ renderSetToError escaped ++ " escaped when checking fun "
         ++ renderError p ++ " -> ... against " ++ renderError s))
 typecheckLambda [p] e ty = do
-    patternTy <- newTyVar
-    resultTy <- newTyVar
+    let location = firstLocationInfo p
+    patternTy <- newTyVarAt location
+    resultTy <- newTyVarAt location
     typecheckAlt patternTy resultTy p e
     subsume (TypeArrow patternTy resultTy) ty
 typecheckLambda ps _ _ =
@@ -194,7 +196,8 @@ inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
     typecheckBraced binds' (renderError v) e ty
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do
-    ty <- newTyVar
+    let location = firstLocationInfo p
+    ty <- newTyVarAt location
     binds <- typecheckPattern p ty
     let binds' = fromList binds
     typecheckBraced binds' (renderError p) e ty
@@ -250,7 +253,8 @@ typecheckPattern (ConstructorPattern _ c ps) ty = do
     unify resultTy ty
     return (mconcat binds)
 typecheckPattern (ArrayPattern ps) ty = do
-    elementTy <- newTyVar
+    let location = firstLocationInfo ps
+    elementTy <- newTyVarAt location
     binds <- traverse (\p -> typecheckPattern p elementTy) ps
     unify (TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy) ty
     return (mconcat binds)

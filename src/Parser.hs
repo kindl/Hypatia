@@ -273,7 +273,7 @@ aexpr = accessorExpr
     <|> interpolatedStringExpression
 {-# INLINE aexpr #-}
 
-accessorExpr = liftA2 (foldl' DotExpression) (variable <|> parenthesizedExpression) (many' accessor)
+accessorExpr = liftA2 (foldl' DotExpression) (variable <|> parenthesizedExpression) (many' (fmap fromId accessor))
 {-# INLINE accessorExpr #-}
 
 variable = fmap Variable qvar
@@ -380,7 +380,7 @@ parenthesizedPattern = fmap ParenthesizedPattern (parenthesized pat)
 arrayPattern = fmap ArrayPattern (bracketed (sepByTrailing pat (token ",")))
 {-# INLINE arrayPattern #-}
 
-spec = varid <|> conid <|> parenthesized varsym
+spec = varid <|> conid <|> parenthesized varsym <|> accessor
 {-# INLINE spec #-}
 
 -- A var can be a varid like `x`
@@ -425,7 +425,7 @@ fromWildcard (Reserved "_") l = return (Wildcard (Id "_" l))
 fromWildcard _ _ = Nothing
 {-# INLINE fromWildcard #-}
 
-fromAccessor (Accessor a) l = return (Name [] (Id a l))
+fromAccessor (Accessor a) l = return (Id a l)
 fromAccessor _ _ = Nothing
 {-# INLINE fromAccessor #-}
 

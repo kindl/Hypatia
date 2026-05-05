@@ -56,6 +56,8 @@ qualifyP quals pat =
 
 qualifyE quals (Variable n) =
     fmap Variable (findName quals n)
+qualifyE quals (DotExpression e n) =
+    liftA2 DotExpression (qualifyE quals e) (findName quals n)
 qualifyE quals (ConstructorExpression c) =
     fmap ConstructorExpression (findName quals c)
 qualifyE quals (LetExpression decls e) = do
@@ -147,6 +149,8 @@ changeQualifiedImports quals =
     let
         f (Variable n) =
             Variable (changeQualifier n quals)
+        f (DotExpression e a) =
+            DotExpression e (changeQualifier a quals)
         f (ConstructorExpression c) =
             ConstructorExpression (changeQualifier c quals)
         f (OperatorExpression ea name eb) =

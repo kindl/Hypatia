@@ -62,6 +62,7 @@ sortModules modules =
 getDepsE e =
     let
         f (Variable v) _ = Set.singleton v
+        f (DotExpression _ a) _ = Set.singleton a
         f (ConstructorExpression c) _ = Set.singleton c
         f (CaseExpression _ alts) (deps:cs) =
             mconcat (deps : zipWith (\(p, _) c ->

@@ -232,7 +232,7 @@ reserved = ["alias", "enum", "type", "forall", "await",
         "import", "module", "let", "in", "where", "case", "of",
         "if", "then", "else", "infix", "infixl", "infixr", "as",
         "record",
-        "fun",
+        "fun", "constructor",
         "_", ":", "=", "->", "|", "\\"]
 
 uppercaseIdent =

@@ -224,7 +224,7 @@ handleReserved _ qs r | elem r reserved =
 handleReserved f qs i = f qs i
 {-# INLINE handleReserved #-}
 
-accessor = fmap Accessor (char '.' *> lowercaseIdent)
+accessor = fmap Accessor (liftA2 Text.cons (char '.') lowercaseIdent)
 {-# INLINE accessor #-}
 
 {- Identifiers -}

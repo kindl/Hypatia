@@ -65,10 +65,14 @@ typecheck (Variable x) ty =
     typecheckVar x ty
 typecheck (ConstructorExpression c) ty =
     typecheckVar c ty
-typecheck (FunctionApplication e1 e2) ty = do
+typecheck (FunctionApplication f e) ty = do
     alpha <- newTyVar
-    typecheck e1 (TypeArrow alpha ty)
-    typecheck e2 alpha
+    typecheck f (TypeArrow alpha ty)
+    typecheck e alpha
+typecheck (DotExpression e accessor) ty = do
+    alpha <- newTyVarAt accessor.getId.getLocation
+    typecheckVar accessor (TypeArrow alpha ty)
+    typecheck e alpha
 typecheck (CaseExpression expr alts) ty = do
     let location = firstLocationInfo (fmap fst alts)
     patternTy <- newTyVarAt location

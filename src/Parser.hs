@@ -5,6 +5,7 @@ import qualified Data.Text.IO as Text
 import Data.List(uncons)
 import Data.Foldable(foldl')
 import Data.Functor(($>))
+import Data.Maybe (fromMaybe)
 import Control.Applicative((<|>), optional, empty)
 import Control.Monad(guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
@@ -78,13 +79,13 @@ impspec = parenthesized (sepByTrailing spec (token ","))
 {-# INLINE impspec #-}
 
 {- Declarations -}
-topdecl = typeDeclaration <|> aliasDeclaration <|> decl
+topdecl = typeDeclaration <|> aliasDeclaration <|> recordDeclaration <|> decl
 {-# INLINE topdecl #-}
 
 typeDeclaration = do
     token "type"
     name <- con
-    variables <- many' var
+    variables <- many' varid
     constructors <- optional (token "=" *> constrs)
     return (TypeDeclaration (fromId name) variables (concat constructors))
 {-# INLINE typeDeclaration #-}
@@ -96,6 +97,31 @@ aliasDeclaration = do
     val <- otype
     return (AliasDeclaration (fromId alias) val)
 {-# INLINE aliasDeclaration #-}
+
+recordDeclaration = do
+    token "record"
+    name <- con
+    variables <- many' varid
+    token "where"
+    (constructor, fields) <- curlyBraces recordDeclarationBody
+    -- If the constructor name is left out, it will default to the record's name
+    return (RecordDeclaration (fromId name) variables (fromId (fromMaybe name constructor)) fields)
+{-# INLINE recordDeclaration #-}
+
+recordDeclarationBody = do
+    constructor <- optional (token "constructor" *> con <* token ";")
+    fields <- sepBy1' fieldSignature (token ";")
+    return (constructor, fields)
+{-# INLINE recordDeclarationBody #-}
+
+-- This is similar to a type signature, but only allows varids
+-- (i.e. no operators) as identifier
+fieldSignature = do
+    identifier <- varid
+    token ":"
+    t <- qtype
+    return (identifierToAccessor identifier, t)
+{-# INLINE fieldSignature #-}
 
 decls = curlyBraces (sepBy' decl (token ";"))
 {-# INLINE decls #-}

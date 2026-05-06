@@ -76,6 +76,8 @@ type Binding = Name
 
 type Accessor = Name
 
+type RecordConstructor = Name
+
 -- The imported Ids in an `import`
 type Spec = Maybe [Id]
 
@@ -85,13 +87,13 @@ data ImportDeclaration = ImportDeclaration Name Spec (Maybe Name)
 data Declaration
     = TypeDeclaration Binding [Id] [(Binding, [Type])]
     | AliasDeclaration Binding Type
+    | RecordDeclaration Binding [Id] RecordConstructor [(Accessor, Type)]
     | FixityDeclaration Associativity Precedence Binding OperatorAlias
     | TypeSignature Binding Type
     | ExpressionDeclaration Pattern Expression
     -- simplified to an expression declaration
     | FunctionDeclaration Binding [([Pattern], Expression)]
         deriving (Show, Data, Typeable)
-
 
 data Type
     = TypeArrow Type Type
@@ -107,6 +109,7 @@ data Type
 data TagInfo =
     TaggedRepresentation
     | ArrayRepresentation
+    | RecordRepresentation [Id]
         deriving (Show, Data, Typeable)
 
 data Pattern
@@ -299,6 +302,12 @@ fromId = Name []
 toId (Name [] identifier) = identifier
 toId name = error ("Tried to turn name " <> renderError name
     <> " into an identifier but it had qualifiers")
+
+-- The identifier in field names is prefixed with a dot
+-- so that it is easier to differentiate between variables and accessors
+identifierToAccessor (Id v l) = fromId (Id (Text.cons '.' v) l)
+
+accessorToIdentifier (Name _ (Id v l)) = Id (Text.drop 1 v) l
 
 isConstructor name = firstIs isUpper name.getId.getText
 

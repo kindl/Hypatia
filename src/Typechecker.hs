@@ -146,7 +146,19 @@ gatherConstructor (TypeDeclaration tyIdent vars constructors) = do
     let resultTy = TypeConstructor tyIdent
     let tyCon = foldl' TypeApplication resultTy (fmap TypeVariable vars)
     fmap fromList (traverse (traverse (constructorToType tyCon vars')) constructors)
+gatherConstructor (RecordDeclaration tyIdent vars recordConstructor fields) = do
+    vars' <- toSetUniqueM vars
+    let resultTy = TypeConstructor tyIdent
+    let tyCon = foldl' TypeApplication resultTy (fmap TypeVariable vars)
+    let fieldTypes = fmap snd fields
+    recordConstructorTy <- constructorToType tyCon vars' fieldTypes
+    -- Creates fields as `.field1 : RecordName -> ty1`
+    let accessorTypes = fmap (gatherAccessor resultTy) fields
+    return (fromList ((recordConstructor, recordConstructorTy):accessorTypes))
 gatherConstructor _ = pure mempty
+
+gatherAccessor recordType (field, fieldType) =
+    (field, TypeArrow recordType fieldType)
 
 -- Convert a constructor declaration to a type
 -- Example for variable scope checks:

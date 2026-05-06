@@ -21,21 +21,19 @@ circleVec (Vector2 x y) r = circle "fill" x y r
 
 drawSphere sphere =
     let
-        _ = setColorVec (color sphere)
-    in circleVec (position sphere) (radius sphere)
+        _ = setColorVec sphere.color
+    in circleVec sphere.position sphere.radius
 
 alias Position = Vector2 Number
 alias Velocity = Vector2 Number
 alias Color = Vector3 Number
 alias Radius = Number
 
-type Sphere = Sphere Position Velocity Color Radius
-
-color (Sphere _ _ c _) = c
-
-position (Sphere p _ _ _) = p
-
-radius (Sphere _ _ _ r) = r
+record Sphere where
+    position : Position
+    velocity : Velocity
+    color : Color
+    radius : Radius
 
 addSphere spheres =
     let
@@ -68,14 +66,14 @@ mousepressed x y button isTouch =
 mousemoved x y dx dy isTouch =
     modifyState (map (moveSphere (Vector2 x y)))
 
-moveSphere screenPos (s alias Sphere p v c r) =
-    if distance p screenPos < r
-        then Sphere screenPos v c r
-        else s
+moveSphere screenPos sphere =
+    if distance sphere.position screenPos < sphere.radius
+        then Sphere screenPos sphere.velocity sphere.color sphere.radius
+        else sphere
 
-hideSphere screenPos (s alias Sphere p v c r) =
-    if distance p screenPos < r
-        then Sphere p v c 0
-        else s
+hideSphere screenPos sphere =
+    if distance sphere.position screenPos < sphere.radius
+        then Sphere sphere.position sphere.velocity sphere.color 0
+        else sphere
 
 draw _ = modifyState (\s -> let { _ = map drawSphere s } in s)

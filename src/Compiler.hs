@@ -50,13 +50,18 @@ data Expr =
     | LitT Text
     | LitB Bool
     | Func [Id] [Statement]
-    | Access Id [Int]
+    | Access Expr [AccessBy]
     | Call Expr [Expr]
-    | Arr [Expr]
+    | ArrayLiteral [Expr]
+    | RecordLiteral [(Id, Expr)]
     | Op Op Expr Expr
     | Negate Expr
         deriving (Show, Typeable, Data)
 
+-- `renameKeywords` will rename fields as well, but this could be changed to use strings instead.
+-- For example, a field access `x.and` is represented as `x.and__`, but could also be `x["and"]`
+data AccessBy = ByIndex Int | ByName Id
+    deriving (Show, Typeable, Data)
 
 -- Render simplified language as Lua
 renderLua m = render (renderLuaMod m)
@@ -138,8 +143,8 @@ toLuaE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)),
     indent 4 (vcatMap toLuaS statements),
     text "end"]
-toLuaE (Access v indices) =
-    pretty v <> foldMap' (brackets . pretty . (+ 1)) indices
+toLuaE (Access e indices) =
+    maybeParens toLuaE e <> foldMap' toLuaAccess indices
 -- Add parantheses for immediate functions
 -- ```
 -- (function () print "Hi" end)()
@@ -148,10 +153,17 @@ toLuaE (Access v indices) =
 toLuaE (Call e@(Func _ _) es) =
     parens (toLuaE e) <> parens (commas (fmap toLuaE es))
 toLuaE (Call e es) = toLuaE e <> parens (commas (fmap toLuaE es))
-toLuaE (Arr es) = braces (commas (fmap toLuaE es))
+toLuaE (ArrayLiteral es) = braces (commas (fmap toLuaE es))
+toLuaE (RecordLiteral fields) = braces (commas (fmap toLuaFieldAssign fields))
 toLuaE (Op op e1 e2) =
     maybeParens toLuaE e1 <+> toLuaOp op <+> maybeParens toLuaE e2
 toLuaE (Negate e) = "-" <> maybeParens toLuaE e
+
+toLuaAccess (ByName a) = "." <> pretty a
+toLuaAccess (ByIndex i) = brackets (pretty (i + 1))
+
+toLuaFieldAssign (identifier, expression) =
+    pretty identifier <+> "=" <+> toLuaE expression
 
 toLuaOp And = text "and"
 toLuaOp Or = text "or"
@@ -238,18 +250,25 @@ toJsE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
     indent 4 (vcatMap toJsS statements),
     text "}"]
-toJsE (Access v indices) =
-    pretty v <> foldMap' (brackets . pretty) indices
+toJsE (Access e indices) =
+    maybeParens toJsE e <> foldMap' toJsAccess indices
 -- Wrapping immediate function might not be necessary in js,
 -- but is also done as a convention.
 toJsE (Call e@(Func _ _) es) =
     parens (toJsE e) <> parens (commas (fmap toJsE es))
 toJsE (Call e es) =
     toJsE e <> parens (commas (fmap toJsE es))
-toJsE (Arr es) = brackets (commas (fmap toJsE es))
+toJsE (ArrayLiteral es) = brackets (commas (fmap toJsE es))
+toJsE (RecordLiteral fields) = brackets (commas (fmap toJsFieldAssign fields))
 toJsE (Op op e1 e2) =
     maybeParens toJsE e1 <+> toJsOp op <+> maybeParens toJsE e2
 toJsE (Negate e) = "-" <> maybeParens toJsE e
+
+toJsAccess (ByName a) = "." <> pretty a
+toJsAccess (ByIndex i) = brackets (pretty i)
+
+toJsFieldAssign (identifier, expression) =
+    pretty identifier <+> "=" <+> toJsE expression
 
 toJsOp And = text "&&"
 toJsOp Or = text "||"
@@ -340,8 +359,10 @@ removeCurryE arityMap c@(Call f originalEs) =
         _ -> Call (removeCurryE arityMap f) (fmap (removeCurryE arityMap) originalEs)
 removeCurryE arityMap (Func vs sts) =
     Func vs (fmap (removeCurryS arityMap) sts)
-removeCurryE arityMap (Arr es) =
-    Arr (fmap (removeCurryE arityMap) es)
+removeCurryE arityMap (ArrayLiteral es) =
+    ArrayLiteral (fmap (removeCurryE arityMap) es)
+removeCurryE arityMap (RecordLiteral fields) =
+    RecordLiteral (fmap (fmap (removeCurryE arityMap)) fields)
 removeCurryE arityMap (Op o e1 e2) =
     Op o (removeCurryE arityMap e1) (removeCurryE arityMap e2)
 removeCurryE _ e =
@@ -393,6 +414,8 @@ compile modDecl =
 
 compileE (Variable v) =
     Var v
+compileE (DotExpression e accessor) =
+    Access (compileE e) [ByName (accessorToIdentifier accessor)]
 compileE (ConstructorExpression c) =
     Var c
 compileE (FunctionApplication f e) =
@@ -400,7 +423,7 @@ compileE (FunctionApplication f e) =
 compileE (LambdaExpression [p] e) =
     compileLambda Func [p] e
 compileE (ArrayExpression es) =
-    Arr (fmap compileE es)
+    ArrayLiteral (fmap compileE es)
 compileE (LiteralExpression l) =
     compileL l
 compileE e@(CaseExpression _ _) =
@@ -451,6 +474,8 @@ compileTop (TypeDeclaration _ _ [c]) =
     [compileConstructor ArrayRepresentation c]
 compileTop (TypeDeclaration _ _ cs) =
     fmap (compileConstructor TaggedRepresentation) cs
+compileTop (RecordDeclaration _ _ recordConstructor fields) =
+    [compileRecordConstructor recordConstructor fields]
 compileTop (FixityDeclaration _ _ _ _) = []
 -- Top level function declarations are uncurried
 compileTop (FunctionDeclaration x alts) =
@@ -492,10 +517,18 @@ compileConstructor info (c, variables) =
     let
         getTag ArrayRepresentation = []
         getTag TaggedRepresentation = [Tag c]
+        getTag rep = error ("Received representation: " <> show rep <> " for a non-record constructor: " <> show c)
 
         parameters = nNewVars (length variables)
-        body = [Ret (Arr (getTag info ++ fmap (Var . fromId) parameters))]
+        body = [Ret (ArrayLiteral (getTag info ++ fmap (Var . fromId) parameters))]
     in Assign c (Func parameters body)
+
+compileRecordConstructor con fields =
+    let
+        parameters = fmap (accessorToIdentifier . fst) fields
+        fields' = fmap (\f -> (f, Var (fromId f))) parameters
+        body = [Ret (RecordLiteral fields')]
+    in Assign con (Func parameters body)
 
 curryFuncSts [v] s = Func [v] s
 curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
@@ -583,8 +616,9 @@ extractVar _ = Nothing
 -- for a pattern match
 getConditions v indices (AliasPattern _ p) =
     getConditions v indices p
+-- Constructors without parameters are only compared by tag
 getConditions v indices (ConstructorPattern _ c []) =
-    [Op Eq (Access v indices) (Tag c)]
+    [Op Eq (Access (Var (fromId v)) indices) (Tag c)]
 -- Constructors with only one variable are not wrapped in an array
 getConditions v indices (ConstructorPattern ArrayRepresentation _ [p]) =
     getConditions v indices p
@@ -593,23 +627,26 @@ getConditions v indices (ConstructorPattern ArrayRepresentation _ ps) =
     getConditionsArray v indices ps
 -- Compare as array and also the tag for constructors with tag
 getConditions v indices (ConstructorPattern TaggedRepresentation c ps) =
-    [makeIsArray (Access v indices),
+    [makeIsArray (Access (Var (fromId v)) indices),
     -- + 1 to account for length of tag
-    Op Eq (makeLength (Access v indices)) (LitI (length ps + 1)),
+    Op Eq (makeLength (Access (Var (fromId v)) indices)) (LitI (length ps + 1)),
     -- Compare tag
-    Op Eq (Access v (indices ++ [0])) (Tag c)]
+    Op Eq (Access (Var (fromId v)) (indices ++ [ByIndex 0])) (Tag c)]
     ++ descendAccess (getConditions v) indices 1 ps
+-- Record constructor
+getConditions v indices (ConstructorPattern (RecordRepresentation fields) _ ps) =
+    descendAccess' (getConditions v) indices (fmap ByName fields) ps
 getConditions v indices (ArrayPattern ps) =
     getConditionsArray v indices ps
 getConditions v indices (LiteralPattern l) =
-    [Op Eq (Access v indices) (compileL l)]
+    [Op Eq (Access (Var (fromId v)) indices) (compileL l)]
 getConditions _ _ (Wildcard _) = []
 getConditions _ _ (VariablePattern _) = []
 getConditions _ _ p = error ("getConditions on " ++ renderError p)
 
 getConditionsArray v indices ps =
-    [makeIsArray (Access v indices),
-    Op Eq (makeLength (Access v indices)) (LitI (length ps))]
+    [makeIsArray (Access (Var (fromId v)) indices),
+    Op Eq (makeLength (Access (Var (fromId v)) indices)) (LitI (length ps))]
     ++ descendAccess (getConditions v) indices 0 ps
 
 -- `getAssignments` is used for creating a series of assignments
@@ -617,9 +654,9 @@ getConditionsArray v indices ps =
 getAssignments v [] (VariablePattern (Name [] x)) | v == x =
     []
 getAssignments v indices (VariablePattern x) =
-    [Assign x (Access v indices)]
+    [Assign x (Access (Var (fromId v)) indices)]
 getAssignments v indices (AliasPattern x p) =
-    Assign x (Access v indices):getAssignments v indices p
+    Assign x (Access (Var (fromId v)) indices):getAssignments v indices p
 -- Identity constructor
 getAssignments v indices (ConstructorPattern ArrayRepresentation _ [p]) =
     getAssignments v indices p
@@ -629,6 +666,9 @@ getAssignments v indices (ConstructorPattern ArrayRepresentation _ ps) =
 -- Tagged constructor
 getAssignments v indices (ConstructorPattern TaggedRepresentation _ ps) =
     descendAccess (getAssignments v) indices 1 ps
+-- Record constructor
+getAssignments v indices (ConstructorPattern (RecordRepresentation fields) _ ps) =
+    descendAccess' (getAssignments v) indices (fmap ByName fields) ps
 getAssignments v indices (ArrayPattern ps) =
     descendAccess (getAssignments v) indices 0 ps
 getAssignments _ _ (LiteralPattern _) = []
@@ -638,7 +678,10 @@ getAssignments _ _ p = error ("getAssignments on " ++ renderError p)
 -- `descendAccess` is used to recurse into the fields of a constructor
 -- or the elements of an array
 descendAccess f previousIndices offset ps =
-    mconcat (zipWith (\i p -> f (previousIndices ++ [i]) p) [offset .. offset + length ps] ps)
+    descendAccess' f previousIndices (fmap ByIndex [offset .. offset + length ps]) ps
+
+descendAccess' f previousIndices indices ps =
+    mconcat (zipWith (\i p -> f (previousIndices ++ [i]) p) indices ps)
 
 immediate statements = Call (Func [] statements) []
 
@@ -657,12 +700,16 @@ captureArity modDecl =
     captureFunctionArity modDecl
     <> captureConstructorArity modDecl
     <> captureSignatureArity modDecl
+    <> captureRecordArity modDecl
 
 captureFunctionArity modDecl =
     fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.getDecls]
 
 captureConstructorArity modDecl =
     fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.getDecls])
+
+captureRecordArity modDecl =
+    fromList ([(recordConstructor, length fields) | RecordDeclaration _ _ recordConstructor fields <- modDecl.getDecls])
 
 captureSignatureArity modDecl =
     fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.getDecls])

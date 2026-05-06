@@ -87,4 +87,6 @@ getDefsP p = Set.fromList (getBindings p)
 getDefsD (ExpressionDeclaration p _) = getDefsP p
 getDefsD (FunctionDeclaration v _) = Set.singleton v
 getDefsD (TypeDeclaration _ _ cs) = foldMap' (Set.singleton . fst) cs
+getDefsD (RecordDeclaration _ _ recordConstructor fields) =
+    Set.singleton recordConstructor <> foldMap' (Set.singleton . fst) fields
 getDefsD _ = mempty

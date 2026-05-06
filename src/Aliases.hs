@@ -67,6 +67,10 @@ aliasOperatorsMod modDecl@(ModuleDeclaration modName imports decls) =
             liftA2 (\aliases' constructors' -> TypeDeclaration aliases' vars constructors')
                 (findConstructorOp aliases op)
                 (traverse (firstA (findConstructorOp aliases)) constructors)
+        k (RecordDeclaration tyOp vars op constructors) =
+            liftA2 (\tyOp' op' -> RecordDeclaration tyOp' vars op' constructors)
+                (findConstructorOp aliases tyOp)
+                (findConstructorOp aliases op)
         k d = Right d
     in fmap (ModuleDeclaration modName imports) (traverse k decls)
 

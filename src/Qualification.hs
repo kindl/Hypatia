@@ -33,8 +33,12 @@ qualifyD quals (ExpressionDeclaration p e) =
     liftA2 ExpressionDeclaration (qualifyP quals p) (qualifyE quals e)
 qualifyD quals (FunctionDeclaration v alts) =
     liftA2 FunctionDeclaration (findName quals v) (traverse (qualifyMultiAlt quals) alts)
-qualifyD quals (TypeDeclaration v vars cs) =
-    fmap (TypeDeclaration v vars) (traverse (firstA (findName quals)) cs)
+qualifyD quals (TypeDeclaration v vars constructors) =
+    fmap (TypeDeclaration v vars) (traverse (firstA (findName quals)) constructors)
+qualifyD quals (RecordDeclaration v vars recordConstructor fields) =
+    liftA2 (RecordDeclaration v vars)
+        (findName quals recordConstructor)
+        (traverse (firstA (findName quals)) fields)
 qualifyD quals (TypeSignature v t) =
     fmap (flip TypeSignature t) (findName quals v)
 qualifyD _ decl@(AliasDeclaration _ _) = Right decl
@@ -101,11 +105,11 @@ captureDecl _ = []
 captureSignature (TypeSignature identifier _) = [identifier]
 captureSignature _ = []
 
-captureTopDecl (TypeDeclaration _ _ cs) = fmap fst cs
+captureTopDecl (TypeDeclaration _ _ constructors) = fmap fst constructors
+captureTopDecl (RecordDeclaration _ _ recordConstructor fields) = recordConstructor : fmap fst fields
 captureTopDecl (AliasDeclaration identifier _) = [identifier]
 captureTopDecl (FixityDeclaration _ _ op _) = [op]
 captureTopDecl _ = []
-
 
 -- Type Level
 qualifyTypeNames quals m =
@@ -116,8 +120,10 @@ qualifyTypeNames quals m =
             fmap TypeConstructor (findName quals c)
         h t = Right t
 
-        k (TypeDeclaration v vs cs) =
-            fmap (\q -> TypeDeclaration q vs cs) (findName quals v)
+        k (TypeDeclaration v vars constructors) =
+            fmap (\q -> TypeDeclaration q vars constructors) (findName quals v)
+        k (RecordDeclaration v vars recordConstructor fields) =
+            fmap (\q -> RecordDeclaration q vars recordConstructor fields) (findName quals v)
         k decl = Right decl
     in (transformBiM h >=> transformBiM k) m
 
@@ -125,8 +131,10 @@ qualifyTypeNames quals m =
 captureTypeNames (ModuleDeclaration modName _ decls) =
     toQualifieds modName (foldMap' captureTypeNamesTopDecl decls)
 
-captureTypeNamesTopDecl (AliasDeclaration identifier _) = [identifier]
-captureTypeNamesTopDecl (TypeDeclaration identifier _ _) = [identifier]
+captureTypeNamesTopDecl (AliasDeclaration binding _) = [binding]
+captureTypeNamesTopDecl (TypeDeclaration binding _ _) = [binding]
+captureTypeNamesTopDecl (RecordDeclaration binding _ _ _) = [binding]
+captureTypeNamesTopDecl (FixityDeclaration _ _ op _) = [op]
 captureTypeNamesTopDecl _ = []
 
 findName quals (Name [] identifier) = do
@@ -193,4 +201,6 @@ captureTagInfo (TypeDeclaration _ _ [(c, _)]) =
     [(c, ArrayRepresentation)]
 captureTagInfo (TypeDeclaration _ _ constructors) =
     fmap (fmap (const TaggedRepresentation)) constructors
+captureTagInfo (RecordDeclaration _ _ recordConstructor fields) =
+    [(recordConstructor, RecordRepresentation (fmap (accessorToIdentifier . fst) fields))]
 captureTagInfo _ = mempty

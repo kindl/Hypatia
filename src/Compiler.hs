@@ -259,7 +259,7 @@ toJsE (Call e@(Func _ _) es) =
 toJsE (Call e es) =
     toJsE e <> parens (commas (fmap toJsE es))
 toJsE (ArrayLiteral es) = brackets (commas (fmap toJsE es))
-toJsE (RecordLiteral fields) = brackets (commas (fmap toJsFieldAssign fields))
+toJsE (RecordLiteral fields) = braces (commas (fmap toJsFieldAssign fields))
 toJsE (Op op e1 e2) =
     maybeParens toJsE e1 <+> toJsOp op <+> maybeParens toJsE e2
 toJsE (Negate e) = "-" <> maybeParens toJsE e
@@ -268,7 +268,7 @@ toJsAccess (ByName a) = "." <> pretty a
 toJsAccess (ByIndex i) = brackets (pretty i)
 
 toJsFieldAssign (identifier, expression) =
-    pretty identifier <+> "=" <+> toJsE expression
+    pretty identifier <> ":" <+> toJsE expression
 
 toJsOp And = text "&&"
 toJsOp Or = text "||"

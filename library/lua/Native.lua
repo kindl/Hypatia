@@ -43,6 +43,26 @@ Native.textLength = function(s)
     return utf8.len(s)
 end
 
+Native.sequenceCompare = function(compare, left, right)
+    if not (type(left) == "table" and type(right) == "table") then
+        return false
+    end
+
+    for key, value in pairs(left) do
+        if not (compare(value)(right[key])) then
+            return false
+        end
+    end
+
+    for key in pairs(right) do
+        if left[key] == nil then
+            return false
+        end
+    end
+
+    return true
+end
+
 Native.slice = function(s, startIndex, endIndex)
     local startOffset = utf8.offset(s, startIndex + 1)
     local endOffset = utf8.offset(s, endIndex + 1)

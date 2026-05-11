@@ -26,7 +26,7 @@ infixr 8 ^ power
 infixr 5 ++ concat
 
 
-# Math
+// Math
 negate : Number -> Number
 
 (*) : Number -> Number -> Number
@@ -49,24 +49,25 @@ cos : Number -> Number
 tan : Number -> Number
 
 
-# Primitive
 unsafeCoerce : a -> b
 
 error : Text -> a
 
-# Arrays
+// Arrays
 unsafeIndex : Number -> Array a -> a
 
 length : Array a -> Number
 
 isArray : a -> Bool
 
+sequenceCompare : (a -> a -> Bool) -> Array a -> Array a -> Bool
+
 // Beware that insert and set is impure and changes the array
 unsafeInsert : Array a -> a -> Array a
 
 unsafeSet : Array a -> Number -> a -> Array a
 
-# Text
+// Text
 textLength : Text -> Number
 
 toString : a -> Text
@@ -79,7 +80,7 @@ toNumber : Text -> Number
 
 slice : Text -> Number -> Number -> Text
 
-# Comparing Numbers, Strings and Constructors
+// Comparing Numbers, Strings and Constructors
 eq : e -> e -> Bool
 
 ne : e -> e -> Bool
@@ -100,5 +101,5 @@ and : Bool -> Bool -> Bool
 
 or : Bool -> Bool -> Bool
 
-# IO
+// IO
 print : Text -> Void

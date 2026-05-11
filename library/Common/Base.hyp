@@ -2,8 +2,8 @@ module Common.Base
 
 import Native(Number, Text, Array, Bool,
     (^), (-), (+), (&&), (||),
-    unsafeIndex, length, isArray, unsafeCoerce,
-    eq, ne, lt, gt, le, ge,
+    unsafeIndex, length, unsafeCoerce,
+    eq, ne, lt, gt, le, ge, sequenceCompare,
     True, False)
 
 sqrt x = x ^ 0.5
@@ -12,44 +12,48 @@ pi = 3.141592653589793
 
 // Comparisons
 infix 4 == equals
+
 infix 4 != notEquals
+
 infix 4 < lessThan
+
 infix 4 > greaterThan
+
 infix 4 <= lessThanOrEqual
+
 infix 4 >= greaterThanOrEqual
 
-equals l r = genComp eq l r
+unsafeCoerceToArray : a -> Array b
+unsafeCoerceToArray x = unsafeCoerce x
 
-notEquals l r = genComp ne l r
+equals l r =
+    eq l r
+        || sequenceCompare equals (unsafeCoerceToArray l) (unsafeCoerceToArray r)
 
-lessThan l r = genComp lt l r
+// Reference equals also implies value equals, but not the other way,
+// for example in Lua `{} ~= {}` would be true.
+// Therefore the `ne` is at the end.
+notEquals l r =
+    sequenceCompare notEquals (unsafeCoerceToArray l) (unsafeCoerceToArray r)
+        || ne l r
 
-greaterThan l r = genComp gt l r
+// In lua a comparison of two tables like `{} < {}`
+// will throw an error, so the sequenceCompare has to happen first.
+lessThan l r =
+    sequenceCompare lessThan (unsafeCoerceToArray l) (unsafeCoerceToArray r)
+        || lt l r
 
-lessThanOrEqual l r = genComp le l r
+greaterThan l r =
+    sequenceCompare greaterThan (unsafeCoerceToArray l) (unsafeCoerceToArray r)
+        || gt l r
 
-greaterThanOrEqual l r = genComp ge l r
+lessThanOrEqual l r =
+    sequenceCompare lessThanOrEqual (unsafeCoerceToArray l) (unsafeCoerceToArray r)
+        || le l r
 
-// Generic comparison
-genComp comp l r =
-    // genComp has to be passed recursively for nested datatypes
-    comp l r || trySeqComp (genComp comp) l r
-
-trySeqComp comp l r =
-    isArray l && isArray r && seqComp comp (toArray l) (toArray r)
-    where
-        toArray : a -> Array b
-        toArray x = unsafeCoerce x
-
-seqComp comp l r =
-    let
-        lengthOfL = length l
-        lengthOfR = length r
-    in eq lengthOfL lengthOfR && seqCompAux comp 0 lengthOfL l r
-
-seqCompAux comp i maxN l r =
-    eq i maxN
-    || (comp (unsafeIndex i l) (unsafeIndex i r) && seqCompAux comp (i + 1) maxN l r)
+greaterThanOrEqual l r =
+    sequenceCompare greaterThanOrEqual (unsafeCoerceToArray l) (unsafeCoerceToArray r)
+        || ge l r
 
 min a b = if a <= b then a else b
 

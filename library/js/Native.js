@@ -38,6 +38,28 @@ const tan = x => Math.tan(x);
 
 const toNumber = x => parseFloat(x);
 
+const sequenceCompare = (compare, left, right) => {
+    // `isArray` will be true for objects and arrays.
+    // This is fine for this use case where compare should work on both.
+    if (!(isArray(left) && isArray(right))) {
+        return false
+    }
+
+    for (const key in left) {
+        if (!compare(left[key])(right[key])) {
+            return false
+        }
+    }
+
+    for (const key in right) {
+        if (!(key in left)) {
+            return false
+        }
+    }
+
+    return true
+}
+
 export default {
     length,
     textLength,
@@ -55,4 +77,5 @@ export default {
     toString,
     print,
     error,
+    sequenceCompare,
 }

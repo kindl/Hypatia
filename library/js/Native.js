@@ -15,7 +15,7 @@ const unsafeInsert = (e, a) => {
     return a;
 };
 
-const unsafeSet = (a, i, v) => {
+const unsafeSet = (i, v, a) => {
     a[i + 1] = v;
     return a;
 }

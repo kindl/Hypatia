@@ -47,6 +47,6 @@ newRef x = point (unsafeMakeRef x)
 readRef r = point (unsafeUnpackRef r)
 
 writeRef (InternalRef r) x = unsafeStateful (\_ ->
-    always Unit (unsafeSet r 0 x))
+    always Unit (unsafeSet 0 x r))
 
 modifyRef r f = writeRef r (f (unsafeUnpackRef r))

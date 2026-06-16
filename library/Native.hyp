@@ -62,10 +62,10 @@ isArray : a -> Bool
 
 sequenceCompare : (a -> a -> Bool) -> Array a -> Array a -> Bool
 
-// Beware that insert and set is impure and changes the array
+// Beware that `insert` and `set` are impure and change the array
 unsafeInsert : a -> Array a -> Array a
 
-unsafeSet : Array a -> Number -> a -> Array a
+unsafeSet : Number -> a -> Array a -> Array a
 
 // Text
 textLength : Text -> Number

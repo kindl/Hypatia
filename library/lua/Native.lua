@@ -23,7 +23,7 @@ Native.unsafeInsert = function(e, a)
     return a
 end
 
-Native.unsafeSet = function(a, i, v)
+Native.unsafeSet = function(i, v, a)
     a[i + 1] = v
     return a
 end

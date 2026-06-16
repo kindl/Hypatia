@@ -1,9 +1,15 @@
 local socket = require("socket")
 
 
-local Closed = function() end
+local Closed
+Closed = function()
+    return Closed
+end
 
-local Timeout = function() end
+local Timeout
+Timeout = function()
+    return Timeout
+end
 
 local Message
 Message = function(text)

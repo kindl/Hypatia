@@ -91,14 +91,15 @@ typecheck (IfExpression condtition thenBranch elseBranch) ty = do
 typecheck (ArrayExpression es) ty = do
     elementTy <- newTyVar
     traverse_ (flip typecheck elementTy) es
-    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy) ty
+    let arrayType = TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy
+    unify arrayType ty
 typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 
 typecheckVar x ty = do
     env <- getEnv
     scheme <- mfind x env
     instantiated <- deepInstantiate scheme
-    subsume instantiated ty
+    subsumeWithInfo x instantiated ty
 
 -- A shortcut that avoids generating new type variables
 typecheckLambda [p] e (TypeArrow patternTy resultTy) =
@@ -118,13 +119,13 @@ typecheckLambda [p] e ty = do
     patternTy <- newTyVarAt location
     resultTy <- newTyVarAt location
     typecheckAlt patternTy resultTy p e
-    subsume (TypeArrow patternTy resultTy) ty
+    subsumeWithInfo p (TypeArrow patternTy resultTy) ty
 typecheckLambda ps _ _ =
     fail ("Lambda with patterns " ++ show ps ++ " was not curried")
 
 typecheckAlt patternTy expressionTy pat expr = do
     binds <- typecheckPattern pat patternTy
-    typecheckBraced (fromList binds) (renderError pat) expr expressionTy
+    with (fromList binds) (typecheck expr expressionTy)
 
 {-
 Typecheck Constructors
@@ -203,32 +204,22 @@ inferDecl gen (FunctionDeclaration v alts) next = do
     let binds' = fromList [(v, ty)]
     -- TODO use typecheckLambda as soon as it supports multiple patterns
     let exprs = fmap (uncurry curryLambda) alts
-    traverse_ (\e -> typecheckBraced binds' (renderError v) e ty) exprs
+    traverse_ (\e -> with binds' (typecheck e ty)) exprs
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
     env <- getEnv
     ty <- mfind v env <|> newTyVarAt v.getId.getLocation
     let binds' = fromList [(v, ty)]
-    typecheckBraced binds' (renderError v) e ty
+    with binds' (typecheck e ty)
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do
     let location = firstLocationInfo p
     ty <- newTyVarAt location
     binds <- typecheckPattern p ty
     let binds' = fromList binds
-    typecheckBraced binds' (renderError p) e ty
+    with binds' (typecheck e ty)
     typecheckNextWith gen binds' next
 inferDecl _ _ next = next
-
--- Wrap typecheck with onError to give more info
-typecheckBraced binds errInfo e ty = do
-    onException' (with binds (typecheck e ty)) (
-        let baseError = "When typechecking declaration " ++ errInfo
-        in case e of
-            -- If an error occurs in a function declaration,
-            -- also show in which pattern it happened
-            LambdaExpression p _ -> putStrLn (baseError ++ "\n   specifically at " ++ renderError p)
-            _ -> putStrLn baseError)
 
 -- It is fine, that binds contains signatures,
 -- because they will not be changed by gen.
@@ -266,13 +257,14 @@ typecheckPattern (ConstructorPattern _ c ps) ty = do
         (fail ("Constructor " ++ renderError c
             ++ " was given wrong number of arguments"))
     binds <- zipWithM typecheckPattern ps consTys
-    unify resultTy ty
+    unifyWithInfo c resultTy ty
     return (mconcat binds)
 typecheckPattern (ArrayPattern ps) ty = do
     let location = firstLocationInfo ps
     elementTy <- newTyVarAt location
     binds <- traverse (\p -> typecheckPattern p elementTy) ps
-    unify (TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy) ty
+    let arrayType = TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy    
+    unifyWithInfo ps arrayType ty
     return (mconcat binds)
 typecheckPattern other _ =
     fail ("Cannot typecheck pattern " ++ renderError other)
@@ -287,6 +279,13 @@ typecheckLiteral (Text _) ty =
 unify x y = do
     subst <- getSubst
     unify' (apply subst x) (apply subst y)
+
+-- Wrap unification to give more info
+wrapWithInfo errInfo action =
+    onException' action (putStrLn ("When typechecking " ++ renderError errInfo))
+
+unifyWithInfo errInfo ty1 ty2 =
+    wrapWithInfo errInfo (unify ty1 ty2)
 
 unify' (SkolemConstant x) (SkolemConstant y) | x == y = return ()
 unify' (TypeVariable x) (TypeVariable y) | x == y = return ()
@@ -386,6 +385,9 @@ instantiate ty = return ty
 -- However, it leads to programs being accepted that should not be,
 -- for example `runST (newSTRef 0)`
 deepInstantiate ty = transformM instantiate ty
+
+subsumeWithInfo errInfo ty1 ty2 =
+    wrapWithInfo errInfo (subsume ty1 ty2)
 
 subsume x y = do
     subst <- getSubst

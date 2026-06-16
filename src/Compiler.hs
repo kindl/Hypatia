@@ -138,7 +138,6 @@ toLuaE (LitD d) = prettyNumber d
 toLuaE (LitT t) = prettyEscaped t
 toLuaE (LitB True) = text "true"
 toLuaE (LitB False) = text "false"
-toLuaE (Func [] []) = text "function() end"
 toLuaE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)),
     indent 4 (vcatMap toLuaS statements),
@@ -245,7 +244,6 @@ toJsE (LitD d) = prettyNumber d
 toJsE (LitT t) = prettyEscaped t
 toJsE (LitB True) = text "true"
 toJsE (LitB False) = text "false"
-toJsE (Func [] []) = text "function() {}"
 toJsE (Func variables statements) = vcat [
     text "function" <> parens (commas (fmap pretty variables)) <+> text "{",
     indent 4 (vcatMap toJsS statements),
@@ -564,7 +562,10 @@ end
 ```
 and None is compiled as
 ```
-local None = function() end
+local None
+None = function()
+    return None
+end
 ```
 
 Matching on the pattern (Some y) compiles to

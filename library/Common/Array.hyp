@@ -1,12 +1,12 @@
 module Common.Array
 
-import Native((++), (+), (-), (&&),
+import Native((++), (+), (-), (*), (&&),
     True, False,
     isArray, unsafeCoerce, toString,
     unsafeInsert, unsafeIndex, length,
     error)
 import Common.Option(Some, None, unsafeFromOption)
-import Common.Base((==), (<), (>), (>=),
+import Common.Base((==), (!=), (<), (>), (>=),
     Tuple2, identity)
 
 // Insert all elements into a fresh array
@@ -60,7 +60,12 @@ any p xs = foldl (\z e -> if p e then True else z) False xs
 
 all p xs = foldl (\z e -> if p e then z else False) True xs
 
+sum xs = foldl (+) 0 xs
+
+product xs = foldl (*) 1 xs
+
 elem x xs = any ((==) x) xs
+
 
 filterWithIndex p a = foldlWithIndex (\i z e ->
     if p i e then unsafeInsert e z else z) [] a
@@ -71,12 +76,20 @@ drop n a = filterWithIndex (\i _ -> i >= n) a
 
 take n a = filterWithIndex (\i _ -> i < n) a
 
-safeIndex i a =
+index i a =
     if i < length a && i >= 0
         then Some (unsafeIndex i a)
         else None
 
+head arr = index 0 arr
+
+last arr = index (length arr - 1) arr
+
 nth n = unsafeIndex (n - 1)
+
+indexOf e a = foldlWithIndex (\i acc x -> if e == x then Some i else acc) None a
+
+deleteByIndex ix = filterWithIndex (\i _ -> i != ix)
 
 intercalate _ [] = ""
 intercalate sep a = foldl1 (\x r -> x ++ sep ++ r) a

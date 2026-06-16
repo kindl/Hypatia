@@ -41,7 +41,7 @@ addSphere spheres =
         vel = Vector2 (unsafeRandom -100 100) (unsafeRandom -100 100)
         col = Vector3 (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255) (unsafeRandom 0 255 / 255)
         rad = unsafeRandom 30 100
-    in unsafeInsert spheres (Sphere pos vel col rad)
+    in unsafeInsert (Sphere pos vel col rad) spheres
 
 load _ =
     let

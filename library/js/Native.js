@@ -10,7 +10,7 @@ const unsafeIndex = (i, a) => a[i];
 
 const unsafeCoerce = x => x;
 
-const unsafeInsert = (a, e) => {
+const unsafeInsert = (e, a) => {
     a.push(e);
     return a;
 };

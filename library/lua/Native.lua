@@ -18,7 +18,7 @@ Native.unsafeCoerce = function(x)
     return x
 end
 
-Native.unsafeInsert = function(a, e)
+Native.unsafeInsert = function(e, a)
     table.insert(a, e)
     return a
 end

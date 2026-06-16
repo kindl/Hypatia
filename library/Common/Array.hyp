@@ -7,33 +7,32 @@ import Native((++), (+), (-), (&&),
     error)
 import Common.Option(Some, None, unsafeFromOption)
 import Common.Base((==), (<), (>), (>=),
-    Tuple2, identity, flip)
+    Tuple2, identity)
 
 // Insert all elements into a fresh array
 // Note that functions like copy cannot be eta converted, i.e.
 // their parameters cannot be dropped, because then an empty array would only be
 // created at function definition, but not with every call.
-copy a = foldl unsafeInsert [] a
+copy a = foldl (\z e -> unsafeInsert e z) [] a
 
-reverse a = foldr (flip unsafeInsert) [] a
+reverse a = foldr unsafeInsert [] a
 
-unique a = foldl (\z e -> if elem e z then z else unsafeInsert z e) [] a
+unique a = foldl (\z e -> if elem e z then z else unsafeInsert e z) [] a
 
 infixr 5 <> append
 
 // Append two arrays
-// The first array is copied to avoid inserting the elements into a
-append a b = foldl unsafeInsert (copy a) b
+append left right = foldl (\z e -> unsafeInsert e z) (copy left) right
 
 // Insert at the front
-prepend a element = foldl unsafeInsert [element] a
+prepend element a = foldl (\z e -> unsafeInsert e z) [element] a
 
 // Insert at the end
-insert a element = unsafeInsert (copy a) element
+insert element a = unsafeInsert element (copy a)
 
-map f a = foldl (\z e -> unsafeInsert z (f e)) [] a
+map f a = foldl (\z e -> unsafeInsert (f e) z) [] a
 
-mapWithIndex f a = foldlWithIndex (\i z e -> unsafeInsert z (f i e)) [] a
+mapWithIndex f a = foldlWithIndex (\i z e -> unsafeInsert (f i e) z) [] a
 
 foldMap f a = foldl (\z e -> append z (f e)) [] a
 
@@ -64,9 +63,9 @@ all p xs = foldl (\z e -> if p e then z else False) True xs
 elem x xs = any ((==) x) xs
 
 filterWithIndex p a = foldlWithIndex (\i z e ->
-    if p i e then unsafeInsert z e else z) [] a
+    if p i e then unsafeInsert e z else z) [] a
 
-filter p a = foldl (\z e -> if p e then unsafeInsert z e else z) [] a
+filter p a = foldl (\z e -> if p e then unsafeInsert e z else z) [] a
 
 drop n a = filterWithIndex (\i _ -> i >= n) a
 

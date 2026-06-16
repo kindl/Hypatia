@@ -35,7 +35,7 @@ manyAux start p = StateT (\input ->
     case runStateT p input of
         None -> Some (Tuple2 start input)
         Some (Tuple2 result nextInput) ->
-            runStateT (manyAux (unsafeInsert start result) p) nextInput
+            runStateT (manyAux (unsafeInsert result start) p) nextInput
     )
 
 many p = option [] (many1 p)

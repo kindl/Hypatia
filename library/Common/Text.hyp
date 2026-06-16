@@ -10,7 +10,7 @@ foldlWithRangeAndIndex i length f z t =
     if i == length then z else
         foldlWithRangeAndIndex (i + 1) length f (f i z (slice t i (i + 1))) t
 
-toArray t = foldlWithRangeAndIndex 0 (textLength t) (\_ acc e -> unsafeInsert acc e) [] t
+toArray t = foldlWithRangeAndIndex 0 (textLength t) (\_ acc e -> unsafeInsert e acc) [] t
 
 alias Affix = Text
 

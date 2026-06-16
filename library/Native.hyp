@@ -63,7 +63,7 @@ isArray : a -> Bool
 sequenceCompare : (a -> a -> Bool) -> Array a -> Array a -> Bool
 
 // Beware that insert and set is impure and changes the array
-unsafeInsert : Array a -> a -> Array a
+unsafeInsert : a -> Array a -> Array a
 
 unsafeSet : Array a -> Number -> a -> Array a
 

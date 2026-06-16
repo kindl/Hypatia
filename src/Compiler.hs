@@ -510,7 +510,7 @@ compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
 compileConstructor _ (c, []) =
-    Assign c (Func [] [])
+    Assign c (Func [] [Ret (Tag c)])
 compileConstructor ArrayRepresentation (c, [_]) =
     Assign c (Var (fromText "Native.unsafeCoerce"))
 compileConstructor info (c, variables) =

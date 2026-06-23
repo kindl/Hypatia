@@ -2,7 +2,7 @@ module Tests
 
 import Native((+), (-), (*), (^), (++), (&&),
     print, unsafeCoerce, slice, textLength, negate)
-import Common.Base((==), (<),
+import Common.Base((==), (!=), (<), (<=), (>), (>=),
     abs, not)
 import Common.Parser(words, split)
 import Geometry.Vector4(Vector4, dot)
@@ -121,9 +121,19 @@ testEq =
             41 43 47 53
     in test "eq" (m1 == m)
 
-testMatrixEquality = test "matrix equality" (m1 == m1)
+testMatrixEquals = test "matrix ==" (m1 == m1)
 
-testMatrixInequality = test "matrix inequality" (not (m1 == m2))
+testMatrixNotEquals1 = test "matrix !=" (m1 != m2)
+
+testMatrixNotEquals2 = test "matrix not ==" (not (m1 == m2))
+
+testMatrixLT = test "matrix <" (m1 < m2)
+
+testMatrixLE = test "matrix <=" (m1 <= m2)
+
+testMatrixGT = test "matrix >" (m2 > m1)
+
+testMatrixGE = test "matrix >=" (m2 >= m1)
 
 testInspect = test "inspect" (multiply m2 m1)
 
@@ -132,6 +142,12 @@ testEqNestedArrays =
         a1 = [[1, 2, 3], [4, 5, 6]]
         a2 = [[1, 2, 3], [4, 5, 6]]
     in test "testEqNestedArrays" (a1 == a2)
+
+testNotEqArraysOfDifferentLength =
+    let
+        a1 = [1, 2, 3, 4, 5, 6]
+        a2 = [1, 2, 3, 4, 5]
+    in test "testNotEqArraysOfDifferentLength" (a1 != a2 && a2 != a1)
 
 testToArray = test "Text.toArray" (Text.toArray "Wörld!" == ["W", "ö", "r", "l", "d", "!"])
 

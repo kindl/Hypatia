@@ -13,7 +13,8 @@ import Syntax
 -- NOTE strict combinators are used
 -- however <$!> instead of fmap would decrease performance
 import Data.Attoparsec.Combinator(many', endOfInput, manyTill')
-import Data.Attoparsec.Text(char, satisfy,
+import Data.Attoparsec.Text(char, anyChar,
+    string, satisfy,
     takeWhile, takeWhile1,
     match, parse, parseOnly,
     hexadecimal, double)
@@ -196,19 +197,26 @@ lexeme = whitespace
 special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
 
--- TODO multi-line comments
-whitespace = whitechars <|> hashcomment <|> slashcomment
+whitespace =
+    whitechars
+    <|> hashComment
+    <|> slashComment
+    <|> multilineComment
 {-# INLINE whitespace #-}
 
 whitechars = fmap Whitespace (takeWhile1 isSpace)
 {-# INLINE whitechars #-}
 
 -- NOTE in contrast to the report this does not consume a newline
-hashcomment = fmap Comment (char '#' *> takeWhile (/= '\n'))
-{-# INLINE hashcomment #-}
+hashComment = fmap Comment (char '#' *> takeWhile (/= '\n'))
+{-# INLINE hashComment #-}
 
-slashcomment = fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n'))
-{-# INLINE slashcomment #-}
+slashComment = fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n'))
+{-# INLINE slashComment #-}
+
+-- TODO nesting multiline comments
+multilineComment = fmap (Comment . Text.pack) (string "/*" *> manyTill' anyChar (string "*/"))
+{-# INLINE multilineComment #-}
 
 qident = do
     prefix <- many' (uppercaseIdent <* char '.')

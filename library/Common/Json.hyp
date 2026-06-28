@@ -1,8 +1,9 @@
 module Common.Json
 
-import Native(Number, Text, Array,
-    (++), (+), (-),
-    toString, Bool, True, False)
+import Native((++), (+), (-),
+    Number, Text, Array,
+    Bool, True, False,
+    toString, error)
 import Common.Base(Tuple2)
 import Common.Text(toArray)
 import Common.Parser((*>), (<*), (<|>),
@@ -26,25 +27,27 @@ type JsonValue = JsonNumber Number
 
 pretty (JsonBool b) = toString b
 pretty (JsonNumber n) = toString n
-pretty (JsonArray a) = "[" ++ intercalate ", " (Array.map pretty a) ++ "]"
 pretty (JsonString s) = prettyString s
+pretty (JsonArray a) =
+    "[" ++ intercalate ", " (Array.map pretty a) ++ "]"
 pretty (JsonObject o) =
     "{" ++ intercalate ", " (Array.map (\(Tuple2 k v) -> prettyString k ++ ": " ++ pretty v) o) ++ "}"
+pretty JsonNull = "null"
 
 prettyString s = "\"" ++ escape s ++ "\""
 
 escape s = foldl (\acc c -> acc ++ (escapeSingle c)) "" (toArray s)
-
-array v =
-    text "[" *> skipAnySpace
-    *> sepBy (skipAnySpace *> v <* skipAnySpace) (text ",")
-    <* text "]"
 
 escapeSingle "\n" = "\\n"
 escapeSingle "\t" = "\\t"
 escapeSingle "\r" = "\\r"
 escapeSingle "\\" = "\\\\"
 escapeSingle c = c
+
+array v =
+    text "[" *> skipAnySpace
+    *> sepBy (skipAnySpace *> v <* skipAnySpace) (text ",")
+    <* text "]"
 
 object v =
     text "{" *> skipAnySpace

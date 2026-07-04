@@ -113,7 +113,9 @@ insertIndentTokens [] = []
 {-# INLINE insertIndentTokens #-}
 
 -- Cut the open and close braces
-cut xs = init (tail xs)
+cut xs = drop 1 (dropEnd 1 xs)
+
+dropEnd n xs = take (length xs - n) xs
 
 withIndentTokens ls = cut (layout (
     LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])

@@ -3,6 +3,8 @@ module Typechecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
+import Data.List(unsnoc)
+import Data.Maybe(fromJust)
 import Data.Map.Strict(Map, fromList, insert, foldrWithKey, lookup, singleton)
 import qualified Data.Set as Set
 import Data.Monoid(getAp)
@@ -249,9 +251,7 @@ typecheckPattern (ConstructorPattern _ c ps) ty = do
     scheme <- mfind c env
     consTy <- instantiate scheme
 
-    let tys = arrowsToList consTy
-    let resultTy = last tys
-    let consTys = init tys
+    let (consTys, resultTy) = fromJust (unsnoc (arrowsToList consTy))
 
     when (length ps /= length consTys)
         (fail ("Constructor " ++ renderError c

@@ -1,6 +1,8 @@
 module Syntax where
 
 import Prelude hiding (lookup)
+import Data.List(unsnoc)
+import Data.Maybe(fromJust)
 import Data.Word(Word64)
 import Data.Data(Data, Typeable)
 import Data.Text(Text)
@@ -294,8 +296,8 @@ renderEnv m = render (foldrWithKey (\k v r ->
 nameToList name = name.getQualifiers ++ [name.getId.getText]
 
 fromText t =
-    let splitted = Text.split (== '.') t
-    in Name (init splitted) (Id (last splitted) builtinLocation)
+    let (qualifiers, name) = fromJust (unsnoc (Text.split (== '.') t))
+    in Name qualifiers (Id name builtinLocation)
 
 fromId = Name []
 

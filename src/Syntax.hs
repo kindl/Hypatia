@@ -13,7 +13,7 @@ import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
     dquotes, parens, brackets, layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text(renderStrict)
 import Data.Generics.Uniplate.Data(universe, universeBi)
-import Data.Foldable(foldMap', foldl')
+import Data.Foldable(foldMap')
 
 
 type Line = Word64

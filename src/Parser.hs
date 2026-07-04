@@ -3,7 +3,6 @@ module Parser where
 import Syntax
 import qualified Data.Text.IO as Text
 import Data.List(uncons)
-import Data.Foldable(foldl')
 import Data.Functor(($>))
 import Data.Maybe (fromMaybe)
 import Control.Applicative((<|>), optional, empty)

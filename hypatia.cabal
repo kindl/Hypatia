@@ -32,8 +32,8 @@ executable hypatia
   extensions:
     OverloadedStrings, OverloadedRecordDot, NoFieldSelectors
   build-depends:
-    -- Lower bound necessary for mapAccumM
-    base >= 4.18.0.0,
+    -- Lower bound necessary for foldl'
+    base >= 4.20.0.0,
     -- Lower bound necessary for Text.show
     text >= 2.1.2.0,
     containers,

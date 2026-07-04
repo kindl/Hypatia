@@ -11,7 +11,7 @@ import Control.Monad.Trans.Class(lift)
 import Control.Monad(when, unless, zipWithM)
 import Data.IORef(readIORef, newIORef, modifyIORef', IORef)
 import Data.Generics.Uniplate.Data(universe, para, descend, transformM)
-import Data.Foldable(traverse_, foldMap', foldl')
+import Data.Foldable(traverse_, foldMap')
 import Control.Exception(onException)
 import Control.Applicative((<|>))
 

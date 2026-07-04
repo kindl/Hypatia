@@ -262,12 +262,12 @@ varsym = takeWhile1 isSym
 {-# INLINE varsym #-}
 
 {- Literal -}
-literal = number <|> hexdecimal <|> stringLiteral
+literal = hexadecimalNumber <|> number <|> stringLiteral
 {-# INLINE literal #-}
 
-hexdecimal = fmap Integer
+hexadecimalNumber = fmap Integer
     (char '0' *> oneOf "xX" *> hexadecimal)
-{-# INLINE hexdecimal #-}
+{-# INLINE hexadecimalNumber #-}
 
 -- `double` from attoparsec will parse an int
 -- like 3 as the double 3.0. Here we check and convert

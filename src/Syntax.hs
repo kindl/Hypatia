@@ -315,7 +315,9 @@ isConstructor name = firstIs isUpper name.getId.getText
 
 isOperator name = firstIs isSym name.getId.getText
 
-firstIs f = Text.foldr (const . f) False
+firstIs p t = case Text.uncons t of
+    Nothing -> False
+    Just (c, _) -> p c
 {-# INLINE firstIs #-}
 
 -- these are not symbols in unicode, but in the language

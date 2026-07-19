@@ -1,6 +1,7 @@
 module Main(main) where
 
 import Data.Foldable(traverse_, foldMap')
+import Data.Maybe(catMaybes)
 import Syntax
 import Compiler
 import Transformations
@@ -16,7 +17,7 @@ import Options.Applicative
 
 data Options = Options {
     getAbbreviation :: String,
-    getLibDir :: FilePath,
+    getLibDirs :: [FilePath],
     getPath :: FilePath
 }
 
@@ -27,38 +28,37 @@ commands = hsubparser (
     <> command "compiletojs" (info (compileCommand "js") (progDesc "Compile to js"))
     )
 
-defaultLibraryPath = "library"
-
 libDirOption =
     strOption (
         long "library"
         <> help "Directory for standard library"
-        <> value defaultLibraryPath
         <> metavar "FILEPATH")
 
 compileCommand abbreviation =
     Options abbreviation
-        <$> libDirOption
+        <$> many libDirOption
         <*> argument str (metavar "FILEPATH")
 
 main = do
     options <- execParser opts
-    compileProgram
-        options.getAbbreviation
-        options.getLibDir
-        options.getPath
+    compileProgram options
 
-compileProgram abbreviation libDir path = do
-    let normalizedPath = normalizePath path
-    let baseDir = takeDirectory normalizedPath
-    program <- loadProgram libDir baseDir normalizedPath
-    let libraryAssetDir = libDir ++ "/" ++ abbreviation
-    let localAssetDir = baseDir ++ "/" ++ abbreviation
-    let buildDir = "build/" ++ abbreviation
-    copyDirectoryIfExists libraryAssetDir buildDir
-    copyDirectoryIfExists localAssetDir buildDir
-    _ <- writeProgram buildDir abbreviation program
-    return ()
+compileProgram options =
+    let
+        abbreviation = options.getAbbreviation
+        libraryDirectories = options.getLibDirs
+        path = options.getPath
+        normalizedPath = normalizePath path
+        baseDir = takeDirectory normalizedPath
+        buildDir = "build/" ++ abbreviation
+    in do
+        program <- loadProgram libraryDirectories baseDir normalizedPath
+        traverse_ (copyAssetDirectory abbreviation buildDir) (baseDir:libraryDirectories) 
+        writeProgram buildDir abbreviation program
+
+copyAssetDirectory abbreviation buildDir folder =
+    let assetDir = folder ++ "/" ++ abbreviation
+    in copyDirectoryIfExists assetDir buildDir
 
 copyDirectory srcDir dstDir = do
     createDirectoryIfMissing True dstDir
@@ -81,10 +81,10 @@ copyEntry srcDir dstDir name =
             then copyDirectory srcPath dstPath
             else copyFile srcPath dstPath
 
-loadProgram libDir baseDir path = do
-    putStrLn ("Compiling module from \"" ++ path ++ "\" using library path \"" ++ libDir ++ "\"")
+loadProgram libraryDirectories baseDir path = do
+    putStrLn ("Compiling module from \"" ++ path ++ "\" using libraries " ++ show libraryDirectories)
     loadedModule <- parseFile path
-    mods <- growModuleEnv libDir baseDir [loadedModule]
+    mods <- growModuleEnv libraryDirectories baseDir [loadedModule]
     program <- transformProgram mods
     _ <- typecheckProgram program
     return program
@@ -99,19 +99,29 @@ dropPrefix prefix t =
 
 -- Turns a module name into a path
 -- Tries to find the module locally first and
--- then looks for the file in the library directory
-parseFromName libDir baseDir modName =
+-- then looks for the file in the library directories
+-- TODO: this is not fully sensible behavior.
+-- A library should look for its dependencies where it is located first.
+parseFromName libraryDirectories baseDir modName =
     let
         modPath = toPath modName
-        localPath = baseDir ++ "/" ++ modPath
-        libraryPath = libDir ++ "/" ++ modPath
+        pathOptions = fmap (\dir -> dir ++ "/" ++ modPath) (baseDir:libraryDirectories)
     in do
-        existsLocally <- doesFileExist localPath
-        if existsLocally
-            then parseFile' modName localPath
-            else parseFile' modName libraryPath
+        existing <- traverse maybeExists pathOptions
+        case catMaybes existing of
+            [] -> fail ("Error: Module " <> renderName modName <> " not found")
+            [path] -> parseFileWithInfo modName path
+            paths@(path:_) -> do
+                putStrLn ("Warning: Module " <> renderName modName <> " has several options " <> show paths)
+                parseFileWithInfo modName path
 
-parseFile' modName path = do
+maybeExists path = do
+    exists <- doesFileExist path
+    return (if exists
+        then Just path
+        else Nothing)
+
+parseFileWithInfo modName path = do
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     modDecl <- parseFile path
     if modDecl.getName == modName
@@ -121,7 +131,7 @@ parseFile' modName path = do
             <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
-growModuleEnv libDir baseDir env =
+growModuleEnv libraryDirectories baseDir env =
     let
         imported = Set.fromList (fmap (.getName) env)
         imports = foldMap' importedModules env
@@ -129,8 +139,8 @@ growModuleEnv libDir baseDir env =
     in if null needed
         then return env
         else do
-                mods <- traverse (parseFromName libDir baseDir) (Set.toList needed)
-                growModuleEnv libDir baseDir (mods ++ env)
+                mods <- traverse (parseFromName libraryDirectories baseDir) (Set.toList needed)
+                growModuleEnv libraryDirectories baseDir (mods ++ env)
 
 writeProgram buildDir abbreviation =
     feedbackM (simpleActionA (writeResult buildDir abbreviation) filterNames (return . captureArity))

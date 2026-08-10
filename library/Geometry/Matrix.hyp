@@ -1,7 +1,7 @@
 module Geometry.Matrix
 
 import Native((+), (*), (/), (-), sin, cos)
-import Geometry.Vector4(Vector4)
+import Geometry.Vector4(Vector4, perspectiveDivide)
 import Geometry.Vector3(Vector3)
 import Geometry.Vector3 as Vector3
 
@@ -25,6 +25,9 @@ transform
             (e * x + f * y + g * z + h * w)
             (i * x + j * y + k * z + l * w)
             (m * x + n * y + o * z + p * w)
+
+transform3 m (Vector3 x y z) =
+    perspectiveDivide (transform m (Vector4 x y z 1))
 
 transpose (Matrix a b c d e f g h i j k l m n o p) =
     Matrix

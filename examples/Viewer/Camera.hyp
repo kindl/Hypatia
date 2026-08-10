@@ -1,0 +1,39 @@
+module Camera
+
+import Native(Number)
+import Geometry.Vector3(Vector3, normalize, subtract)
+import Geometry.Matrix(translation, rotation, transform3, look)
+
+alias Eye = Vector3 Number
+alias Forward = Vector3 Number
+alias Up = Vector3 Number
+
+record Camera where
+    eye: Eye
+    forward: Forward
+    up: Up
+
+// only the directions are rotated, the position stays
+rotate camera x y z =
+    let
+        r = rotation x y z
+        forward = transform3 r camera.forward
+        up = transform3 r camera.up
+    in Camera camera.eye forward up
+
+translate camera x y z =
+    let
+        tr = translation x y z
+        eye = transform3 tr camera.eye
+    in Camera eye camera.forward camera.up
+
+getViewMatrix camera =
+    look camera.eye camera.forward camera.up
+
+default =
+    Camera (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
+
+lookAt eye at up =
+    let
+        forward = normalize (subtract at eye)
+    in Camera eye forward up

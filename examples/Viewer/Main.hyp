@@ -12,11 +12,12 @@ import Geometry.Vector3(Vector3)
 import Geometry.Vector4(Vector4, normalize)
 import Geometry.Matrix as Matrix
 import Geometry.Matrix((@), Matrix,
-    simpleProjection, transform, lookAt)
+    simpleProjection, transform)
 import Common.Array(map, foldMap, nth)
 import Common.Stateful(Ref,
     unsafeMakeRef, unsafeRun, modifyRef, unsafeUnpackRef)
 import Model(toTexturedMesh, drawModel)
+import Camera(getViewMatrix, lookAt)
 
 
 record State where
@@ -77,6 +78,8 @@ wheelmoved _ y = modifyState (\state ->
         translation = state.translation + y * scrollSpeed
     in State state.rotationX state.rotationY translation)
 
+camera = lookAt (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
+
 draw _ =
     let
         state = unsafeUnpackRef gameState
@@ -86,7 +89,8 @@ draw _ =
 
         projectionMatrix = simpleProjection 1
         modelMatrix = translation @ scale @ rotation
-        viewMatrix = lookAt (Vector3 0 0 0) (Vector3 1 0 0) (Vector3 0 0 1)
+
+        viewMatrix = getViewMatrix camera
 
         screenWidth = unsafeRun getWidth
         screenHeight = unsafeRun getHeight

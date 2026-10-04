@@ -164,6 +164,7 @@ data Lexeme
     | Comment Text
     | Block Int
     | Indent Int
+    | Unrecognized Text
         deriving (Show)
 
 {-
@@ -192,10 +193,19 @@ lexeme = whitespace
     <|> accessor
     <|> special
     <|> qident
+    <|> unrecognized
 {-# INLINE lexeme #-}
 
--- NOTE . was addded
--- it is part of for example forall a. a
+-- This option helps catch characters that are not handled:
+-- For example single quotes ' do not have a rule yet,
+-- without this option the lexer would fail with endOfInput
+-- with it the failure happens in the parser with a better error message
+unrecognized =
+    fmap (Unrecognized . Text.singleton) anyChar
+{-# INLINE unrecognized #-}
+
+-- Additions:
+-- . for forall, e.g. `forall a. a`
 special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
 

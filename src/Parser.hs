@@ -20,7 +20,7 @@ parse path s = do
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result
         Just (_, rest) ->
-            Left ("Could not parse until end. Next lexemes are: "
+            Left ("Could not parse until end. Next lexemes are:\n"
                 <> renderError (fmap prettyLocated (take 10 rest)))
 {-# INLINE parse #-}
 

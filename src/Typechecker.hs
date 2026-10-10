@@ -103,19 +103,19 @@ typecheckVar x ty = do
     instantiated <- deepInstantiate scheme
     subsumeWithInfo x instantiated ty
 
--- A shortcut that avoids generating new type variables
-typecheckLambda [p] e (TypeArrow patternTy resultTy) =
-    typecheckAlt patternTy resultTy p e
-typecheckLambda [p] e s@(ForAll _ (TypeArrow _ _)) = do
-    (skolVars, TypeArrow alpha beta) <- skolemise s
-    typecheckAlt alpha beta p e
+typecheckLambda ps e s@(ForAll _ _) = do
+    (skolVars, ty) <- skolemise s
+    typecheckLambda ps e ty
     subst <- getSubst
     env <- getEnv
     let escVars = skolems s <> foldMap' (skolems . apply subst) env
     let escaped = Set.intersection escVars (Set.fromList skolVars)
-    unless (null escaped) (fail ("Escape check lambda: "
-        ++ renderSetToError escaped ++ " escaped when checking function "
-        ++ renderError p ++ " -> ... against " ++ renderError s))
+    unless (null escaped) (fail ("Escape check lambda:\n"
+        ++ renderSetToError escaped ++ "\nescaped when checking function\n"
+        ++ renderError ps ++ " -> ... against\n" ++ renderError s))
+-- A shortcut that avoids generating new type variables
+typecheckLambda [p] e (TypeArrow patternTy resultTy) =
+    typecheckAlt patternTy resultTy p e
 typecheckLambda [p] e ty = do
     let location = firstLocationInfo p
     patternTy <- newTyVarAt location
@@ -124,6 +124,19 @@ typecheckLambda [p] e ty = do
     subsumeWithInfo p (TypeArrow patternTy resultTy) ty
 typecheckLambda ps _ _ =
     fail ("Lambda with patterns " ++ show ps ++ " was not curried")
+
+typecheckFunDecl alts scheme@(ForAll _ _) = do
+    (skolVars, ty) <- skolemise scheme
+    typecheckFunDecl alts ty
+    subst <- getSubst
+    env <- getEnv
+    let escVars = skolems scheme <> foldMap' (skolems . apply subst) env
+    let escaped = Set.intersection escVars (Set.fromList skolVars)
+    unless (null escaped) (fail ("Escape check function declaration:\n"
+        ++ renderSetToError escaped ++ "\nescaped when checking function declaration\n"
+        ++ "\nagainst\n" ++ renderError scheme))
+typecheckFunDecl alts ty =
+    traverse_ (\(ps, e) -> typecheck (curryLambda ps e) ty) alts
 
 typecheckAlt patternTy expressionTy pat expr = do
     binds <- typecheckPattern pat patternTy
@@ -204,9 +217,7 @@ inferDecl gen (FunctionDeclaration var alts) next = do
     env <- getEnv
     ty <- mfind var env <|> newTyVarAt var.getId.getLocation
     let binds' = fromList [(var, ty)]
-    -- TODO use typecheckLambda as soon as it supports multiple patterns
-    let exprs = fmap (uncurry curryLambda) alts
-    traverse_ (\e -> with binds' (typecheck e ty)) exprs
+    with binds' (typecheckFunDecl alts ty)
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern var) e) next = do
     env <- getEnv

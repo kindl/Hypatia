@@ -390,7 +390,7 @@ mfind o m = maybe (fail (notFoundMessage o m)) return (lookup o m)
 firstA f (a, b) = fmap (\a' -> (a', b)) (f a)
 
 notFoundMessage o m =
-    "Unknown " <> renderError o <> " in " <> renderError (keys m)
+    "Unknown " <> renderError o <> " in " <> show (pretty (keys m))
 {-# INLINE notFoundMessage #-}
 
 locationInfos other = [l | Id _ l <- universeBi other]

@@ -200,18 +200,18 @@ inferDecls gen =
 onException' a b =
     ReaderT (\s -> onException (runReaderT a s) b)
 
-inferDecl gen (FunctionDeclaration v alts) next = do
+inferDecl gen (FunctionDeclaration var alts) next = do
     env <- getEnv
-    ty <- mfind v env <|> newTyVarAt v.getId.getLocation
-    let binds' = fromList [(v, ty)]
+    ty <- mfind var env <|> newTyVarAt var.getId.getLocation
+    let binds' = fromList [(var, ty)]
     -- TODO use typecheckLambda as soon as it supports multiple patterns
     let exprs = fmap (uncurry curryLambda) alts
     traverse_ (\e -> with binds' (typecheck e ty)) exprs
     typecheckNextWith gen binds' next
-inferDecl gen (ExpressionDeclaration (VariablePattern v) e) next = do
+inferDecl gen (ExpressionDeclaration (VariablePattern var) e) next = do
     env <- getEnv
-    ty <- mfind v env <|> newTyVarAt v.getId.getLocation
-    let binds' = fromList [(v, ty)]
+    ty <- mfind var env <|> newTyVarAt var.getId.getLocation
+    let binds' = fromList [(var, ty)]
     with binds' (typecheck e ty)
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration p e) next = do

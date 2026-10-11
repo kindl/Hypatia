@@ -21,8 +21,11 @@ type Environment = Map Name Type
 
 type Substitution = Map Id Type
 
-data TypecheckerState =
-    TypecheckerState Environment (IORef Word64) (IORef Substitution)
+data TypecheckerState = TypecheckerState {
+    getEnvironment :: Environment,
+    getSupply :: IORef Word64,
+    getSubstitution :: IORef Substitution
+}
 
 type Typechecker a = ReaderT TypecheckerState IO a
 
@@ -98,7 +101,7 @@ typecheck (ArrayExpression es) ty = do
 typecheck other _ = fail ("Cannot typecheck expression " ++ show other)
 
 typecheckVar x ty = do
-    env <- getEnv
+    env <- readEnv
     scheme <- mfind x env
     instantiated <- deepInstantiate scheme
     subsumeWithInfo x instantiated ty
@@ -106,8 +109,8 @@ typecheckVar x ty = do
 typecheckLambda ps e s@(ForAll _ _) = do
     (skolVars, ty) <- skolemise s
     typecheckLambda ps e ty
-    subst <- getSubst
-    env <- getEnv
+    subst <- readSubst
+    env <- readEnv
     let escVars = skolems s <> foldMap' (skolems . apply subst) env
     let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check lambda:\n"
@@ -128,8 +131,8 @@ typecheckLambda ps _ _ =
 typecheckFunDecl alts scheme@(ForAll _ _) = do
     (skolVars, ty) <- skolemise scheme
     typecheckFunDecl alts ty
-    subst <- getSubst
-    env <- getEnv
+    subst <- readSubst
+    env <- readEnv
     let escVars = skolems scheme <> foldMap' (skolems . apply subst) env
     let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check function declaration:\n"
@@ -214,13 +217,13 @@ onException' a b =
     ReaderT (\s -> onException (runReaderT a s) b)
 
 inferDecl gen (FunctionDeclaration var alts) next = do
-    env <- getEnv
+    env <- readEnv
     ty <- mfind var env <|> newTyVarAt var.getId.getLocation
     let binds' = fromList [(var, ty)]
     with binds' (typecheckFunDecl alts ty)
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern var) e) next = do
-    env <- getEnv
+    env <- readEnv
     ty <- mfind var env <|> newTyVarAt var.getId.getLocation
     let binds' = fromList [(var, ty)]
     with binds' (typecheck e ty)
@@ -258,7 +261,7 @@ typecheckPattern (LiteralPattern l) ty = do
     typecheckLiteral l ty
     return mempty
 typecheckPattern (ConstructorPattern _ c ps) ty = do
-    env <- getEnv
+    env <- readEnv
     scheme <- mfind c env
     consTy <- instantiate scheme
 
@@ -288,7 +291,7 @@ typecheckLiteral (Text _) ty =
 
 -- Unification
 unify x y = do
-    subst <- getSubst
+    subst <- readSubst
     unify' (apply subst x) (apply subst y)
 
 -- Wrap unification to give more info
@@ -342,14 +345,14 @@ apply subst ty@(TypeVariable x) =
 apply subst ty = descend (apply subst) ty
 
 -- Environment
-getEnv = asks (\(TypecheckerState env _ _) -> env)
+readEnv = asks (.getEnvironment)
 
 insertSubst k v = do
-    r <- asks (\(TypecheckerState _ _ s) -> s)
+    r <- asks (.getSubstitution)
     lift (modifyIORef' r (insert k v))
 
-getSubst = do
-    r <- asks (\(TypecheckerState _ _ s) -> s)
+readSubst = do
+    r <- asks (.getSubstitution)
     lift (readIORef r)
 
 with binds = local (\(TypecheckerState env r s) ->
@@ -357,7 +360,7 @@ with binds = local (\(TypecheckerState env r s) ->
 
 -- Type Variables
 newUnique = do
-    r <- asks (\(TypecheckerState _ u _) -> u)
+    r <- asks (.getSupply)
     lift (modifyIORef' r succ >> readIORef r)
 
 newTyVarAt location = fmap TypeVariable (newUniqueName location)
@@ -378,9 +381,9 @@ freeVars ty =
     in para f ty
 
 generalize ty = do
-    subst <- getSubst
+    subst <- readSubst
     let ty' = apply subst ty
-    env <- getEnv
+    env <- readEnv
     let envVars = foldMap' (freeVars . apply subst) env
     let qualVars = Set.difference (freeVars ty') envVars
     return (makeForAll qualVars ty')
@@ -401,7 +404,7 @@ subsumeWithInfo errInfo ty1 ty2 =
     wrapWithInfo errInfo (subsume ty1 ty2)
 
 subsume x y = do
-    subst <- getSubst
+    subst <- readSubst
     subsume' (apply subst x) (apply subst y)
 
 {-
@@ -415,7 +418,7 @@ to keep subsumption simple anyway
 subsume' scheme1 scheme2@(ForAll _ _) = do
     (skolVars, ty) <- skolemise scheme2
     subsume' scheme1 ty
-    subst <- getSubst
+    subst <- readSubst
     let escVars = skolems (apply subst scheme1) <> skolems (apply subst scheme2)
     let escaped = Set.intersection escVars (Set.fromList skolVars)
     unless (null escaped) (fail ("Escape check: " ++ renderSetToError escaped

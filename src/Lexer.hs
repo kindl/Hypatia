@@ -142,7 +142,7 @@ oneOf xs = satisfy (flip Text.elem xs)
 
 data LocatedLexeme = LocatedLexeme {
     getLexeme :: Lexeme,
-    getLoc :: Location
+    getLocation :: Location
 } deriving (Show)
 
 prettyLocated (LocatedLexeme l p) =

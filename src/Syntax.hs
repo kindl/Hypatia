@@ -20,13 +20,18 @@ import Data.Foldable(foldMap')
 
 type Line = Word64
 type Column = Word64
-data Position = Position Line Column
-    deriving (Show, Eq, Ord, Data, Typeable)
+data Position = Position {
+    line :: Line,
+    column :: Column
+} deriving (Show, Eq, Ord, Data, Typeable)
 
 type StartPosition = Position
 type EndPosition = Position
-data Location = Location StartPosition EndPosition FilePath
-    deriving (Show, Data, Typeable)
+data Location = Location {
+    startPosition :: StartPosition,
+    endPosition :: EndPosition,
+    filePath :: FilePath
+} deriving (Show, Data, Typeable)
 
 data Id = Id {
     getText :: Text,
@@ -162,10 +167,10 @@ qualify _ name = name
 
 
 instance Pretty Location where
-    pretty (Location (Position line column) _ filePath) =
-        pretty filePath
-        <> text ":" <> pretty line
-        <> text ":" <> pretty column
+    pretty location =
+        pretty location.filePath
+        <> text ":" <> pretty location.startPosition.line
+        <> text ":" <> pretty location.startPosition.column
 
 instance Pretty Type where
     pretty t@(TypeArrow _ _) =
@@ -251,9 +256,9 @@ renderSetToError p = show (text "Set.fromList" <+> prettyError (Set.toList p))
 
 prettyError p = pretty p <> " at " <> pretty (mergeLocationInfos (locationInfos p))
 
-mergeLocationInfos locations@(Location _ _ filePath:_) =
-    let positions = mconcat [[startPosition, endPosition] | Location startPosition endPosition _ <- locations]
-    in Location (minimum positions) (maximum positions) filePath
+mergeLocationInfos locations@(location:_) =
+    let positions = foldMap' (\l -> [l.startPosition, l.endPosition]) locations
+    in Location (minimum positions) (maximum positions) location.filePath
 mergeLocationInfos _ = builtinLocation
 
 firstLocationInfo x =
@@ -328,16 +333,20 @@ isSym x = (isSymbol x && not (isExcludedSym x)) || Text.elem x "!%&*/?@\\-:"
 isExcludedSym x = Text.elem x "$"
 {-# INLINE isExcludedSym #-}
 
-builtinLocation = Location (Position 0 0) (Position 0 0) "builtin"
+builtinLocation = Location {
+    startPosition = Position 0 0,
+    endPosition = Position 0 0,
+    filePath = "builtin"
+}
 
 prefixedId location x = Id ("_v" <> x) location
 {-# INLINE prefixedId #-}
 
 -- Encode the location inside the name to avoid name conflicts
-locatedId location@(Location (Position line column) _ _) x =
+locatedId location x =
     Id ("_v" <> x
-        <> "_" <> uintToText line
-        <> "_" <> uintToText column) location
+        <> "_" <> uintToText location.startPosition.line
+        <> "_" <> uintToText location.startPosition.column) location
 {-# INLINE locatedId #-}
 
 differenceKeys m ks = filterWithKey (const . flip notElem ks) m
@@ -393,7 +402,8 @@ notFoundMessage o m =
     "Unknown " <> renderError o <> " in " <> show (pretty (keys m))
 {-# INLINE notFoundMessage #-}
 
-locationInfos other = [l | Id _ l <- universeBi other]
+locationInfos other =
+    fmap (.getLocation) (universeBi other :: [Id])
 {-# INLINE locationInfos #-}
 
 -- Functions for sets that error on overwriting a key

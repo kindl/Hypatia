@@ -456,7 +456,7 @@ fromAccessor _ _ = Nothing
 
 parseLocated f = do
     n <- next
-    maybe empty return (f n.getLexeme n.getLoc)
+    maybe empty return (f n.getLexeme n.getLocation)
 {-# INLINE parseLocated #-}
 
 varsym = parseLocated fromVarsym

@@ -8,19 +8,21 @@ import Prettyprinter(vcat, indent, (<+>),
 import Data.Foldable(foldMap')
 import qualified Data.Set as Set
 import Data.Data(Data, Typeable)
-import Data.Generics.Uniplate.Data(universeBi, transformBi)
+import Data.Generics.Uniplate.Data(transformBi)
 import Data.Map.Strict(fromList, lookup)
 import Prelude hiding (lookup)
-
+import Sorting(getDepsE, getDepsD)
 
 type Import = Name
 
 data Mod = Mod Name [Import] [Statement]
     deriving (Show, Typeable, Data)
 
+type IsRec = Bool
+
 data Statement =
     Ret Expr
-    | Assign Binding Expr
+    | Assign IsRec Binding Expr
     | If Expr [Statement] [Statement]
         deriving (Show, Typeable, Data)
 
@@ -80,7 +82,7 @@ renderLuaMod (Mod _ imports statements) = vcat [
 exports x = pretty x <+> text "=" <+> pretty x
 
 getIdentifiers statements =
-    [name.getId.getText | Assign name _ <- statements, not (isWildcard name.getId.getText)]
+    [name.getId.getText | Assign _ name _ <- statements, not (isWildcard name.getId.getText)]
 
 isWildcard i = i == "_"
 
@@ -88,7 +90,7 @@ toLuaI modName =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
 
-toLuaS (Assign (Name [] (Id "_" _)) e) =
+toLuaS (Assign _ (Name [] (Id "_" _)) e) =
     toLuaE e
 -- Local functions need a forward declaration for recursion
 -- Otherwise
@@ -98,14 +100,11 @@ toLuaS (Assign (Name [] (Id "_" _)) e) =
 -- end
 -- ```
 -- would result in an error because `fix` is undefined
--- TODO decide if a forward declaration is necessary without looking
--- at all names appearing in the function body. Maybe the result of
--- sorting LetExpressions could be reused.
-toLuaS (Assign (Name [] x) e) =
-    if elem x [ident | Name [] ident <- universeBi e]
+toLuaS (Assign isRec (Name [] x) e) =
+    if isRec
         then vcat [text "local" <+> pretty x, pretty x <+> equals <+> toLuaE e]
         else text "local" <+> pretty x <+> equals <+> toLuaE e
-toLuaS (Assign x _) =
+toLuaS (Assign _ x _) =
     error ("Unexpected qualified name " <> renderError x)
 toLuaS (Ret e) =
     text "return" <+> toLuaE e
@@ -207,11 +206,11 @@ toJsI modName =
     text "import" <+> flatModName modName <+>
         text "from" <+> toJsPath modName <> semi
 
-toJsS (Assign (Name [] (Id "_" _)) e) =
+toJsS (Assign _ (Name [] (Id "_" _)) e) =
     toJsE e <> semi
-toJsS (Assign (Name [] x) e) =
+toJsS (Assign _ (Name [] x) e) =
     text "const" <+> pretty x <+> equals <+> toJsE e <> semi
-toJsS (Assign x _) =
+toJsS (Assign _ x _) =
     error ("Unexpected qualified name " <> renderError x)
 toJsS (Ret e) =
     text "return" <+> toJsE e <> semi
@@ -324,8 +323,8 @@ optimizeApplication arityMap statements =
 
 removeCurryS arityMap (Ret e) =
     Ret (removeCurryE arityMap e)
-removeCurryS arityMap (Assign n e) =
-    Assign n (removeCurryE arityMap e)
+removeCurryS arityMap (Assign isRec n e) =
+    Assign isRec n (removeCurryE arityMap e)
 removeCurryS arityMap (If e thenBranch elseBranch) =
     If (removeCurryE arityMap e)
         (fmap (removeCurryS arityMap) thenBranch)
@@ -457,7 +456,7 @@ compileEtoS (CaseExpression e alts) =
         location = firstLocationInfo e
         v = locatedId location "c"
         err = Ret (makeError ("No pattern match for " <> prettyError (fmap fst alts)))
-    in Assign (fromId v) (compileE e) : compileAlts v [err] alts
+    in Assign False (fromId v) (compileE e) : compileAlts v [err] alts
 compileEtoS (LetExpression decls e) =
     foldMap' compileD decls ++ compileEtoS e
 compileEtoS (IfExpression c th el) =
@@ -476,17 +475,20 @@ compileTop (RecordDeclaration _ _ recordConstructor fields) =
     [compileRecordConstructor recordConstructor fields]
 compileTop (FixityDeclaration _ _ _ _) = []
 -- Top level function declarations are uncurried
-compileTop (FunctionDeclaration x alts) =
-    [Assign x (compileMultiLambda Func alts)]
+compileTop decl@(FunctionDeclaration x alts) =
+    let isRec = elem x (getDepsD decl)
+    in [Assign isRec x (compileMultiLambda Func alts)]
 compileTop other = compileD other
 
 -- Function declarations in let bindings are curried
-compileD (FunctionDeclaration x alts) =
-    [Assign x (compileMultiLambda curryFuncSts alts)]
+compileD decl@(FunctionDeclaration x alts) =
+    let isRec = elem x (getDepsD decl)
+    in [Assign isRec x (compileMultiLambda curryFuncSts alts)]
 compileD (ExpressionDeclaration (VariablePattern x) e) =
-    [Assign x (compileE e)]
+    let isRec = elem x (getDepsE e)
+    in [Assign isRec x (compileE e)]
 compileD (ExpressionDeclaration (Wildcard w) e) =
-    [Assign (fromId w) (compileE e)]
+    [Assign False (fromId w) (compileE e)]
 {-
 Compile pattern matches in let expressions like
 ```
@@ -502,15 +504,15 @@ compileD (ExpressionDeclaration p e) =
         err = Ret (makeError ("No pattern match in declaration for " <> prettyError p))
         assignments = getAssignments v [] p
         withEarlyOut = makeIf (getConditions v [] p) [] [err] <> assignments
-    in Assign (fromId v) (compileE e) : withEarlyOut
+    in Assign False (fromId v) (compileE e) : withEarlyOut
 compileD (TypeSignature _ _) = []
 compileD (AliasDeclaration _ _) = []
 compileD other = error ("compileD does not work on " ++ show other)
 
 compileConstructor _ (c, []) =
-    Assign c (Func [] [Ret (Tag c)])
+    Assign True c (Func [] [Ret (Tag c)])
 compileConstructor ArrayRepresentation (c, [_]) =
-    Assign c (Var (fromText "Native.unsafeCoerce"))
+    Assign False c (Var (fromText "Native.unsafeCoerce"))
 compileConstructor info (c, variables) =
     let
         getTag ArrayRepresentation = []
@@ -519,14 +521,14 @@ compileConstructor info (c, variables) =
 
         parameters = nNewVars (length variables)
         body = [Ret (ArrayLiteral (getTag info ++ fmap (Var . fromId) parameters))]
-    in Assign c (Func parameters body)
+    in Assign True c (Func parameters body)
 
 compileRecordConstructor con fields =
     let
         parameters = fmap (accessorToIdentifier . fst) fields
         fields' = fmap (\f -> (f, Var (fromId f))) parameters
         body = [Ret (RecordLiteral fields')]
-    in Assign con (Func parameters body)
+    in Assign False con (Func parameters body)
 
 curryFuncSts [v] s = Func [v] s
 curryFuncSts (v:vs) s = Func [v] [Ret (curryFuncSts vs s)]
@@ -655,9 +657,9 @@ getConditionsArray v indices ps =
 getAssignments v [] (VariablePattern (Name [] x)) | v == x =
     []
 getAssignments v indices (VariablePattern x) =
-    [Assign x (Access (Var (fromId v)) indices)]
+    [Assign False x (Access (Var (fromId v)) indices)]
 getAssignments v indices (AliasPattern x p) =
-    Assign x (Access (Var (fromId v)) indices):getAssignments v indices p
+    Assign False x (Access (Var (fromId v)) indices):getAssignments v indices p
 -- Identity constructor
 getAssignments v indices (ConstructorPattern ArrayRepresentation _ [p]) =
     getAssignments v indices p

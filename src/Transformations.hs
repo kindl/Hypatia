@@ -10,7 +10,7 @@ import Qualification
 import Data.Map.Strict(insert, (!))
 import Data.Foldable(foldMap')
 import Control.Monad((<=<))
--- import qualified Data.Text.IO as Text
+-- import Data.Text.IO qualified as Text
 import Data.Traversable(mapAccumM)
 
 

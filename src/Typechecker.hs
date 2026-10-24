@@ -6,7 +6,7 @@ import Data.Word(Word64)
 import Data.List(unsnoc)
 import Data.Maybe(fromJust)
 import Data.Map.Strict(Map, fromList, insert, foldrWithKey, lookup, singleton)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Data.Monoid(getAp)
 import Control.Monad.Trans.Reader(ReaderT(ReaderT), runReaderT, asks, local)
 import Control.Monad.Trans.Class(lift)

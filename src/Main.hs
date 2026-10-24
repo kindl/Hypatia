@@ -6,9 +6,9 @@ import Syntax
 import Compiler
 import Transformations
 import Parser(parseFile)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import qualified Data.Set as Set
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
+import Data.Set qualified as Set
 import System.FilePath(takeDirectory)
 import System.Directory(createDirectoryIfMissing, copyFile,
     doesFileExist, doesDirectoryExist, listDirectory)

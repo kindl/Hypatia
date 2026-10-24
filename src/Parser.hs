@@ -1,7 +1,7 @@
 module Parser where
 
 import Syntax
-import qualified Data.Text.IO as Text
+import Data.Text.IO qualified as Text
 import Data.List(uncons)
 import Data.Functor(($>))
 import Data.Maybe (fromMaybe)

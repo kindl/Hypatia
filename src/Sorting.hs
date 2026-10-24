@@ -4,7 +4,7 @@ import Syntax
 import Data.List(partition)
 import Data.Generics.Uniplate.Data(para)
 import Data.Foldable(foldMap')
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 
 
 {-

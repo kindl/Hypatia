@@ -6,11 +6,11 @@ import Data.Maybe(fromJust)
 import Data.Word(Word64)
 import Data.Data(Data, Typeable)
 import Data.Text(Text)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import Data.Char(isUpper, isSymbol, isPrint)
 import Data.Map.Strict(lookup, keys, foldrWithKey,
     filterWithKey, fromListWith, unionWith, keysSet)
-import qualified Data.Set as Set
+import Data.Set qualified as Set
 import Prettyprinter(Doc, Pretty, pretty, (<+>), hardline,
     dquotes, parens, brackets, layoutPretty, defaultLayoutOptions)
 import Prettyprinter.Render.Text(renderStrict)

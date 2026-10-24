@@ -1,8 +1,8 @@
 module Lexer where
 
 import Prelude hiding (takeWhile)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
+import Data.Text qualified as Text
+import Data.Text.IO qualified as Text
 import Data.Text(Text)
 import Prettyprinter(pretty)
 import Control.Applicative((<|>))

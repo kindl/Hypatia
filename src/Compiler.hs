@@ -1,17 +1,17 @@
 module Compiler where
 
 import Syntax
+import Sorting
+import Data.Data(Data, Typeable)
+import Data.Foldable(foldMap')
+import Data.Generics.Uniplate.Data(transformBi)
 import Data.List(transpose)
+import Data.Set qualified as Set
+import Data.Map.Strict qualified as Map
 import Data.Text(Text)
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
-import Data.Foldable(foldMap')
-import qualified Data.Set as Set
-import Data.Data(Data, Typeable)
-import Data.Generics.Uniplate.Data(transformBi)
-import Data.Map.Strict(fromList, lookup)
-import Prelude hiding (lookup)
-import Sorting(getDepsE, getDepsD)
+
 
 type Import = Name
 
@@ -337,7 +337,7 @@ removeCurryS arityMap (If e thenBranch elseBranch) =
 removeCurryE _ e@(Var (Name ["Native"] (Id "negate" _))) =
     createPartialApplication 1 e []
 removeCurryE arityMap e@(Var v) =
-    case lookup v arityMap of
+    case Map.lookup v arityMap of
         Just arity | arity > 1 ->
             -- When a function is referred as a name
             -- it has to be curried as if it was applied to no arguments
@@ -346,7 +346,7 @@ removeCurryE arityMap e@(Var v) =
 removeCurryE arityMap c@(Call f originalEs) =
     case flattenCall c [] of
         (Var v, es) ->
-            case lookup v arityMap of
+            case Map.lookup v arityMap of
                 Just arity | arity == length es ->
                     Call (Var v) (fmap (removeCurryE arityMap) es)
                 Just arity | arity > length es ->
@@ -706,16 +706,16 @@ captureArity modDecl =
     <> captureRecordArity modDecl
 
 captureFunctionArity modDecl =
-    fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.getDecls]
+    Map.fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.getDecls]
 
 captureConstructorArity modDecl =
-    fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.getDecls])
+    Map.fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.getDecls])
 
 captureRecordArity modDecl =
-    fromList ([(recordConstructor, length fields) | RecordDeclaration _ _ recordConstructor fields <- modDecl.getDecls])
+    Map.fromList ([(recordConstructor, length fields) | RecordDeclaration _ _ recordConstructor fields <- modDecl.getDecls])
 
 captureSignatureArity modDecl =
-    fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.getDecls])
+    Map.fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.getDecls])
 
 getArityFromType x ty@(TypeArrow _ _) =
     let l = countArrows ty

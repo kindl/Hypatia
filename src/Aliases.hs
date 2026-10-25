@@ -84,10 +84,10 @@ findConstructorOp aliases op | isOperator op = do
 findConstructorOp _ op = Right op
 
 captureAliases modDecl =
-    fromList [(v, alias) | AliasDeclaration v alias <- modDecl.getDecls]
+    fromList [(v, alias) | AliasDeclaration v alias <- modDecl.decls]
 
 captureOperatorAliases modDecl =
-    fromList [(op, alias) | FixityDeclaration _ _ op alias <- modDecl.getDecls]
+    fromList [(op, alias) | FixityDeclaration _ _ op alias <- modDecl.decls]
 
 -- TODO allow forall?
 -- this would be clear for types but not for patterns
@@ -115,5 +115,5 @@ findAlias name m = do
     return (switchLocation name alias)
 
 switchLocation original name =
-    let originalLocation = original.getId.getLocation
-    in Name name.getQualifiers (Id name.getId.getText originalLocation)
+    let originalLocation = original.id.location
+    in Name name.qualifiers (Id name.id.text originalLocation)

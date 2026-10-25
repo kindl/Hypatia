@@ -16,9 +16,9 @@ import Options.Applicative
 
 
 data Options = Options {
-    getAbbreviation :: String,
-    getLibDirs :: [FilePath],
-    getPath :: FilePath
+    abbreviation :: String,
+    libraryDirectories :: [FilePath],
+    filePath :: FilePath
 }
 
 opts = info (commands <**> helper) mempty
@@ -45,10 +45,10 @@ main = do
 
 compileProgram options =
     let
-        abbreviation = options.getAbbreviation
-        libraryDirectories = options.getLibDirs
-        path = options.getPath
-        normalizedPath = normalizePath path
+        abbreviation = options.abbreviation
+        libraryDirectories = options.libraryDirectories
+        filePath = options.filePath
+        normalizedPath = normalizePath filePath
         baseDir = takeDirectory normalizedPath
         buildDir = "build/" ++ abbreviation
     in do
@@ -124,16 +124,16 @@ maybeExists path = do
 parseFileWithInfo modName path = do
     putStrLn ("Parsing module " ++ renderName modName ++ " from " ++ path)
     modDecl <- parseFile path
-    if modDecl.getName == modName
+    if modDecl.name == modName
         then return modDecl
-        else fail ("The parsed module name " <> renderError modDecl.getName
+        else fail ("The parsed module name " <> renderError modDecl.name
             <> " did not match the expected module name " <> renderName modName
             <> " from path " <> show path)
 
 -- Load all imported modules step-by-step
 growModuleEnv libraryDirectories baseDir env =
     let
-        imported = Set.fromList (fmap (.getName) env)
+        imported = Set.fromList (fmap (.name) env)
         imports = foldMap' importedModules env
         needed = Set.difference imports imported
     in if null needed
@@ -157,7 +157,7 @@ getKeywordSet other =
 
 writeResult buildDir abbreviation arityMap modDecl =
     let
-        name = render (flatModName modDecl.getName)
+        name = render (flatModName modDecl.name)
         compiled = compile modDecl
         fileName = Text.unpack name ++ "." ++ abbreviation
         filePath = buildDir ++ "/" ++ fileName

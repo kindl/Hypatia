@@ -36,7 +36,7 @@ parseString s = parse "" s
 next = StateT uncons
 {-# INLINE next #-}
 
-nextLexeme = fmap (.getLexeme) next
+nextLexeme = fmap (.lexeme) next
 {-# INLINE nextLexeme #-}
 
 token t = do
@@ -456,7 +456,7 @@ fromAccessor _ _ = Nothing
 
 parseLocated f = do
     n <- next
-    maybe empty return (f n.getLexeme n.getLocation)
+    maybe empty return (f n.lexeme n.location)
 {-# INLINE parseLocated #-}
 
 varsym = parseLocated fromVarsym

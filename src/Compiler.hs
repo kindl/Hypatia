@@ -82,7 +82,7 @@ renderLuaMod (Mod _ imports statements) = vcat [
 exports x = pretty x <+> text "=" <+> pretty x
 
 getIdentifiers statements =
-    [name.getId.getText | Assign _ name _ <- statements, not (isWildcard name.getId.getText)]
+    [name.id.text | Assign _ name _ <- statements, not (isWildcard name.id.text)]
 
 isWildcard = firstIs (== '_')
 
@@ -373,13 +373,13 @@ createPartialApplication arity e es =
     in curryFuncSts vars body
 
 optimizeName modName name =
-    if name.getQualifiers == nameToList modName
-        then Name [] name.getId
+    if name.qualifiers == nameToList modName
+        then Name [] name.id
         else name
 
 renameKeywords keywords identifier =
-    if elem identifier.getText keywords
-        then Id ("__" <> identifier.getText) identifier.getLocation
+    if elem identifier.text keywords
+        then Id ("__" <> identifier.text) identifier.location
         else identifier
 
 luaKeywords :: [Text]
@@ -405,9 +405,9 @@ jsKeywords = [
 -- Compile to simplified language
 compile modDecl =
     let
-        compiledDecls = foldMap' compileTop modDecl.getDecls
+        compiledDecls = foldMap' compileTop modDecl.decls
         imports = importedModules modDecl
-    in Mod modDecl.getName (Set.toList imports) compiledDecls
+    in Mod modDecl.name (Set.toList imports) compiledDecls
 
 compileE (Variable v) =
     Var v
@@ -706,16 +706,16 @@ captureArity modDecl =
     <> captureRecordArity modDecl
 
 captureFunctionArity modDecl =
-    Map.fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.getDecls]
+    Map.fromList [(x, identical (fmap (length . fst) alts)) | FunctionDeclaration x alts <- modDecl.decls]
 
 captureConstructorArity modDecl =
-    Map.fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.getDecls])
+    Map.fromList (concat [fmap (fmap length) cs | TypeDeclaration _ _ cs <- modDecl.decls])
 
 captureRecordArity modDecl =
-    Map.fromList ([(recordConstructor, length fields) | RecordDeclaration _ _ recordConstructor fields <- modDecl.getDecls])
+    Map.fromList ([(recordConstructor, length fields) | RecordDeclaration _ _ recordConstructor fields <- modDecl.decls])
 
 captureSignatureArity modDecl =
-    Map.fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.getDecls])
+    Map.fromList (concat [getArityFromType x ty | TypeSignature x ty <- modDecl.decls])
 
 getArityFromType x ty@(TypeArrow _ _) =
     let l = countArrows ty

@@ -22,7 +22,7 @@ fixAssoc operatorTable =
 
 {- Read the fixity declarations -}
 captureAssocs modDecl =
-    fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- modDecl.getDecls]
+    fromList [(op, (assoc, prec)) | FixityDeclaration assoc prec op _ <- modDecl.decls]
 
 fixAssocE operatorTable (OperatorExpression (OperatorExpression e1 child e2) root e3) =
     fixAssocAux operatorTable False OperatorExpression e1 child e2 root e3

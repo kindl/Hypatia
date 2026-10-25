@@ -139,7 +139,7 @@ captureTypeNamesTopDecl _ = []
 
 findName quals (Name [] identifier) = do
     q <- findEither identifier quals
-    pure (Name q.getQualifiers identifier)
+    pure (Name q.qualifiers identifier)
 findName _ n = Right n
 
 toLocals names = fromListUnique (fmap (\name -> (toId name, name)) names)
@@ -183,9 +183,9 @@ captureQualifiedImports imports =
         ImportDeclaration modName Nothing (Just renamedModName) <- imports]
 
 changeQualifier name quals =
-    case lookup name.getQualifiers quals of
+    case lookup name.qualifiers quals of
         Nothing -> name
-        Just renamedModNames -> Name renamedModNames name.getId
+        Just renamedModNames -> Name renamedModNames name.id
 
 -- Tag info annotation for optimiziation
 annotateTagInfo tagInfos =
@@ -195,7 +195,7 @@ annotateTagInfo tagInfos =
         g p = Right p
     in transformBiM g
 
-captureTagInfos modDecl = fromList (foldMap' captureTagInfo modDecl.getDecls)
+captureTagInfos modDecl = fromList (foldMap' captureTagInfo modDecl.decls)
 
 captureTagInfo (TypeDeclaration _ _ [(c, _)]) =
     [(c, ArrayRepresentation)]

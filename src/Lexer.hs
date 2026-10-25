@@ -31,7 +31,7 @@ lexFileDebug path =
     fmap (parse (program path)) (Text.readFile path)
 
 lexFileDebug2 path =
-    fmap (fmap (fmap (.getLexeme)) . lexlex path)
+    fmap (fmap (fmap (.lexeme)) . lexlex path)
         (Text.readFile path)
 
 lexDebug = parseOnly (program "")
@@ -141,8 +141,8 @@ oneOf xs = satisfy (flip Text.elem xs)
 {-# INLINE oneOf #-}
 
 data LocatedLexeme = LocatedLexeme {
-    getLexeme :: Lexeme,
-    getLocation :: Location
+    lexeme :: Lexeme,
+    location :: Location
 } deriving (Show)
 
 prettyLocated (LocatedLexeme l p) =
@@ -300,9 +300,9 @@ escapedCharSequence p e =
 {-# INLINE escapedCharSequence #-}
 
 interpolatedString = do
-    start <- match (char '$' *> char '\"' *> return InterpolatedStringStart)
+    start <- match (string "$\"" $> InterpolatedStringStart)
     midParts <- alternating1 (fmap return (match interpolatedStringPart)) expressionPart
-    end <- match (char '\"' *> return InterpolatedStringEnd)
+    end <- match (char '\"' $> InterpolatedStringEnd)
     return (start : concat midParts ++ [end])
 {-# INLINE interpolatedString #-}
 

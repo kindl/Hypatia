@@ -22,9 +22,9 @@ type Environment = Map Name Type
 type Substitution = Map Id Type
 
 data TypecheckerState = TypecheckerState {
-    getEnvironment :: Environment,
-    getSupply :: IORef Word64,
-    getSubstitution :: IORef Substitution
+    environment :: Environment,
+    supply :: IORef Word64,
+    substitution :: IORef Substitution
 }
 
 type Typechecker a = ReaderT TypecheckerState IO a
@@ -32,7 +32,7 @@ type Typechecker a = ReaderT TypecheckerState IO a
 typecheckModule env modDecl = do
     r <- newIORef 0
     s <- newIORef mempty
-    putStrLn ("Typechecking Module " ++ renderName modDecl.getName)
+    putStrLn ("Typechecking Module " ++ renderName modDecl.name)
     runReaderT (inferModule modDecl) (TypecheckerState env r s)
 
 inferModule (ModuleDeclaration _ _ decls) = do
@@ -75,7 +75,7 @@ typecheck (FunctionApplication f e) ty = do
     typecheck f (TypeArrow alpha ty)
     typecheck e alpha
 typecheck (DotExpression e accessor) ty = do
-    alpha <- newTyVarAt accessor.getId.getLocation
+    alpha <- newTyVarAt accessor.id.location
     typecheckVar accessor (TypeArrow alpha ty)
     typecheck e alpha
 typecheck (CaseExpression expr alts) ty = do
@@ -218,13 +218,13 @@ onException' a b =
 
 inferDecl gen (FunctionDeclaration var alts) next = do
     env <- readEnv
-    ty <- mfind var env <|> newTyVarAt var.getId.getLocation
+    ty <- mfind var env <|> newTyVarAt var.id.location
     let binds' = fromList [(var, ty)]
     with binds' (typecheckFunDecl alts ty)
     typecheckNextWith gen binds' next
 inferDecl gen (ExpressionDeclaration (VariablePattern var) e) next = do
     env <- readEnv
-    ty <- mfind var env <|> newTyVarAt var.getId.getLocation
+    ty <- mfind var env <|> newTyVarAt var.id.location
     let binds' = fromList [(var, ty)]
     with binds' (typecheck e ty)
     typecheckNextWith gen binds' next
@@ -345,14 +345,14 @@ apply subst ty@(TypeVariable x) =
 apply subst ty = descend (apply subst) ty
 
 -- Environment
-readEnv = asks (.getEnvironment)
+readEnv = asks (.environment)
 
 insertSubst k v = do
-    r <- asks (.getSubstitution)
+    r <- asks (.substitution)
     lift (modifyIORef' r (insert k v))
 
 readSubst = do
-    r <- asks (.getSubstitution)
+    r <- asks (.substitution)
     lift (readIORef r)
 
 with binds = local (\(TypecheckerState env r s) ->
@@ -360,7 +360,7 @@ with binds = local (\(TypecheckerState env r s) ->
 
 -- Type Variables
 newUnique = do
-    r <- asks (.getSupply)
+    r <- asks (.supply)
     lift (modifyIORef' r succ >> readIORef r)
 
 newTyVarAt location = fmap TypeVariable (newUniqueName location)
@@ -389,7 +389,7 @@ generalize ty = do
     return (makeForAll qualVars ty')
 
 instantiate (ForAll vars ty) = do
-    subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt x.getLocation)) vars
+    subst <- traverse (\x -> fmap (\t -> (x, t)) (newTyVarAt x.location)) vars
     return (apply (fromList subst) ty)
 instantiate ty = return ty
 
@@ -438,7 +438,7 @@ makeForAll tvs ty =
     if null tvs then ty else ForAll (Set.toAscList tvs) ty
 
 skolemise (ForAll vars ty) = do
-    skolVars <- traverse (newUniqueName . (.getLocation)) vars
+    skolVars <- traverse (newUniqueName . (.location)) vars
     let subs = fromList (zip vars (fmap SkolemConstant skolVars))
     return (skolVars, apply subs ty)
 skolemise ty = return ([], ty)

@@ -34,8 +34,8 @@ data Location = Location {
 } deriving (Show, Data, Typeable)
 
 data Id = Id {
-    getText :: Text,
-    getLocation :: Location
+    text :: Text,
+    location :: Location
 } deriving (Show, Data, Typeable)
 
 instance Eq Id where
@@ -45,14 +45,14 @@ instance Ord Id where
     Id t1 _ <= Id t2 _ = t1 <= t2
 
 data Name = Name {
-    getQualifiers :: [Text],
-    getId :: Id
+    qualifiers :: [Text],
+    id :: Id
 } deriving (Show, Data, Typeable, Eq, Ord)
 
 data ModuleDeclaration = ModuleDeclaration {
-    getName :: Name,
-    getImports :: [ImportDeclaration],
-    getDecls :: [Declaration]
+    name :: Name,
+    imports :: [ImportDeclaration],
+    decls :: [Declaration]
 } deriving (Show, Data, Typeable)
 
 {-
@@ -63,7 +63,7 @@ import Viewer.Obj as Obj
 ```
 -}
 importedModules modDecl =
-    Set.fromList [name | ImportDeclaration name _ _ <- modDecl.getImports]
+    Set.fromList [name | ImportDeclaration name _ _ <- modDecl.imports]
 
 
 data Literal
@@ -162,7 +162,7 @@ mintercalate _ [] = mempty
 mintercalate s xs = foldr1 (\x r -> x <> s <> r) xs
 
 qualify moduleName (Name [] identifier) =
-    Name (moduleName.getQualifiers ++ [moduleName.getId.getText]) identifier
+    Name (moduleName.qualifiers ++ [moduleName.id.text]) identifier
 qualify _ name = name
 
 
@@ -246,7 +246,7 @@ flatName = intercalateName (text "_") (text ".")
 
 intercalateName _ _ (Name [] i) = pretty i
 intercalateName qualSep idSep name =
-    mintercalate qualSep (fmap text name.getQualifiers) <> idSep <> pretty name.getId
+    mintercalate qualSep (fmap text name.qualifiers) <> idSep <> pretty name.id
 {-# INLINE intercalateName #-}
 
 
@@ -298,7 +298,7 @@ renderEnv m = render (foldrWithKey (\k v r ->
     pretty k <+> text ":" <+> pretty v <> hardline <> r) mempty m)
 {-# INLINE renderEnv #-}
 
-nameToList name = name.getQualifiers ++ [name.getId.getText]
+nameToList name = name.qualifiers ++ [name.id.text]
 
 fromText t =
     let (qualifiers, name) = fromJust (unsnoc (Text.split (== '.') t))
@@ -316,9 +316,9 @@ identifierToAccessor (Id v l) = fromId (Id (Text.cons '.' v) l)
 
 accessorToIdentifier (Name _ (Id v l)) = Id (Text.drop 1 v) l
 
-isConstructor name = firstIs isUpper name.getId.getText
+isConstructor name = firstIs isUpper name.id.text
 
-isOperator name = firstIs isSym name.getId.getText
+isOperator name = firstIs isSym name.id.text
 
 firstIs p t = case Text.uncons t of
     Nothing -> False
@@ -403,7 +403,7 @@ notFoundMessage o m =
 {-# INLINE notFoundMessage #-}
 
 locationInfos other =
-    fmap (.getLocation) (universeBi other :: [Id])
+    fmap (.location) (universeBi other :: [Id])
 {-# INLINE locationInfos #-}
 
 -- Functions for sets that error on overwriting a key

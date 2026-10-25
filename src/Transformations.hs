@@ -44,10 +44,10 @@ transformations =
 typecheckProgram p = feedbackM typecheckAction p
 
 typecheckAction envs modDecl = do
-    let filtered = filterNames modDecl.getImports envs
+    let filtered = filterNames modDecl.imports envs
     captured <- typecheckModule filtered modDecl
     -- Save the environment for debugging
-    -- let logPath = "logs/" ++ renderName modDecl.getName ++ ".log"
+    -- let logPath = "logs/" ++ renderName modDecl.name ++ ".log"
     -- Text.writeFile logPath (renderEnv captured)
     return (captured, ())
 
@@ -74,7 +74,7 @@ annotateTagInfoProgram =
 -- but return only the local environment
 simpleActionA action filterEnvs capture envs modDecl = do
     captured <- capture modDecl
-    let combined = captured <> filterEnvs modDecl.getImports envs
+    let combined = captured <> filterEnvs modDecl.imports envs
     result <- action combined modDecl
     pure (captured, result)
 
@@ -84,7 +84,7 @@ simpleActionA action filterEnvs capture envs modDecl = do
 feedbackM action mods = fmap snd (mapAccumM step mempty mods)
     where step envs modDecl = do
             (captured, result) <- action envs modDecl
-            return (insert modDecl.getName captured envs, result)
+            return (insert modDecl.name captured envs, result)
 
 filterIds imports envs =
     foldMap' (\(ImportDeclaration modName importedIds _) ->

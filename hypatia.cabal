@@ -29,7 +29,7 @@ executable hypatia
     Syntax,
     Transformations,
     Typechecker
-  extensions:
+  default-extensions:
     OverloadedStrings, OverloadedRecordDot, NoFieldSelectors
   build-depends:
     -- Lower bound necessary for foldl'

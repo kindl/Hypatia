@@ -84,7 +84,7 @@ exports x = pretty x <+> text "=" <+> pretty x
 getIdentifiers statements =
     [name.getId.getText | Assign _ name _ <- statements, not (isWildcard name.getId.getText)]
 
-isWildcard i = i == "_"
+isWildcard = firstIs (== '_')
 
 toLuaI modName =
     text "local" <+> flatModName modName <+> equals

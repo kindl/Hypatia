@@ -69,7 +69,7 @@ copyDirectoryIfExists srcDir dstDir = do
     isDirectory <- doesDirectoryExist srcDir
     if isDirectory
         then putStrLn ("Copying directory " <> srcDir) >> copyDirectory srcDir dstDir
-        else putStrLn ("Skipped copying directory " <> srcDir)
+        else putStrLn ("Copying directory " <> srcDir <> " is skipped because it does not exist")
 
 copyEntry srcDir dstDir name =
     let

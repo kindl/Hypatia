@@ -73,8 +73,8 @@ open pos = LocatedLexeme (Reserved "{") pos
 
 close pos = LocatedLexeme (Reserved "}") pos
 
-isLayout (LocatedLexeme (Reserved t) _)
-    | elem t ["let", "where", "of"] = True
+isLayout (LocatedLexeme (Reserved t) _) =
+    elem t ["let", "where", "of"]
 isLayout _ = False
 
 -- add 1 because counting columns starts from 1
@@ -91,9 +91,10 @@ getIndent l =
     error ("getIndent impossible case at " ++ prettyLocated l)
 
 
-followedByOpen rest = case dropWhile isWhite rest of
-    (LocatedLexeme (Reserved t) _:_) | t == "{" -> True
-    _ -> False
+followedByOpen rest =
+    case dropWhile isWhite rest of
+        (LocatedLexeme (Reserved "{") _:_) -> True
+        _ -> False
 
 -- TODO find the logic error in here
 --insertIndentTokens (l:rest)
@@ -130,12 +131,15 @@ isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
 isSignificantWhite _ = False
 
 {- Locations -}
-advance (Position l _) '\n' =
-    Position (l + 1) 1
-advance (Position l c) _ =
-    Position l (c + 1)
+advance position '\n' =
+    Position (position.line + 1) 1
+advance position _ =
+    Position position.line (position.column + 1)
 
-initialPosition = Position 1 1
+initialPosition = Position {
+    line = 1,
+    column = 1
+}
 
 oneOf xs = satisfy (flip Text.elem xs)
 {-# INLINE oneOf #-}
@@ -145,8 +149,8 @@ data LocatedLexeme = LocatedLexeme {
     location :: Location
 } deriving (Show)
 
-prettyLocated (LocatedLexeme l p) =
-    show l ++ " " ++ show (pretty p)
+prettyLocated l =
+    show l.lexeme ++ " " ++ show (pretty l.location)
 
 data Lexeme
     = Reserved Text

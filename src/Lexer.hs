@@ -17,7 +17,7 @@ import Data.Attoparsec.Text(char, anyChar,
     string, satisfy,
     takeWhile, takeWhile1,
     match, parse, parseOnly,
-    hexadecimal, double)
+    hexadecimal, double, endOfLine)
 
 {-
 This module converts text to a list of lexemes
@@ -124,6 +124,7 @@ withIndentTokens ls = cut (layout (
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True
+isWhite (LocatedLexeme (MultilineComment _) _) = True
 isWhite _ = False
 
 isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
@@ -166,6 +167,7 @@ data Lexeme
     | Conid [Text] Text
     | Accessor Text
     | Comment Text
+    | MultilineComment Text
     | Block Int
     | Indent Int
     | Unrecognized Text
@@ -223,15 +225,17 @@ whitespace =
 whitechars = fmap Whitespace (takeWhile1 isSpace)
 {-# INLINE whitechars #-}
 
--- NOTE in contrast to the report this does not consume a newline
-hashComment = fmap Comment (char '#' *> takeWhile (/= '\n'))
+hashComment =
+    fmap Comment (char '#' *> takeWhile (/= '\n') <* (endOfLine <|> endOfInput))
 {-# INLINE hashComment #-}
 
-slashComment = fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n'))
+slashComment =
+    fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n') <* (endOfLine <|> endOfInput))
 {-# INLINE slashComment #-}
 
 -- TODO nesting multiline comments
-multilineComment = fmap (Comment . Text.pack) (string "/*" *> manyTill' anyChar (string "*/"))
+multilineComment =
+    fmap (MultilineComment . Text.pack) (string "/*" *> manyTill' anyChar (string "*/"))
 {-# INLINE multilineComment #-}
 
 qident = do
@@ -244,7 +248,7 @@ qident = do
 handleReserved _ qs r | elem r reserved =
     if null qs
         then Reserved r
-        else error ("Identifier " <> Text.unpack r <> " cannot be used qualifed")
+        else error ("Identifier " <> Text.unpack r <> " cannot be used qualified")
 handleReserved f qs i = f qs i
 {-# INLINE handleReserved #-}
 

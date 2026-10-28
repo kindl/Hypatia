@@ -3,6 +3,7 @@ module Typechecker where
 import Prelude hiding (lookup)
 import Syntax
 import Data.Word(Word64)
+import Data.Text qualified as Text
 import Data.List(unsnoc)
 import Data.Maybe(fromJust)
 import Data.Map.Strict(Map, fromList, insert, foldrWithKey, lookup, singleton)
@@ -277,7 +278,7 @@ typecheckPattern (ArrayPattern ps) ty = do
     let location = firstLocationInfo ps
     elementTy <- newTyVarAt location
     binds <- traverse (\p -> typecheckPattern p elementTy) ps
-    let arrayType = TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy    
+    let arrayType = TypeApplication (TypeConstructor (fromText "Native.Array")) elementTy
     unifyWithInfo ps arrayType ty
     return (mconcat binds)
 typecheckPattern other _ =
@@ -367,7 +368,7 @@ newTyVarAt location = fmap TypeVariable (newUniqueName location)
 
 newTyVar = newTyVarAt builtinLocation
 
-newUniqueName location = fmap (prefixedId location . uintToText) newUnique
+newUniqueName location = fmap (prefixedId location . Text.show) newUnique
 
 -- extract skolem constants
 skolems ty = Set.fromList [c | SkolemConstant c <- universe ty]

@@ -9,6 +9,7 @@ import Data.List(transpose)
 import Data.Set qualified as Set
 import Data.Map.Strict qualified as Map
 import Data.Text(Text)
+import Data.Text qualified as Text
 import Prettyprinter(vcat, indent, (<+>),
     equals, braces, parens, brackets, semi, pretty, dquotes, hardline)
 
@@ -603,7 +604,7 @@ getOrMakeIds' index (patterns:ps) =
     case extractVar patterns of
         Nothing ->
             -- Investigate if this could produce name conflicts
-            prefixedId builtinLocation ("l" <> intToText index) : getOrMakeIds' (index + 1) ps
+            prefixedId builtinLocation ("l" <> Text.show index) : getOrMakeIds' (index + 1) ps
         Just v ->
             toId v : getOrMakeIds' (index + 1) ps
 getOrMakeIds' _ [] = []

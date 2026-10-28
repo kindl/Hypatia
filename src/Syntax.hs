@@ -3,7 +3,6 @@ module Syntax where
 import Prelude hiding (lookup)
 import Data.List(unsnoc)
 import Data.Maybe(fromJust)
-import Data.Word(Word64)
 import Data.Data(Data, Typeable)
 import Data.Text(Text)
 import Data.Text qualified as Text
@@ -363,7 +362,7 @@ getBindings p =
     in foldMap' f (universe p)
 
 nNewVars n =
-    fmap (prefixedId builtinLocation . intToText) [1..n]
+    fmap (prefixedId builtinLocation . Text.show) [1..n]
 
 makeOpApp op a b =
     foldl' FunctionApplication (if isConstructor op
@@ -437,9 +436,3 @@ identical [] = error "Called `identical` with empty list"
 
 intToDouble :: Int -> Double
 intToDouble = fromIntegral
-
-intToText :: Int -> Text
-intToText = Text.show
-
-uintToText :: Word64 -> Text
-uintToText = Text.show

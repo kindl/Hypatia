@@ -18,8 +18,8 @@ import Data.Generics.Uniplate.Data(universe, universeBi)
 import Data.Foldable(foldMap')
 
 
-type Line = Word64
-type Column = Word64
+type Line = Int
+type Column = Int
 data Position = Position {
     line :: Line,
     column :: Column
@@ -345,8 +345,8 @@ prefixedId location x = Id ("_v" <> x) location
 -- Encode the location inside the name to avoid name conflicts
 locatedId location x =
     Id ("_v" <> x
-        <> "_" <> uintToText location.startPosition.line
-        <> "_" <> uintToText location.startPosition.column) location
+        <> "_" <> Text.show location.startPosition.line
+        <> "_" <> Text.show location.startPosition.column) location
 {-# INLINE locatedId #-}
 
 differenceKeys m ks = filterWithKey (const . flip notElem ks) m

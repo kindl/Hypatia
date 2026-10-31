@@ -1,6 +1,7 @@
 module Lexer where
 
 import Prelude hiding (takeWhile)
+import Data.Maybe(listToMaybe)
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text(Text)
@@ -77,39 +78,23 @@ isLayout (LocatedLexeme (Reserved t) _) =
     elem t ["let", "where", "of"]
 isLayout _ = False
 
--- add 1 because counting columns starts from 1
-indLength ws = Text.length (last (Text.split (== '\n') ws)) + 1
-
-getBlock (LocatedLexeme (Whitespace ws) pos) =
-    LocatedLexeme (Block (indLength ws)) pos
-getBlock l =
-    error ("getBlock impossible case at " ++ prettyLocated l)
-
-getIndent (LocatedLexeme (Whitespace ws) pos) =
-    LocatedLexeme (Indent (indLength ws)) pos
-getIndent l =
-    error ("getIndent impossible case at " ++ prettyLocated l)
-
-
-followedByOpen rest =
-    case dropWhile isWhite rest of
-        (LocatedLexeme (Reserved "{") _:_) -> True
-        _ -> False
-
--- TODO find the logic error in here
---insertIndentTokens (l:rest)
---    | isWhite l && not (isSignificantWhite l) =
---        insertIndentTokens rest
-insertIndentTokens (l:rest@(r:rs))
-    | isLayout l && followedByOpen rest = l:insertIndentTokens rest
-    | isLayout l = l:getBlock r:insertIndentTokens rs
-    | isSignificantWhite l && isSignificantWhite r =
-        insertIndentTokens rest
-    | isSignificantWhite l && isWhite r = insertIndentTokens (l:rs)
-insertIndentTokens (l:rest)
-    | isSignificantWhite l = getIndent l:insertIndentTokens rest
-    | isWhite l = insertIndentTokens rest
-    | otherwise = l:insertIndentTokens rest
+insertIndentTokens (l:rest) =
+    let
+        restWithout = dropWhile isWhite rest
+        next = insertIndentTokens restWithout
+    in case listToMaybe restWithout of
+        Just (LocatedLexeme (Reserved "{") _) | isLayout l ->
+            l:next
+        Just t | isLayout l ->
+            l:LocatedLexeme (Block t.location.startPosition.column) l.location:next
+        Just t | isWhite l ->
+            LocatedLexeme (Indent t.location.startPosition.column) l.location:next
+        Nothing | isWhite l ->
+            LocatedLexeme (Indent 1) l.location:next
+        Nothing ->
+            l:LocatedLexeme (Indent 1) l.location:next
+        Just _ ->
+            l:insertIndentTokens rest
 insertIndentTokens [] = []
 {-# INLINE insertIndentTokens #-}
 
@@ -118,18 +103,15 @@ cut xs = drop 1 (dropEnd 1 xs)
 
 dropEnd n xs = take (length xs - n) xs
 
-withIndentTokens ls = cut (layout (
-    LocatedLexeme (Block 1) builtinLocation : insertIndentTokens ls) [])
+withIndentTokens ls =
+    let inserted = insertIndentTokens ls
+    in cut (layout (LocatedLexeme (Block 1) builtinLocation:inserted) [])
 {-# INLINE withIndentTokens #-}
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
 isWhite (LocatedLexeme (Comment _) _) = True
 isWhite (LocatedLexeme (MultilineComment _) _) = True
 isWhite _ = False
-
-isSignificantWhite (LocatedLexeme (Whitespace ws) _) =
-    Text.elem '\n' ws
-isSignificantWhite _ = False
 
 {- Locations -}
 advance position '\n' =

@@ -171,7 +171,9 @@ program path = fmap (located path . concat)
     (many' matchedLexeme <* endOfInput)
 
 -- matched is used to retrieve the parsed text for location info
-matchedLexeme = fmap return (match lexeme) <|> interpolatedString
+matchedLexeme =
+    interpolatedString
+    <|> fmap return (match lexeme)
 {-# INLINE matchedLexeme #-}
 
 lexeme = whitespace

@@ -9,13 +9,13 @@ import Control.Applicative((<|>), optional, empty)
 import Control.Monad(guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), LocatedLexeme(..),
-    lexlex, prettyLocated, alternating1)
+    lexWithPath, prettyLocated, alternating1)
 import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', option)
 
 
 -- This module turns a list of lexemes into a syntax tree
 parse path s = do
-    lexemes <- lexlex path s
+    lexemes <- lexWithPath path s
     case runStateT modDecl lexemes of
         Nothing -> Left "Parse error at the beginning"
         Just (result, []) -> return result

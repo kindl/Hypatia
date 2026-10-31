@@ -24,16 +24,15 @@ import Data.Attoparsec.Text(char, anyChar,
 This module converts text to a list of lexemes
 Inspired by the Haskell2010 report
 -}
-lexlex path s =
+lexWithPath path s =
     fmap withIndentTokens (parseOnly (program path) s)
-{-# INLINE lexlex #-}
+{-# INLINE lexWithPath #-}
 
-lexFileDebug path =
+lexFileWithWhitespaceDebug path =
     fmap (parse (program path)) (Text.readFile path)
 
-lexFileDebug2 path =
-    fmap (fmap (fmap (.lexeme)) . lexlex path)
-        (Text.readFile path)
+lexFileDebug path =
+    fmap (lexWithPath path) (Text.readFile path)
 
 lexDebug = parseOnly (program "")
 

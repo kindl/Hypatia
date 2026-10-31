@@ -7,7 +7,7 @@ import Data.Text.IO qualified as Text
 import Data.Text(Text)
 import Prettyprinter(pretty)
 import Control.Applicative((<|>))
-import Data.Functor(($>))
+import Data.Functor(($>), void)
 import Data.Char(isSpace, isUpper, isLower, isAlphaNum)
 import Data.Traversable(mapAccumL)
 import Syntax
@@ -217,8 +217,10 @@ slashComment =
 {-# INLINE slashComment #-}
 
 -- TODO nesting multiline comments
+-- TODO fail if this reaches end of input
 multilineComment =
-    fmap (MultilineComment . Text.pack) (string "/*" *> manyTill' anyChar (string "*/"))
+    fmap (MultilineComment . Text.pack)
+        (string "/*" *> manyTill' anyChar (void (string "*/") <|> endOfInput))
 {-# INLINE multilineComment #-}
 
 qident = do

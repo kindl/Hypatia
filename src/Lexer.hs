@@ -103,14 +103,18 @@ cut xs = drop 1 (dropEnd 1 xs)
 dropEnd n xs = take (length xs - n) xs
 
 withIndentTokens ls =
-    let inserted = insertIndentTokens ls
+    let
+        filtered = filter (not . isComment) ls
+        inserted = insertIndentTokens (dropWhile isWhite filtered)
     in cut (layout (LocatedLexeme (Block 1) builtinLocation:inserted) [])
 {-# INLINE withIndentTokens #-}
 
 isWhite (LocatedLexeme (Whitespace _) _) = True
-isWhite (LocatedLexeme (Comment _) _) = True
-isWhite (LocatedLexeme (MultilineComment _) _) = True
 isWhite _ = False
+
+isComment (LocatedLexeme (Comment _) _) = True
+isComment (LocatedLexeme (MultilineComment _) _) = True
+isComment _ = False
 
 {- Locations -}
 advance position '\n' =
@@ -193,8 +197,7 @@ unrecognized =
     fmap (Unrecognized . Text.singleton) anyChar
 {-# INLINE unrecognized #-}
 
--- Additions:
--- . for forall, e.g. `forall a. a`
+-- The dot `.` is reserved for forall, e.g. `forall a. a`
 special = fmap (Reserved . Text.singleton) (oneOf "(),;[]`{}.")
 {-# INLINE special #-}
 
@@ -213,7 +216,7 @@ hashComment =
 {-# INLINE hashComment #-}
 
 slashComment =
-    fmap Comment (char '/' *> char '/' *> takeWhile (/= '\n') <* (endOfLine <|> endOfInput))
+    fmap Comment (string "//" *> takeWhile (/= '\n') <* (endOfLine <|> endOfInput))
 {-# INLINE slashComment #-}
 
 -- TODO nesting multiline comments

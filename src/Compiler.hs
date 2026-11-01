@@ -600,6 +600,7 @@ makeIf cs s elseBranch = [If (foldr1 (Op And) cs) s elseBranch]
 
 getOrMakeIds = getOrMakeIds' 0
 
+getOrMakeIds' :: Int -> [[Pattern]] -> [Id]
 getOrMakeIds' index (patterns:ps) =
     case extractVar patterns of
         Nothing ->

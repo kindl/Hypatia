@@ -91,8 +91,10 @@ toLuaI modName =
     text "local" <+> flatModName modName <+> equals
         <+> text "require" <+> toLuaPath modName
 
-toLuaS (Assign _ (Name [] (Id "_" _)) e) =
+toLuaS (Assign _ (Name [] (Id "_" _)) e@(Call _ _)) =
     toLuaE e
+toLuaS (Assign _ (Name [] (Id "_" _)) e) =
+    "_" <+> equals <+> toLuaE e
 -- Local functions need a forward declaration for recursion
 -- Otherwise
 -- ```

@@ -6,9 +6,9 @@ import Common.Array(map)
 import Geometry.Vector2(Vector2)
 
 /*
-This is an algebraic datatype.
+This is an algebraic data type.
 A Primitive is either a Rectangle or a Circle.
-Datatypes can have type variables.
+Data types can have type variables.
 So this type could become a Primitive (Vector2 Number), Primitive (Vector3 Number) and more.
 */
 type Primitive point = Rectangle point point | Circle point Radius

@@ -1,8 +1,8 @@
-# Hypatia - A ML-family Language Compiled to Lua
+# Hypatia - An ML-family Language Compiled to Lua
 Hello stranger,
 
 
-How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML family. As it is tradition, my name was given to honour a [deceased mathematician](https://en.wikipedia.org/wiki/Hypatia). Who I am? Well isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, Purescript and Elm, but I compile to Lua. I am walking in the footsteps of my ancestors, but I want to be different: I want to make games. So let me tell you about me.
+How did you end up here? Let me introduce myself, I am Hypatia, youngest child of the ML-family. As is tradition, my name honors a [departed mathematician](https://en.wikipedia.org/wiki/Hypatia). Who am I? Well, isn't that the question we all ask ourselves? I am still young, I have dreams, but I have not found my purpose yet. I am similar to my siblings, PureScript and Elm, but I compile to Lua. I follow in the footsteps of my ancestors, but I want to be different: I want to make games. So, let me tell you about myself.
 
 ### My Appearance
 ```
@@ -14,9 +14,9 @@ import Common.Array(map)
 import Geometry.Vector2(Vector2)
 
 /*
-This is an algebraic datatype.
+This is an algebraic data type.
 A Primitive is either a Rectangle or a Circle.
-Datatypes can have type variables.
+Data types can have type variables.
 So this type could become a Primitive (Vector2 Number), Primitive (Vector3 Number) and more.
 */
 type Primitive point = Rectangle point point | Circle point Radius
@@ -45,7 +45,7 @@ draw _ =
     in map fill primitives
 ```
 
-People say, I look like my father, Haskell, but somehow I am a little different:
+People say I look like my father, Haskell, but I am a little different:
 
 * No guards. Just use if expressions.
 * No operator sections. In Haskell `(-2)` could be a section or a prefix minus. Just use anonymous functions like `(\x -> x - 2)` or partial applications like `((-) 3)`.
@@ -53,16 +53,16 @@ People say, I look like my father, Haskell, but somehow I am a little different:
 * Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` can be used for pattern- and type aliases.
 * A module declaration has no `where` block, it is only a single line. One module, one file.
 
-It was nice to talk with you stranger.
+It was nice to talk with you, stranger.
 
 
 xoxo<br>
 Hypatia
 
 ## How to get started
-Hypatia is a prototype of a functional language of the ML-family that compiles to lua.
-People are writing game engines in functional languages, however functional scripting languages are rarely seen.
-Hypatia could fill this gap and it could reuse parts of the existing lua ecosystem.
+Hypatia is a prototype of a functional language in the ML-family that compiles to Lua.
+People are writing game engines in functional languages. However, functional scripting languages are rarely seen.
+Hypatia could fill this gap and reuse parts of the existing Lua ecosystem.
 
 Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/).
 Copy the `library` folder to `~/.hypatia/library` or inside one of the example folders.
@@ -72,4 +72,4 @@ cabal run hypatia -- compile examples/Spheres/Spheres.hyp
 love build/lua
 ```
 
-Head over to the folder "examples" to see how applications look like.
+Head over to the `examples` folder to see example applications.

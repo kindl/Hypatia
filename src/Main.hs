@@ -53,7 +53,7 @@ compileProgram options =
         buildDir = "build/" ++ abbreviation
     in do
         program <- loadProgram libraryDirectories baseDir normalizedPath
-        traverse_ (copyAssetDirectory abbreviation buildDir) (baseDir:libraryDirectories) 
+        traverse_ (copyAssetDirectory abbreviation buildDir) (baseDir:libraryDirectories)
         writeProgram buildDir abbreviation program
 
 copyAssetDirectory abbreviation buildDir folder =
@@ -155,6 +155,18 @@ getKeywordSet "js" = jsKeywords
 getKeywordSet other =
     error ("No keyword set for " ++ show other)
 
+-- A module which name starts with `Native` is a native module by convention
+-- meaning it is a module where the corresponding lua file is created by hand.
+-- Writing the compiled output is skipped to not override these files.
+-- Native modules can be used to call functions from Lua or Love 2D,
+-- see `examples/lua/Native.lua` or `Native_Love.lua`.
+-- `Main` is also excluded to not override the file `main.lua`
+-- which is used as an entry point by Love 2D.
+isNative name =
+    name == "Native"
+    || name == "Main"
+    || Text.isPrefixOf "Native_" name
+
 writeResult buildDir abbreviation arityMap modDecl =
     let
         name = render (flatModName modDecl.name)
@@ -164,16 +176,7 @@ writeResult buildDir abbreviation arityMap modDecl =
         keywords = getKeywordSet abbreviation
         renderFun = getRender abbreviation
         optimized = optimize arityMap keywords compiled
-    in if name == "Native" || name == "Main" || Text.isPrefixOf "Native_" name
--- A module which name starts with "Native" is a native module by convention
--- meaning it is a module where the corresponding lua file is created by hand
--- Writing the compiled output is skipped to not override these files
-
--- Native modules can be used to call functions from Love 2D,
--- see examples/lua/Native.lua or Native_Love.lua
-
--- Main is also excluded to not override the file main.lua
--- which is used as an entry point by Love 2D
+    in if isNative name
         then do
             doesExist <- doesFileExist filePath
             let message = if doesExist then " exists at " else " does NOT exist at "

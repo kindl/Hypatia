@@ -10,7 +10,7 @@ import Control.Monad(guard)
 import Control.Monad.Trans.State.Strict(StateT(..), runStateT)
 import Lexer(Lexeme(..), LocatedLexeme(..),
     lexWithPath, prettyLocated, alternating1)
-import Data.Attoparsec.Combinator(sepBy', sepBy1', many', many1', option)
+import Data.Attoparsec.Combinator(sepBy1', many', many1', option)
 
 
 -- This module turns a list of lexemes into a syntax tree
@@ -57,12 +57,15 @@ bracketed p = token "[" *> p <* token "]"
 sepByTrailing p sep = option [] (sepBy1' p sep <* optional sep)
 {-# INLINE sepByTrailing #-}
 
+-- Helper to allow empty declarations
+semis = many1' (token ";")
+{-# INLINE semis #-}
 
 {- Module -}
 modDecl = do
-    name <- option (fromText "Scratch") (token "module" *> modid <* token ";")
-    imports <- many' (impdecl <* token ";")
-    topDecls <- many' (topdecl <* token ";")
+    name <- option (fromText "Scratch") (token "module" *> modid <* semis)
+    imports <- many' (impdecl <* semis)
+    topDecls <- many' (topdecl <* semis)
     return (ModuleDeclaration name imports topDecls)
 {-# INLINE modDecl #-}
 
@@ -108,8 +111,8 @@ recordDeclaration = do
 {-# INLINE recordDeclaration #-}
 
 recordDeclarationBody = do
-    constructor <- optional (token "constructor" *> con <* token ";")
-    fields <- sepBy1' fieldSignature (token ";")
+    constructor <- optional (token "constructor" *> con <* semis)
+    fields <- sepBy1' fieldSignature semis <* optional semis
     return (constructor, fields)
 {-# INLINE recordDeclarationBody #-}
 
@@ -122,7 +125,7 @@ fieldSignature = do
     return (identifierToAccessor identifier, t)
 {-# INLINE fieldSignature #-}
 
-decls = curlyBraces (sepBy' decl (token ";"))
+decls = curlyBraces (sepByTrailing decl semis)
 {-# INLINE decls #-}
 
 decl = typeSignature <|> fixityDeclaration
@@ -330,7 +333,7 @@ positionedStringExpr = do
     return (LiteralExpression (Text s))
 {-# INLINE positionedStringExpr #-}
 
-alts = curlyBraces (sepBy' alt (token ";"))
+alts = curlyBraces (sepByTrailing alt semis)
 {-# INLINE alts #-}
 
 alt = do

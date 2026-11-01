@@ -65,10 +65,9 @@ People are writing game engines in functional languages. However, functional scr
 Hypatia could fill this gap and reuse parts of the existing Lua ecosystem.
 
 Install the game engine [love](https://love2d.org) and [GHC](https://www.haskell.org/).
-Copy the `library` folder to `~/.hypatia/library` or inside one of the example folders.
 Then run
 ```
-cabal run hypatia -- compile examples/Spheres/Spheres.hyp
+cabal run hypatia -- compile --library=library examples/Spheres/Spheres.hyp
 love build/lua
 ```
 

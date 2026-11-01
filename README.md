@@ -47,11 +47,18 @@ draw _ =
 
 People say I look like my father, Haskell, but I am a little different:
 
-* No guards. Just use if expressions.
-* No operator sections. In Haskell `(-2)` could be a section or a prefix minus. Just use anonymous functions like `(\x -> x - 2)` or partial applications like `((-) 3)`.
-* No do-expressions, list comprehensions and arithmetic sequences. Instead plain functions like `andThen`, `map2` or `range`.
-* Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` can be used for pattern- and type aliases.
-* A module declaration has no `where` block, it is only a single line. One module, one file.
+* One colon for type signatures `i : Number`.
+* Types are inferred. You generally write fewer type signatures in Hypatia compared to Haskell. The compiler is written in a similar style. (Side note of the author: This style is not what I would normally use for Haskell.)
+* Array literals. Trailing commas are allowed `[a,b,]`. You cannot destructure arrays with `(head:tail)`, use functions from `Common.Array` instead.
+* No guards. Use if expressions instead.
+* No operator sections. In Haskell `(-2)` could be a section or a unary minus. Use anonymous functions like `(\x -> x - 2)` or partial applications like `((-) 3)`.
+* Positive and negative literals. The minus in `f -2` is part of the literal and does not need parentheses. Negating a variable still needs them: `f (-a)`.
+* No do-expressions, list comprehensions, or arithmetic sequences. Instead plain functions like `andThen`, `map2` or `range`.
+* No tuple syntax. Use records with an Idris-like syntax to give fields a name and a type. Alternatively use `type Tuple2 a b = Tuple2 a b` instead.
+* Different keywords. `type` instead of `data`, in the spirit of Elm. `alias` can be used for pattern aliases and type aliases.
+* A module declaration has no `where` block, it is only a single line. A module starts with `module SomeModuleName`, the file name has to match the module name.
+* Interpolated strings with `$"Hello {name}!"`.
+* No character literals. Use string literals with a single character instead.
 
 It was nice to talk with you, stranger.
 
